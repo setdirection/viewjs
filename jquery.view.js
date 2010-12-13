@@ -7,11 +7,10 @@
       structure = arguments[1];
       methods = arguments[2];
     }
-    var klass = function klass(scope){
+    var klass = function klass(attributes){
       this._observers = {};
       this.attributes = {};
       this.initialize.apply(this,arguments);
-      this.trigger('initialized');
       if(klass._observers && 'attached' in klass._observers){
         $.view.triggerOrDelayAttachedEventOnInstance(this);
       }
@@ -51,11 +50,11 @@
   $.view.logging = false;
   
   $.view.isViewInstance = function isViewInstance(object){
-    return object && object.getElement && object.getElement().nodeType == 1 && object.scope;
+    return object && object.getElement && object.getElement().nodeType == 1 && object.attributes;
   };
   
   $.view.isViewClass = function isViewClass(object){
-    return object && object.prototype && object.prototype.structure && object.prototype.setupScope;
+    return object && object.prototype && object.prototype.structure && object.prototype.getElement;
   };
   
   $.view.arrayFrom = function arrayFrom(object){
@@ -224,7 +223,7 @@
   $.view.instanceMethods = {
     initialize: function initialize(attributes){
       if($.view.logging){
-        console.log('jQuery.View: initialized ',this,' with scope:',scope);
+        console.log('jQuery.View: initialized ',this,' with attributes:',attributes);
       }
       for(var key in attributes){
         this.set(key,attributes[key]);
