@@ -14,13 +14,6 @@
       if(klass._observers && 'attached' in klass._observers){
         $.view.triggerOrDelayAttachedEventOnInstance(this);
       }
-      /* find a smarter way to do this?
-      for(var attribute_name in this){
-        if(typeof(this[attribute_name]) == 'function'){
-          this[attribute_name] = $.proxy(this[attribute_name],this);
-        }
-      }
-      */
     };
     klass._observers = {};
     klass.instance = false;
@@ -73,7 +66,7 @@
     var values = $.view.arrayFrom(arguments).slice(1);
     var response = [];
     for(var i = 0 ; i < arr.length; i++){
-      if(!($.inArray(values,arr[i]) > -1)){
+      if(!($.inArray(arr[i],values) > -1)){
         response.push(arr[i]);
       }
     }
@@ -112,7 +105,7 @@
     return !!(ancestor.body);
   };
   
-  $.view.wrapEventMethodsForChildClass = function wrapActiveEventMethodsForChildClass(child_class,parent_class){
+  $.view.wrapEventMethodsForChildClass = function wrapEventMethodsForChildClass(child_class,parent_class){
     var methods = ['bind','unbind','bindOnce'];
     for(var i = 0; i < methods.length; ++i){
       (function method_wrapper_iterator(method_name){
@@ -162,7 +155,7 @@
     },
     bind: function bind(event_name,observer,context){
       if(context){
-        observer = $.view.proxyAndCurryFunction(observer,$.view.arrayFrom(arguments).slice(2));
+        observer = $.view.proxyAndCurryFunction.apply($.view,[observer].concat($.view.arrayFrom(arguments).slice(2)));
       }
       if(typeof(event_name) === 'string' && typeof(observer) !== 'undefined'){
         if(!(event_name in this._observers)){
@@ -174,7 +167,7 @@
     },
     bindOnce: function bindOnce(event_name,observer,context){
       if(context){
-        outer_observer = $.view.proxyAndCurryFunction(outer_observer,$.view.arrayFrom(arguments).slice(2));
+        outer_observer = $.view.proxyAndCurryFunction.apply($.view,[outer_observer].concat($.view.arrayFrom(arguments).slice(2)));
       }
       var inner_observer = $.view.proxyAndCurryFunction(function bound_inner_observer(){
         outer_observer.apply(this,arguments);
