@@ -30,6 +30,7 @@ task :docs do
       <html>
         <head>
           <title>jQuery View</title>
+          <link rel="stylesheet" media="screen" href="screen.css"/>
         </head>
         <body>
           #{Maruku.new(source_for_markdown.join(10.chr)).to_html}
