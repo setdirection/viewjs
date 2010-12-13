@@ -84,6 +84,10 @@
     return object && object.prototype && object.prototype.structure && object.prototype.getElement;
   };
   
+  $.view.isjQueryObject = function isjQueryObject(object){
+    return typeof(object) == 'object' && ('jquery' in object) && ('selector' in object) && ('context' in object) && ('length' in object);
+  };
+  
   $.view.arrayFrom = function arrayFrom(object){
     if(!object){
       return [];
@@ -344,7 +348,8 @@
       if(
         typeof(argument) !== 'string' &&
         typeof(argument) !== 'number' &&
-        !(argument !== null && typeof argument === "object" && 'splice' in argument && 'join' in argument) &&
+        !$.isArray(argument) &&
+        !$.view.isjQueryObject(argument) &&
         !(argument && argument.nodeType === 1)
       ){
         for(attribute_name in argument){
@@ -352,7 +357,10 @@
         }
         return;
       }
-      if(argument !== null && typeof argument === "object" && 'splice' in argument && 'join' in argument){
+      if($.view.isjQueryObject(argument)){
+        argument = argument.toArray();
+      }
+      if($.isArray(argument)){
         for(ii = 0; ii < argument.length; ++ii){
           $.view.builder.processNodeArgument(elements,attributes,argument[ii]);
         }

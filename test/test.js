@@ -37,10 +37,25 @@ var DeepView = $.view(function(){
   );
 });
 
+var ViewWithJQuery = $.view(function(){
+  var element = $.ul(
+    $.li('a'),
+    $($.li('b'))
+  );
+  return element;
+});
+
 test("Node creation with mix and match of text and elements",function(){
   var arguments_instance = new ArgumentsTestView();
   equal(arguments_instance.getElement().firstChild.firstChild.nodeValue,'one');
   equal(arguments_instance.getElement().firstChild.childNodes[2].tagName,'B');
+});
+
+test("Node creation with jQuery methods being called",function(){
+  var jquery_view_instance = new ViewWithJQuery();
+  var list_items = $('li',jquery_view_instance.getElement());
+  equal(list_items.length,2);
+  equal(list_items[1].innerHTML,'b');
 });
 
 test("Node creation with deep nesting",function(){
