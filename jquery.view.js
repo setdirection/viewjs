@@ -2,7 +2,7 @@
 * TODO:
 * - try "MyView = $.view("create"
 * - investiage jQuery custom events
-* 
+* - change bindOnce to one
 * Existing functionality to document
 * - all class and instance attributes (in "internals" section)
 * 
@@ -15,7 +15,19 @@
 * $('li a',new MyView())
 * $(new MyView())
 * 
+* Hypothetical routes API:
 * 
+* $.view.routes({
+*   '/': function(){
+* 	},
+* 	'/test': [MyView,'method']
+* });
+* $.view.routes.change(function(path,target){
+* 
+* });
+* $.view.routes.set('');
+* MyView.method() //also calls $.view.routes.set('/test');
+*
 * Attributes
 * ----------
 * MyViewWithAttributes = $.view(function(){

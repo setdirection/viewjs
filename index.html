@@ -1,0 +1,35 @@
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>jQuery View</title>
+        </head>
+        <body>
+          <p>TODO:</p>
+
+<ul>
+<li>try &#8220;MyView = $.view(&#8220;create&#8221;</li>
+
+<li>investiage jQuery custom events</li>
+
+<li>change bindOnce to one Existing functionality to document</li>
+
+<li>all class and instance attributes (in &#8220;internals&#8221; section)</li>
+</ul>
+
+<p>New functionality to document:</p>
+
+<p>MyView = $.view(function(){ $(this.div()).click() });</p>
+
+<p>$(&#8216;li a&#8217;,new MyView()) $(new MyView())</p>
+
+<p>Hypothetical routes API:</p>
+
+<p>$.view.routes({ &#8217;/&#8217;: function(){ }, &#8216;/test&#8217;: <span>MyView,&#8217;method&#8217;</span> }); $.view.routes.change(function(path,target){</p>
+
+<p>}); $.view.routes.set(&#8221;); MyView.method() //also calls $.view.routes.set(&#8216;/test&#8217;);</p>
+
+<h2 id='attributes'>Attributes</h2>
+
+<p>MyViewWithAttributes = $.view(function(){ this.get(&#8216;key&#8217;); }); new MyViewWithAttributes({ key: &#8216;value&#8217; });</p>
+        </body>
+      </html>
