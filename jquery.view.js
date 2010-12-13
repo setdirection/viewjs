@@ -1,3 +1,37 @@
+/*
+* TODO:
+* - emphasize in docs that conceptually each view is both a div, a jquery instance scoped to that div, and an actual class instance
+* - make default builder loaction "this" in each View class
+* - scope the jQuery object returned from the tag generator to have all bind events
+*     be proxied to "this" View
+* - make this.live("ul li a") work
+* - make this.div().click() work
+* - try "MyView = $.view("create"
+* - make constructor automatically create a div
+* - "this" will always refer to a jQuery object scoped to that div, 
+* - but it will also have all instance methods and properties of that view
+* - to override auto created div you can pass in an element "MyView = $.view(some_element,function(){
+*   
+*   })"
+* - all event observers created by "this" or it's tag methods will be proxied to "this"
+* 
+* In each view, all jQuery methods should be available
+* but always scoped to the outer element of the view
+* 
+* MyView = $.view(function(){
+*   var element = this.table(
+*     this.tr(
+*       this.td(
+*         this.div().click(
+*          
+*         )
+*       )
+*     )
+*   )
+* });
+* 
+*/
+
 (function($){
 
   $.view = function view(structure,methods){
@@ -235,7 +269,8 @@
     unbind: $.view.classMethods.unbind,
     trigger: function trigger(event_name){
       if(
-        (!this.constructor._observers || !this.constructor._observers[event_name] || (this.constructor._observers[event_name] && this.constructor._observers[event_name].length == 0)) &&
+        (!this.constructor._observers || !this.constructor._observers[event_name] ||
+          (this.constructor._observers[event_name] && this.constructor._observers[event_name].length == 0)) &&
         (!this._observers || !this._observers[event_name] || (this._observers[event_name] && this._observers[event_name].length == 0))
       ){
         return [];
@@ -306,7 +341,12 @@
       if(typeof(argument) === 'function'){
         argument = argument();
       }
-      if(typeof(argument) !== 'string' && typeof(argument) !== 'number' && !(argument !== null && typeof argument === "object" && 'splice' in argument && 'join' in argument) && !(argument && argument.nodeType === 1)){
+      if(
+        typeof(argument) !== 'string' &&
+        typeof(argument) !== 'number' &&
+        !(argument !== null && typeof argument === "object" && 'splice' in argument && 'join' in argument) &&
+        !(argument && argument.nodeType === 1)
+      ){
         for(attribute_name in argument){
           attributes[attribute_name] = argument[attribute_name];
         }
