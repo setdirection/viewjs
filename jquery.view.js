@@ -1,7 +1,5 @@
 /*
 * TODO:
-* - emphasize in docs that conceptually each view is both a div, a jquery instance scoped to that div, and an actual class instance
-* - make default builder loaction "this" in each View class
 * - scope the jQuery object returned from the tag generator to have all bind events
 *     be proxied to "this" View
 * - try "MyView = $.view("create"
@@ -16,18 +14,16 @@
 * In each view, all jQuery methods should be available
 * but always scoped to the outer element of the view
 * 
+
+* 
+* New functionality to document:
+* 
 * MyView = $.view(function(){
-*   var element = this.table(
-*     this.tr(
-*       this.td(
-*         this.div().click(
-*          
-*         )
-*       )
-*     )
-*   )
+*   $(this.div()).click()
 * });
 * 
+* $('li a',new MyView())
+* $(new MyView())
 */
 
 (function($){
@@ -254,6 +250,7 @@
   
   $.view.instanceMethods = {
     initialize: function initialize(attributes){
+      this.length = 0;
       if($.view.logging){
         console.log('jQuery.View: initialized ',this,' with attributes:',attributes);
       }
@@ -267,6 +264,8 @@
       if(!this.element || !this.element.nodeType || this.element.nodeType !== 1){
         throw 'The view constructor must return a DOM element, or set this.element as a DOM element. View constructor returned:' + typeof(this.element);
       }
+      this.length = 1;
+      this[0] = this.element;
       this.trigger('initialized');
     },
     bind: $.view.classMethods.bind,
@@ -420,6 +419,7 @@
       };
     }
   };
+  //generate tag methods
   for(var i = 0; i < $.view.builder.tags.length; ++i){
     $.view.builder.methods[$.view.builder.tags[i]] = $.view.builder.generateBuilderMethod($.view.builder.tags[i]);
   }

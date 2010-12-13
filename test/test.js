@@ -35,9 +35,10 @@ var DeepView = $.view(function(){
 });
 
 var ViewWithJQuery = $.view(function(){
-  var element = this.ul(
+  var element = this.ul({id:'jquery_test'},
     this.li('a'),
-    $(this.li('b'))
+    $(this.li('b')),
+    $(this.li('c')).addClass('test').attr('id','test2')
   );
   return element;
 });
@@ -48,11 +49,23 @@ test("Node creation with mix and match of text and elements",function(){
   equal(arguments_instance.getElement().firstChild.childNodes[2].tagName,'B');
 });
 
-test("Node creation with jQuery methods being called",function(){
+test("Node creation with jQuery methods being chained in builder",function(){
   var jquery_view_instance = new ViewWithJQuery();
   var list_items = $('li',jquery_view_instance.getElement());
-  equal(list_items.length,2);
+  equal(list_items.length,3);
   equal(list_items[1].innerHTML,'b');
+  equal(list_items[2].innerHTML,'c');
+  equal(list_items[2].className,'test');
+  equal(list_items[2].id,'test2');
+});
+
+test("View instance can be used as argument to jQuery",function(){
+  var instance = new ViewWithJQuery();
+  $(instance).appendTo(document.body);
+  equal($('#jquery_test').length,1);
+  $(instance).detach();
+  equal($('#jquery_test').length,0);
+  equal($('li',instance).length,3);
 });
 
 test("Node creation with deep nesting",function(){
@@ -141,6 +154,7 @@ test('Parent element passed to child constructor',function(){
   document.body.appendChild(child.getElement());
   equal(child.getText(),'test');
   equal(child.textNode.className,'added');
+  $(child.getElement()).detach();
 });
 
 test('Events triggered and cascade properly between parent and child',function(){
