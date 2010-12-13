@@ -68,9 +68,33 @@ test("View instance can be used as argument to jQuery",function(){
   equal($('li',instance).length,3);
 });
 
+test("Constructor can return a jQuery object",function(){
+  var TestView = $.view(function(){
+    return $(this.div('test'));
+  });
+  equal(new TestView().getElement().innerHTML,'test');
+});
+
 test("Node creation with deep nesting",function(){
   var deep_instance = new DeepView();
   equal(deep_instance.getElement().firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.nodeValue,'test');
+});
+
+test("User specified view methods are proxied",function(){
+  var test_value;
+  var event_test;
+  var ProxyTestView = $.view(function(){
+    this.testValue = 'test';
+    return $(this.div()).click(this.clickHandler);
+  },{
+    clickHandler: function(event){
+      event_test = event;
+      test_value = this.testValue;
+    }
+  });
+  var instance = new ProxyTestView();
+  $(instance.getElement()).trigger('click');
+  equal(test_value,'test');
 });
 
 var trigger_count = 0;
@@ -142,6 +166,13 @@ var ChildViewTwo = $.view(ParentViewTwo,function(parent_element){
 });
 ChildViewTwo.className = 'ChildView.Class';
 ChildViewTwo.prototype.className = 'ChildView.Instnace';
+
+test('List of methods to proxy correctly cascades',function(){
+  var parent = new ParentViewTwo();
+  var child = new ChildViewTwo();
+  equal(parent.constructor.methodsToProxy.length,'3');
+  equal(child.constructor.methodsToProxy.length,'4');
+});
 
 test('View subclass attributes cascades to child',function(){
   var child = new ChildViewTwo({value:'test'});

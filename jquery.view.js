@@ -1,20 +1,10 @@
 /*
 * TODO:
-* - scope the jQuery object returned from the tag generator to have all bind events
-*     be proxied to "this" View
 * - try "MyView = $.view("create"
-* - make constructor automatically create a div
-* - "this" will always refer to a jQuery object scoped to that div, 
-* - but it will also have all instance methods and properties of that view
-* - to override auto created div you can pass in an element "MyView = $.view(some_element,function(){
-*   
-*   })"
-* - all event observers created by "this" or it's tag methods will be proxied to "this"
+* - investiage jQuery custom events
 * 
-* In each view, all jQuery methods should be available
-* but always scoped to the outer element of the view
-* 
-
+* Existing functionality to document
+* - all class and instance attributes (in "internals" section)
 * 
 * New functionality to document:
 * 
@@ -24,10 +14,19 @@
 * 
 * $('li a',new MyView())
 * $(new MyView())
+* 
+* 
+* Attributes
+* ----------
+* MyViewWithAttributes = $.view(function(){
+*   this.get('key');
+* });
+* new MyViewWithAttributes({
+*   key: 'value'
+* });
 */
 
 (function($){
-
   $.view = function view(structure,methods){
     var parent_class;
     if($.view.isViewClass(structure)){
@@ -36,17 +35,25 @@
       methods = arguments[2];
     }
     var klass = function klass(attributes){
-      this._observers = {};
+      this.observers = {};
       this.attributes = {};
       for(var method_name in $.view.builder.methods){
         this[method_name] = $.view.builder.methods[method_name];
       }
+      //proxy all user specified methods
+      for(var i = 0; i < this.constructor.methodsToProxy.length; ++i){
+        this[this.constructor.methodsToProxy[i]] = $.proxy(this[this.constructor.methodsToProxy[i]],this);
+      }
       this.initialize.apply(this,arguments);
-      if(klass._observers && 'attached' in klass._observers){
+      if(klass.observers && 'attached' in klass.observers){
         $.view.triggerOrDelayAttachedEventOnInstance(this);
       }
     };
-    klass._observers = {};
+    klass.methodsToProxy = [];
+    for(var method_name in methods){
+      klass.methodsToProxy.push(method_name);
+    }
+    klass.observers = {};
     klass.instance = false;
     $.extend(klass,$.view.classMethods);
     if(parent_class){
@@ -54,17 +61,20 @@
       klass.prototype.structure = $.view.wrapFunction(parent_class.prototype.structure,function(proceed){
         return structure.apply(this,[$.proxy(proceed,this)()]);
       });
+      for(var i = 0; i < parent_class.methodsToProxy.length; ++i){
+        klass.methodsToProxy.push(parent_class.methodsToProxy[i]);
+      }
     }else{
       $.extend(klass.prototype,$.view.instanceMethods);
       klass.prototype.structure = structure;
     }
     klass.prototype.bind = $.view.wrapFunction(klass.prototype.bind,$.view.observeWrapperForAttachedEventOnInstance);
     if(parent_class){
-      klass._observers = {};
-      for(var observer_name in parent_class._observers){
-        klass._observers[observer_name] = parent_class._observers[observer_name];
+      klass.observers = {};
+      for(var observer_name in parent_class.observers){
+        klass.observers[observer_name] = parent_class.observers[observer_name];
       }
-      klass.prototype._observers = {};
+      klass.prototype.observers = {};
       $.view.wrapEventMethodsForChildClass(klass,parent_class);
     }
     $.extend(klass.prototype,methods || {});
@@ -193,10 +203,10 @@
         observer = $.view.proxyAndCurryFunction.apply($.view,[observer].concat($.view.arrayFrom(arguments).slice(2)));
       }
       if(typeof(event_name) === 'string' && typeof(observer) !== 'undefined'){
-        if(!(event_name in this._observers)){
-          this._observers[event_name] = [];
+        if(!(event_name in this.observers)){
+          this.observers[event_name] = [];
         }
-        this._observers[event_name].push(observer);
+        this.observers[event_name].push(observer);
       }
       return observer;
     },
@@ -208,36 +218,36 @@
         outer_observer.apply(this,arguments);
         this.unbind(event_name,inner_observer);
       },this);
-      if(!(event_name in this._observers)){
-        this._observers[event_name] = [];
+      if(!(event_name in this.observers)){
+        this.observers[event_name] = [];
       }
-      this._observers[event_name].push(inner_observer);
+      this.observers[event_name].push(inner_observer);
       return inner_observer;
     },
     unbind: function unbind(event_name,observer){
-      if(!(event_name in this._observers)){
-        this._observers[event_name] = [];
+      if(!(event_name in this.observers)){
+        this.observers[event_name] = [];
       }
       if(event_name && observer){
-        this._observers[event_name] = $.view.arrayWithoutValue(this._observers[event_name],observer);
+        this.observers[event_name] = $.view.arrayWithoutValue(this.observers[event_name],observer);
       }
       else if(event_name){
-        this._observers[event_name] = [];
+        this.observers[event_name] = [];
       }else{
-        this._observers = {};
+        this.observers = {};
       }
     },
     trigger: function trigger(event_name){
-      if(!this._observers || !this._observers[event_name] || (this._observers[event_name] && this._observers[event_name].length == 0)){
+      if(!this.observers || !this.observers[event_name] || (this.observers[event_name] && this.observers[event_name].length == 0)){
         return [];
       }
-      if(!(event_name in this._observers)){
-        this._observers[event_name] = [];
+      if(!(event_name in this.observers)){
+        this.observers[event_name] = [];
       }
       var collected_return_values = [];
       var args = $.view.arrayFrom(arguments).slice(1);
-      for(var i = 0; i < this._observers[event_name].length; ++i){
-        var response = this._observers[event_name][i].apply(this._observers[event_name][i],args);
+      for(var i = 0; i < this.observers[event_name].length; ++i){
+        var response = this.observers[event_name][i].apply(this.observers[event_name][i],args);
         if(response === false){
           return false;
         }else{
@@ -262,10 +272,8 @@
         this.setElement(response);
       }
       if(!this.element || !this.element.nodeType || this.element.nodeType !== 1){
-        throw 'The view constructor must return a DOM element, or set this.element as a DOM element. View constructor returned:' + typeof(this.element);
+        throw 'The view constructor must return either a DOM element or jQuery object, or set this.element as a DOM element. View constructor returned:' + typeof(this.element);
       }
-      this.length = 1;
-      this[0] = this.element;
       this.trigger('initialized');
     },
     bind: $.view.classMethods.bind,
@@ -273,9 +281,9 @@
     unbind: $.view.classMethods.unbind,
     trigger: function trigger(event_name){
       if(
-        (!this.constructor._observers || !this.constructor._observers[event_name] ||
-          (this.constructor._observers[event_name] && this.constructor._observers[event_name].length == 0)) &&
-        (!this._observers || !this._observers[event_name] || (this._observers[event_name] && this._observers[event_name].length == 0))
+        (!this.constructor.observers || !this.constructor.observers[event_name] ||
+          (this.constructor.observers[event_name] && this.constructor.observers[event_name].length == 0)) &&
+        (!this.observers || !this.observers[event_name] || (this.observers[event_name] && this.observers[event_name].length == 0))
       ){
         return [];
       }
@@ -289,12 +297,12 @@
         return false;
       }
       collected_return_values = collected_return_values.concat(collected_return_values_from_constructor);
-      if(!(event_name in this._observers)){
-        this._observers[event_name] = [];
+      if(!(event_name in this.observers)){
+        this.observers[event_name] = [];
       }
       var response;
-      for(var i = 0; i < this._observers[event_name].length; ++i){
-        response = this._observers[event_name][i].apply(this._observers[event_name][i],args);
+      for(var i = 0; i < this.observers[event_name].length; ++i){
+        response = this.observers[event_name][i].apply(this.observers[event_name][i],args);
         if(response === false){
           return false;
         }else{
@@ -310,7 +318,12 @@
       return this.attributes[key] = value;
     },
     setElement: function setElement(element){
+      if($.view.isjQueryObject(element)){
+        element = element[0];
+      }
       this.element = element;
+      this.length = 1;
+      this[0] = this.element;
     },
     getElement: function getElement(){
       return this.element;
@@ -419,6 +432,7 @@
       };
     }
   };
+  
   //generate tag methods
   for(var i = 0; i < $.view.builder.tags.length; ++i){
     $.view.builder.methods[$.view.builder.tags[i]] = $.view.builder.generateBuilderMethod($.view.builder.tags[i]);
