@@ -1,34 +1,31 @@
-//put tag methods on jQuery object
-$.view.exportTags($);
-
 var ArgumentsTestView = $.view(function(){
-  return $.ul(
-    $.li('one','two',$.b('three'),'four',$.b('five')),
-    $.li({className: 'test'}),
+  return this.ul(
+    this.li('one','two',this.b('three'),'four',this.b('five')),
+    this.li({className: 'test'}),
     {className: 'blarg'}
   );
 });
 
 var DeepView = $.view(function(){
-  return $.div(
-    $.table(
-      $.tbody(
-        $.tr(
-          $.td(
-            $.ul(
-              $.li($.span($.b('test'))),
-              $.li()
+  return this.div(
+    this.table(
+      this.tbody(
+        this.tr(
+          this.td(
+            this.ul(
+              this.li(this.span(this.b('test'))),
+              this.li()
             )
           ),
-          $.td(
-            $.p($.span('test'))
+          this.td(
+            this.p(this.span('test'))
           )
         ),
-        $.tr(
-          $.td(
+        this.tr(
+          this.td(
             
           ),
-          $.td(
+          this.td(
             
           )
         )
@@ -38,9 +35,9 @@ var DeepView = $.view(function(){
 });
 
 var ViewWithJQuery = $.view(function(){
-  var element = $.ul(
-    $.li('a'),
-    $($.li('b'))
+  var element = this.ul(
+    this.li('a'),
+    $(this.li('b'))
   );
   return element;
 });
@@ -65,7 +62,7 @@ test("Node creation with deep nesting",function(){
 
 var trigger_count = 0;
 var ParentView = $.view(function(){
-  return $.span();
+  return this.span();
 });
 ParentView.className = 'ParentView.Class';
 ParentView.prototype.className = 'ParentView.Instnace';
@@ -101,7 +98,7 @@ test('attached event cascades to child class',function(){
 
 var ParentViewTwo = $.view(function(){
   this.set('a','1');
-  this.textNode = $.span();
+  this.textNode = this.span();
   this.setText(this.get('value'));
   this.trigger('parent_event','a');
   return this.textNode;

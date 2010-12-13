@@ -4,8 +4,6 @@
 * - make default builder loaction "this" in each View class
 * - scope the jQuery object returned from the tag generator to have all bind events
 *     be proxied to "this" View
-* - make this.live("ul li a") work
-* - make this.div().click() work
 * - try "MyView = $.view("create"
 * - make constructor automatically create a div
 * - "this" will always refer to a jQuery object scoped to that div, 
@@ -44,6 +42,9 @@
     var klass = function klass(attributes){
       this._observers = {};
       this.attributes = {};
+      for(var method_name in $.view.builder.methods){
+        this[method_name] = $.view.builder.methods[method_name];
+      }
       this.initialize.apply(this,arguments);
       if(klass._observers && 'attached' in klass._observers){
         $.view.triggerOrDelayAttachedEventOnInstance(this);
@@ -319,6 +320,7 @@
     
   $.view.builder = {
     cache: {},
+    methods: {},
     tags: ('a abbr acronym address applet area b base basefont bdo big blockquote body ' +
       'br button canvas caption center cite code col colgroup dd del dfn dir div dl dt em embed fieldset ' +
       'font form frame frameset h1 h2 h3 h4 h5 h6 head hr html i iframe img input ins isindex ' +
@@ -371,10 +373,14 @@
         return;
       }
     },
-    createNode: function createNode(tag_name,attributes){
-      attributes = attributes || {};
+    createElement: function createElement(tag_name){
+      var i, argument, attributes, attribute_name, elements, element;
+      elements = [];
+      attributes = {};
+      for(i = 1; i < arguments.length; ++i){
+        $.view.builder.processNodeArgument(elements,attributes,arguments[i]);
+      }
       tag_name = tag_name.toLowerCase();
-      var element;
       if(!!(document.attachEvent && !window.opera) && (attributes.name || (tag_name == 'input' && attributes.type))){
         //ie needs these attributes to be written in the string passed to createElement
         tag = '<' + tag_name;
@@ -395,36 +401,26 @@
         element = $.view.builder.cache[tag_name].cloneNode(false);
       }
       $(element).attr(attributes);
+      for(i = 0; i < elements.length; ++i){
+        if(elements[i] && elements[i].nodeType === 1){
+          element.appendChild(elements[i]);
+        }else{
+          element.appendChild(document.createTextNode(String(elements[i])));
+        }
+      }
       return element;
     },
-    exportTagMethods: function exportTagMethods(target){
-      for(var t = 0; t < $.view.builder.tags.length; ++t){
-        (function tag_iterator(tag){
-          if(!(tag in target)){
-            target[tag] = function node_generator(){
-              var i, ii, argument, attributes, attribute_name, elements, element;
-              elements = [];
-              attributes = {};
-              for(i = 0; i < arguments.length; ++i){
-                $.view.builder.processNodeArgument(elements,attributes,arguments[i]);
-              }
-              element = $.view.builder.createNode(tag,attributes);
-              for(i = 0; i < elements.length; ++i){
-                if(elements[i] && elements[i].nodeType === 1){
-                  element.appendChild(elements[i]);
-                }else{
-                  element.appendChild(document.createTextNode(String(elements[i])));
-                }
-              }
-              return element;
-            };
-          }
-        })($.view.builder.tags[t]);
-      }
+    generateBuilderMethod: function generateBuilderMethod(tag_name){
+      return function element_generator(){
+        var args = [tag_name];
+        for(var i = 0; i < arguments.length; ++i){
+          args.push(arguments[i]);
+        }
+        return $.view.builder.createElement.apply($.view.builder,args);
+      };
     }
   };
-
-  $.view.exportTags = $.view.builder.exportTagMethods;
-  
-  $.view.exportTags($.view);
+  for(var i = 0; i < $.view.builder.tags.length; ++i){
+    $.view.builder.methods[$.view.builder.tags[i]] = $.view.builder.generateBuilderMethod($.view.builder.tags[i]);
+  }
 })(jQuery);
