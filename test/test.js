@@ -109,25 +109,25 @@ var ChildView = $.view(ParentView,function(parent_element){
 
 ChildView.className = 'ChildView.Class';
 ChildView.prototype.className = 'ChildView.Instnace';
-test('attached event firing on class, instance and after attached',function(){
-  ParentView.bind('attached',function(){
+test('ready event firing on class, instance and after ready',function(){
+  ParentView.ready(function(){
     ++trigger_count;
   });
   var parent_instance = new ParentView();
-  parent_instance.bind('attached',function(){
+  parent_instance.ready(function(){
     ++trigger_count;
   });
   document.body.appendChild(parent_instance.getElement());
-  parent_instance.bind('attached',function(){
+  parent_instance.bind('ready',function(){
     ++trigger_count;
   });
   equal(trigger_count,3);
 });
-test('attached event cascades to child class',function(){
-  //observing "attached" immediately after inserting will syncrhonusly trigger other observers that had been delayed
+test('ready event cascades to child class',function(){
+  //observing "ready" immediately after inserting will syncrhonusly trigger other observers that had been delayed
   child_instance = new ChildView();
   document.body.appendChild(child_instance.getElement());
-  child_instance.bind('attached',function(){
+  child_instance.bind('ready',function(){
     ++trigger_count;
   });
   equal(trigger_count,5);

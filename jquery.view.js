@@ -49,15 +49,15 @@
     var klass = function klass(attributes){
       this.observers = {};
       this.attributes = {};
-      for(var method_name in $.view.builder.methods){
-        this[method_name] = $.view.builder.methods[method_name];
+      for(var i = 0; i < $.view.builder.tags.length; ++i){
+        this[$.view.builder.tags[i]] = $.view[$.view.builder.tags[i]];
       }
       //proxy all user specified methods
       for(var i = 0; i < this.constructor.methodsToProxy.length; ++i){
         this[this.constructor.methodsToProxy[i]] = $.proxy(this[this.constructor.methodsToProxy[i]],this);
       }
       this.initialize.apply(this,arguments);
-      if(klass.observers && 'attached' in klass.observers){
+      if(klass.observers && 'ready' in klass.observers){
         $.view.triggerOrDelayAttachedEventOnInstance(this);
       }
     };
@@ -178,26 +178,26 @@
   $.view.observeWrapperForAttachedEventOnInstance = function observeWrapperForAttachedEventOnInstance(proceed,event_name){
     var arguments_array = $.view.arrayFrom(arguments).slice(1);
     var response = proceed.apply(proceed,arguments_array);
-    if(event_name == 'attached'){
+    if(event_name == 'ready'){
       $.view.triggerOrDelayAttachedEventOnInstance(this);
     }
     return response;
   };
   
   $.view.triggerOrDelayAttachedEventOnInstance = function triggerOrDelayAttachedEventOnInstance(instance){
-    if(!instance._attachedEventFired && instance.element && $.view.nodeInDomTree(instance.element)){
-      instance.trigger('attached');
-      instance._attachedEventFired = true;
-      if(instance._attachedEventInterval){
-        clearInterval(instance._attachedEventInterval);
+    if(!instance._readyEventFired && instance.element && $.view.nodeInDomTree(instance.element)){
+      instance.trigger('ready');
+      instance._readyEventFired = true;
+      if(instance._readyEventInterval){
+        clearInterval(instance._readyEventInterval);
       }
-    }else if(!('_attachedEventInterval' in instance)){
-      instance._attachedEventInterval = setInterval(function(){
+    }else if(!('_readyEventInterval' in instance)){
+      instance._readyEventInterval = setInterval(function(){
         if(instance.element && $.view.nodeInDomTree(instance.element)){
-          instance.trigger('attached');
-          instance._attachedEventFired = true;
-          clearInterval(instance._attachedEventInterval);
-          instance._attachedEventInterval = false;
+          instance.trigger('ready');
+          instance._readyEventFired = true;
+          clearInterval(instance._readyEventInterval);
+          instance._readyEventInterval = false;
         }
       },10);
     }
@@ -267,6 +267,11 @@
         }
       }
       return collected_return_values;
+    },
+    ready: function ready(){
+      var args = $.view.arrayFrom(arguments);
+      args.unshift('ready');
+      return this.bind.apply(this,args);
     }
   };
   
@@ -291,6 +296,7 @@
     bind: $.view.classMethods.bind,
     bindOnce: $.view.classMethods.bindOnce,
     unbind: $.view.classMethods.unbind,
+    ready: $.view.classMethods.ready,
     trigger: function trigger(event_name){
       if(
         (!this.constructor.observers || !this.constructor.observers[event_name] ||
@@ -447,6 +453,6 @@
   
   //generate tag methods
   for(var i = 0; i < $.view.builder.tags.length; ++i){
-    $.view.builder.methods[$.view.builder.tags[i]] = $.view.builder.generateBuilderMethod($.view.builder.tags[i]);
+    $.view[$.view.builder.tags[i]] = $.view.builder.generateBuilderMethod($.view.builder.tags[i]);
   }
 })(jQuery);
