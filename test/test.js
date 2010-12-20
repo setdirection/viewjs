@@ -247,3 +247,96 @@ test('Events triggered and cascade properly between parent and child',function()
   equal(trigger_count,9);
   equal(notify_arg_from_parent_class,'a');
 });
+
+//routes tests
+ViewWithRoutes = $.view(function(){
+  return this.div();
+},{
+  article: function(params){
+    this.lastParams = params;
+  },
+  articleComment: function(params){
+    this.lastParams = params;
+  },
+  home: function(){
+
+  },
+  wiki: function(){},
+  multipleParams: function(){},
+  test: function(){},
+  optionalOne: function(){},
+  optionalTwo: function(){},
+  optionalThree: function(){}
+});
+ViewWithRoutes.classMethodTest = function(params){
+  ViewWithRoutes.lastClassParams = params;
+};
+$.view.routes({
+  '/': 'ViewWithRoutes#home',
+  '/article/:id': 'ViewWithRoutes#article',
+  '/article/:id/:comment_id': 'ViewWithRoutes#articleComment',
+  '/wiki/*': 'ViewWithRoutes#wiki',
+  '/one/two/:three/:four/:five/:six': ViewWithRoutes.getInstance().multipleParams,
+  '/one/:a/(:b)': 'ViewWithRoutes#optionalOne',
+  '/one/:a/(:b)/(:c)': 'ViewWithRoutes#optionalTwo',
+  '/one/:a/(:b)/(:c)/(:d)/(:e)': 'ViewWithRoutes#optionalThree',
+  '/:ViewWithRoutes/:method/:id': 'ViewWithRoutes#test'
+});
+
+test('Url generation',function(){
+  equal($.view.routes("url",'ViewWithRoutes#home'),'/');
+  equal($.view.routes("url",'ViewWithRoutes#article',{id:'5'}),'/article/5');
+  equal($.view.routes("url",'ViewWithRoutes#wiki','/one/two/three'),'/wiki/one/two/three');
+  equal($.view.routes("url",'ViewWithRoutes#test',{
+    ViewWithRoutes: 'contacts',
+    method: 'create',
+    id: 5
+  }),'/contacts/create/5');
+});
+
+test('Routes matching',function(){
+  equal($.view.routes.match('/')[0],ViewWithRoutes.getInstance().home);
+  equal($.view.routes.match('/article/5')[0],ViewWithRoutes.getInstance().article);
+  equal($.view.routes.match('/article/5')[1].id,"5");
+  equal($.view.routes.match('/one/two/3/4/5/6')[0],ViewWithRoutes.getInstance().multipleParams);
+  equal($.view.routes.match('/one/two/3/4/5/6')[1].three,"3");
+  equal($.view.routes.match('/one/two/3/4/5/6')[1].four,"4");
+  equal($.view.routes.match('/one/two/3/4/5/6')[1].five,"5");
+  equal($.view.routes.match('/one/two/3/4/5/6')[1].six,"6");
+
+  equal($.view.routes.match('/one/a/b')[0],ViewWithRoutes.getInstance().optionalOne);
+  equal($.view.routes.match('/one/a/b')[1].a,'a');
+  equal($.view.routes.match('/one/a/b')[1].b,'b');
+  
+  equal($.view.routes.match('/one/a/b/c')[0],ViewWithRoutes.getInstance().optionalTwo);
+  equal($.view.routes.match('/one/a/b/c')[1].a,'a');
+  equal($.view.routes.match('/one/a/b/c')[1].b,'b');
+  equal($.view.routes.match('/one/a/b/c')[1].c,'c');
+  
+  equal($.view.routes.match('/one/a/b/c/d/e')[0],ViewWithRoutes.getInstance().optionalThree);
+  equal($.view.routes.match('/one/a/b/c/d/e')[1].a,'a');
+  equal($.view.routes.match('/one/a/b/c/d/e')[1].b,'b');
+  equal($.view.routes.match('/one/a/b/c/d/e')[1].c,'c');
+  equal($.view.routes.match('/one/a/b/c/d/e')[1].d,'d');
+  equal($.view.routes.match('/one/a/b/c/d/e')[1].e,'e');
+  equal($.view.routes.match('/one/a/b/c/d')[0],ViewWithRoutes.getInstance().optionalThree);
+  equal($.view.routes.match('/one/a/b/c/d')[1].a,'a');
+  equal($.view.routes.match('/one/a/b/c/d')[1].b,'b');
+  equal($.view.routes.match('/one/a/b/c/d')[1].c,'c');
+  equal($.view.routes.match('/one/a/b/c/d')[1].d,'d');
+});
+
+asyncTest('Method calling',function(){
+  setTimeout(function(){
+    start();
+    ViewWithRoutes.getInstance().home();
+    ViewWithRoutes.getInstance().article({
+      id: 5
+    });
+    equal($.view.routes('get'),$.view.routes.url('ViewWithRoutes#article',{id:'5'}));
+    equal(ViewWithRoutes.getInstance().lastParams.id,5);
+  },50);
+});
+
+//test optional parameter url generation
+//test method call setting correct route
