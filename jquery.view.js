@@ -571,8 +571,6 @@
         throw 'The method "' + method_name + '" does not exist for the route "' + path + '"';
       }
       object[method_name] = function routing_wrapper(params){
-        console.log('routing wrapper');
-        console.log('setRoute',$.view.routes.generateUrl(path,params));
         $.view.routes.setRoute($.view.routes.generateUrl(path,params));
         original_method.apply(object,arguments);
       };
@@ -660,7 +658,6 @@
     start: function start(){
       if(!$.view.routes.startObserver && !$.view.routes.ready){
         $.view.routes.startObserver = $(document).ready(function document_ready_observer(){
-          console.log('initialized');
           $.view.routes.historyManager.initialize();
           $.view.routes.ready = true;
           $.view.routes.enabled = true;
