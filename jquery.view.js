@@ -55,8 +55,57 @@
 * 
 * Routing
 * -------
-* By default nothing happens if you
-* Second parameter to routes() is boolean "lazy"
+* 
+* $.view.routes(Object routes [,Boolean lazy_loading = false]) -> null
+* ----------------------------
+* 
+*     $.view.routes({
+*       "/": "ArticlesView#home",
+*       "/article/:id": "ArticlesView#article",
+*       "/about/(:page_name)": "PageController#page",
+*       "/wiki/*": "WikiController#page",
+*       "/class_method": "Object.method",
+*       "/callback": function(){}
+*     });
+* 
+* $.view.routes("url",String callback) -> String
+* ---------------------------------
+* Generates a url for a route.
+* 
+*     var url = $.view.routes("url","ArticlesView#article",{id:5});
+*     url == "/article/5"
+* 
+* $.view.routes("get") -> String
+* --------------------
+* Returns the current address / path.
+* 
+* $.view.routes("set") -> null
+* --------------------
+* Sets the current address / path, calling the matched route if a match is found.
+* 
+*     $.view.routes("set","/article/5");
+* 
+* $.view.routes("match",String path) -> Array [Function callback, Object params, Number index_of_route]
+* ----------------------------------
+*     var match = $.view.routes("match","/article/5");
+*     match[0](match[1]);
+* 
+* $.view.routes("setup",String callback) -> null
+* --------------------------------------
+* If lazy loading is enabled each callback will need to be setup to enable two way routing.
+* 
+*     $.view.routes("setup","ArticlesView#article");
+*     ArticlesView.getInstance().article({id:5});
+*     $.view.routes("get") == "/article/5"
+* 
+* $.view.routes("stop") -> null
+* ---------------------
+* Stops the routing plugin from handling changes in the page address.
+* 
+* $.view.routes("start") -> null
+* ----------------------
+* Called implicitly when you specify your routes. Only necessary if **stop** has been called.
+* 
 */
 
 (function($,context){
@@ -487,7 +536,8 @@
         'match',
         'set',
         'get',
-        'url'
+        'url',
+        'setup'
       ])){
         return $.view.routes[method_name].apply($.view.routes,$.view.arrayFrom(arguments).slice(1));
       }else{
@@ -497,7 +547,7 @@
       $.view.routes.setRoutes(routes);
       if(!lazy_loading){
         for(var i = 0; i < $.view.routes.routes.length; ++i){
-          $.view.routes.setupCallback($.view.routes.routes[i][1],i);
+          $.view.routes.setup($.view.routes.routes[i][1],i);
         }
       }
     }
@@ -507,7 +557,7 @@
       initialize: function(){
         $.address.bind('externalChange',$.view.routes.externalChangeHandler);
       },
-      onChange: function(path){
+      setAddress: function(path){
         $.address.value(path);
       }
     },
@@ -551,7 +601,16 @@
       }
       return [new RegExp('^' + reg_exp_pattern + '$'),params];
     },
-    setupCallback: function setupCallback(callback,index_of_route){
+    setup: function setup(callback,index_of_route){
+      if(typeof(callback) == 'string' && typeof(index_of_route) == 'undefined'){
+        for(var i = 0; i < $.view.routes.routes.length; ++i){
+          if($.view.routes.routes[i][1] == callback){
+            index_of_route = i;
+            break; 
+          }
+        }
+        throw 'Method ' + callback + ' not found in specified routes.';
+      }
       //context var comes from outer plugin wrapper and usually refers to window
       if(typeof(callback) == 'function'){
         return callback;
@@ -571,7 +630,7 @@
         throw 'The method "' + method_name + '" does not exist for the route "' + path + '"';
       }
       object[method_name] = function routing_wrapper(params){
-        $.view.routes.setRoute($.view.routes.generateUrl(path,params));
+        $.view.routes.setAddress($.view.routes.generateUrl(path,params));
         original_method.apply(object,arguments);
       };
       object[method_name].callOriginal = function original_method_callback(){
@@ -589,9 +648,9 @@
         should_dispatch = true;
       }
       if($.view.routes.enabled && should_dispatch && match){
-        match[0] = $.view.routes.setupCallback(match[0],match[2]);
+        match[0] = $.view.routes.setup(match[0],match[2]);
         if(!('callOriginal' in match[0])){
-          $.view.routes.setRoute(path);
+          $.view.routes.setAddress(path);
         }
         this.history.push([path,match[0],match[1]]);
         $.view.routes.dispatcher(match[0],match[1],path);
@@ -603,7 +662,7 @@
     match: function match(path){
       for(var i = 0; i < $.view.routes.routes.length; ++i){
         if($.view.routes.routes[i][0] == path){
-          return [$.view.routes.setupCallback($.view.routes.routes[i][1],i),{},i];
+          return [$.view.routes.setup($.view.routes.routes[i][1],i),{},i];
         }
       }
       for(var i = 0; i < $.view.routes.routePatterns.length; ++i){
@@ -613,7 +672,7 @@
           for(var ii = 0; ii < $.view.routes.routePatterns[i][1].length; ++ii){
             params[$.view.routes.routePatterns[i][1][ii]] = matches[((ii + 1) * 3) - 1];
           }
-          return [$.view.routes.setupCallback($.view.routes.routes[i][1],i),params,i];
+          return [$.view.routes.setup($.view.routes.routes[i][1],i),params,i];
         }
       }
       return false;
@@ -633,10 +692,10 @@
       }
       return url;
     },
-    setRoute: function setRoute(path){
+    setAddress: function setAddress(path){
       if($.view.routes.enabled){
         if($.view.routes.currentRoute != path){
-          $.view.routes.historyManager.onChange(path);
+          $.view.routes.historyManager.setAddress(path);
           $.view.routes.currentRoute = path;
         }
       }
