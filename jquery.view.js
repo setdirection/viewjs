@@ -33,16 +33,16 @@
 * 
 * Hypothetical routes API:
 * 
-* $.view.routes({
+* $.routes({
 *   '/': function(){
 * 	},
 * 	'/test': [MyView,'method']
 * });
-* $.view.routes.change(function(path,target){
+* $.routes.change(function(path,target){
 * 
 * });
-* $.view.routes.set('');
-* MyView.method() //also calls $.view.routes.set('/test');
+* $.routes.set('');
+* MyView.method() //also calls $.routes.set('/test');
 *
 * Attributes
 * ----------
@@ -53,13 +53,29 @@
 *   key: 'value'
 * });
 * 
-* Routing
-* -------
+* Builder
+* =======
 * 
-* $.view.routes(Object routes [,Boolean lazy_loading = false]) -> null
+* $.builder.tag(*args)
+* --------------------------
+* **tag** can be any HTML or HTML5 element name.
+* 
+* $.builder("static")
+* -------------------
+* By default builder will export all tag methods (**br**,**h3**, etc) to **$.view.fn**
+* which in turn makes them available inside your views as **this.br()**, **this.h3()**.
+* Calling static will disable this. Tag methods are always availble in the **$.builder**
+* object wether or not static has been called.
+* 
+*     $.builder.h3("My Title")
+* 
+* Routing
+* =======
+* 
+* $.routes(Object routes [,Boolean lazy_loading = false]) -> null
 * ----------------------------
 * 
-*     $.view.routes({
+*     $.routes({
 *       "/": "ArticlesView#home",
 *       "/article/:id": "ArticlesView#article",
 *       "/about/(:page_name)": "PageController#page",
@@ -68,41 +84,41 @@
 *       "/callback": function(){}
 *     });
 * 
-* $.view.routes("url",String callback) -> String
+* $.routes("url",String callback) -> String
 * ---------------------------------
 * Generates a url for a route.
 * 
-*     var url = $.view.routes("url","ArticlesView#article",{id:5});
+*     var url = $.routes("url","ArticlesView#article",{id:5});
 *     url == "/article/5"
 * 
-* $.view.routes("get") -> String
+* $.routes("get") -> String
 * --------------------
 * Returns the current address / path.
 * 
-* $.view.routes("set") -> null
+* $.routes("set") -> null
 * --------------------
 * Sets the current address / path, calling the matched route if a match is found.
 * 
-*     $.view.routes("set","/article/5");
+*     $.routes("set","/article/5");
 * 
-* $.view.routes("match",String path) -> Array [Function callback, Object params, Number index_of_route]
+* $.routes("match",String path) -> Array [Function callback, Object params, Number index_of_route]
 * ----------------------------------
-*     var match = $.view.routes("match","/article/5");
+*     var match = $.routes("match","/article/5");
 *     match[0](match[1]);
 * 
-* $.view.routes("setup",String callback) -> null
+* $.routes("setup",String callback) -> null
 * --------------------------------------
 * If lazy loading is enabled each callback will need to be setup to enable two way routing.
 * 
-*     $.view.routes("setup","ArticlesView#article");
+*     $.routes("setup","ArticlesView#article");
 *     ArticlesView.getInstance().article({id:5});
-*     $.view.routes("get") == "/article/5"
+*     $.routes("get") == "/article/5"
 * 
-* $.view.routes("stop") -> null
+* $.routes("stop") -> null
 * ---------------------
 * Stops the routing plugin from handling changes in the page address.
 * 
-* $.view.routes("start") -> null
+* $.routes("start") -> null
 * ----------------------
 * Called implicitly when you specify your routes. Only necessary if **stop** has been called.
 * 
@@ -415,7 +431,10 @@
     }
   };
     
-  $.view.builder = {
+  $.builder = function(){
+    $.builder.tags
+  };
+  $.extend($.builder,{
     cache: {},
     methods: {},
     tags: ('a abbr acronym address applet area b base basefont bdo big blockquote body ' +
@@ -461,7 +480,7 @@
       }
       if($.isArray(argument)){
         for(ii = 0; ii < argument.length; ++ii){
-          $.view.builder.processNodeArgument(elements,attributes,argument[ii]);
+          $.builder.processNodeArgument(elements,attributes,argument[ii]);
         }
         return;
       }
@@ -475,7 +494,7 @@
       elements = [];
       attributes = {};
       for(i = 1; i < arguments.length; ++i){
-        $.view.builder.processNodeArgument(elements,attributes,arguments[i]);
+        $.builder.processNodeArgument(elements,attributes,arguments[i]);
       }
       tag_name = tag_name.toLowerCase();
       if(!!(document.attachEvent && !window.opera) && (attributes.name || (tag_name == 'input' && attributes.type))){
@@ -492,10 +511,10 @@
         delete attributes.type;
         element = document.createElement(tag);
       }else{
-        if(!$.view.builder.cache[tag_name]){
-          $.view.builder.cache[tag_name] = document.createElement(tag_name);
+        if(!$.builder.cache[tag_name]){
+          $.builder.cache[tag_name] = document.createElement(tag_name);
         }
-        element = $.view.builder.cache[tag_name].cloneNode(false);
+        element = $.builder.cache[tag_name].cloneNode(false);
       }
       $(element).attr(attributes);
       for(i = 0; i < elements.length; ++i){
@@ -513,18 +532,23 @@
         for(var i = 0; i < arguments.length; ++i){
           args.push(arguments[i]);
         }
-        return $.view.builder.createElement.apply($.view.builder,args);
+        return $.builder.createElement.apply($.builder,args);
       };
+    },
+    'static': function makeBuilderStatic(){
+      for(var i = 0; i < $.builder.tags.length; ++i){
+        delete $.view.fn[$.builder.tags[i]];
+      }
     }
-  };
+  });
   
   //generate tag methods
-  for(var i = 0; i < $.view.builder.tags.length; ++i){
-    $.view[$.view.builder.tags[i]] = $.view.fn[$.view.builder.tags[i]] = $.view.builder.generateBuilderMethod($.view.builder.tags[i]);
+  for(var i = 0; i < $.builder.tags.length; ++i){
+    $.view[$.builder.tags[i]] = $.view.fn[$.builder.tags[i]] = $.builder.generateBuilderMethod($.builder.tags[i]);
   }
   
   //routing
-  $.view.routes = function(routes,lazy_loading){
+  $.routes = function(routes,lazy_loading){
     if(typeof($.address) == 'undefined'){
       throw 'jQuery Address (http://www.asual.com/jquery/address/) is required to run jQuery View Routes';
     }
@@ -539,23 +563,23 @@
         'url',
         'setup'
       ])){
-        return $.view.routes[method_name].apply($.view.routes,$.view.arrayFrom(arguments).slice(1));
+        return $.routes[method_name].apply($.routes,$.view.arrayFrom(arguments).slice(1));
       }else{
         throw method_name + ' is not a supported method.';
       }
     }else{
-      $.view.routes.setRoutes(routes);
+      $.routes.setRoutes(routes);
       if(!lazy_loading){
-        for(var i = 0; i < $.view.routes.routes.length; ++i){
-          $.view.routes.setup($.view.routes.routes[i][1],i);
+        for(var i = 0; i < $.routes.routes.length; ++i){
+          $.routes.setup($.routes.routes[i][1],i);
         }
       }
     }
   };
-  $.extend($.view.routes,{
+  $.extend($.routes,{
     historyManager: {
       initialize: function(){
-        $.address.bind('externalChange',$.view.routes.externalChangeHandler);
+        $.address.bind('externalChange',$.routes.externalChangeHandler);
       },
       setAddress: function(path){
         $.address.value(path);
@@ -567,22 +591,21 @@
     routePatterns: [], //array of [regexp,param_name_array]
     currentRoute: false,
     history: [],
-    paramPattern: '([\\w]+)(/|$)',
     enabled: false,
     setRoutes: function setRoutes(routes){
       for(var path in routes){
         var route_is_array = routes[path] && typeof(routes[path]) == 'object' && 'length' in routes[path] && 'splice' in routes[path] && 'join' in routes[path];
         if(route_is_array){
-          $.view.routes.addRoute(path,routes[path][0],routes[path][1]);
+          $.routes.addRoute(path,routes[path][0],routes[path][1]);
         }else{
-          $.view.routes.addRoute(path,routes[path]);
+          $.routes.addRoute(path,routes[path]);
         }
       }
-      $.view.routes.start();
+      $.routes.start();
     },
     addRoute: function addRoute(path,callback){
-      $.view.routes.routes.push([path,callback]);
-      $.view.routes.routePatterns.push($.view.routes.routeMatcherFromPath(path));
+      $.routes.routes.push([path,callback]);
+      $.routes.routePatterns.push($.routes.routeMatcherFromPath(path));
     },
     routeMatcherFromPath: function routeMatcherFromPath(path){
       var params = [];
@@ -592,7 +615,7 @@
       });
       reg_exp_pattern = reg_exp_pattern.replace(/\:([\w]+)(\/?)/g,function(){
         params.push(arguments[1]);
-        return '(' + $.view.routes.paramPattern + ')';
+        return '(([\\w]+)(/|$))';
       });
       reg_exp_pattern = reg_exp_pattern.replace(/\)\?\/\(/g,')?('); //cleanup for optional params 
       if(reg_exp_pattern.match(/\*/)){
@@ -603,8 +626,8 @@
     },
     setup: function setup(callback,index_of_route){
       if(typeof(callback) == 'string' && typeof(index_of_route) == 'undefined'){
-        for(var i = 0; i < $.view.routes.routes.length; ++i){
-          if($.view.routes.routes[i][1] == callback){
+        for(var i = 0; i < $.routes.routes.length; ++i){
+          if($.routes.routes[i][1] == callback){
             index_of_route = i;
             break; 
           }
@@ -615,7 +638,7 @@
       if(typeof(callback) == 'function'){
         return callback;
       }
-      var path = $.view.routes.routes[index_of_route][0];
+      var path = $.routes.routes[index_of_route][0];
       var callback_bits = callback.split(/(\.|\#)/);
       var object = context[callback_bits[0]];
       if(callback.match(/[\w]+\#[\w]+/)){
@@ -630,7 +653,7 @@
         throw 'The method "' + method_name + '" does not exist for the route "' + path + '"';
       }
       object[method_name] = function routing_wrapper(params){
-        $.view.routes.setAddress($.view.routes.generateUrl(path,params));
+        $.routes.setAddress($.routes.generateUrl(path,params));
         original_method.apply(object,arguments);
       };
       object[method_name].callOriginal = function original_method_callback(){
@@ -642,61 +665,64 @@
       method(params);
     },
     set: function set(path,force){
-      var match = $.view.routes.match(path);
-      var should_dispatch = path != $.view.routes.currentRoute;
+      var match = $.routes.match(path);
+      var should_dispatch = path != $.routes.currentRoute;
       if(!should_dispatch && force == true){
         should_dispatch = true;
       }
-      if($.view.routes.enabled && should_dispatch && match){
-        match[0] = $.view.routes.setup(match[0],match[2]);
+      if($.routes.enabled && should_dispatch && match){
+        match[0] = $.routes.setup(match[0],match[2]);
         if(!('callOriginal' in match[0])){
-          $.view.routes.setAddress(path);
+          $.routes.setAddress(path);
         }
         this.history.push([path,match[0],match[1]]);
-        $.view.routes.dispatcher(match[0],match[1],path);
+        $.routes.dispatcher(match[0],match[1],path);
         return true;
       }else{
         return false;
       }
     },
     match: function match(path){
-      for(var i = 0; i < $.view.routes.routes.length; ++i){
-        if($.view.routes.routes[i][0] == path){
-          return [$.view.routes.setup($.view.routes.routes[i][1],i),{},i];
+      for(var i = 0; i < $.routes.routes.length; ++i){
+        if($.routes.routes[i][0] == path){
+          return [$.routes.setup($.routes.routes[i][1],i),{},i];
         }
       }
-      for(var i = 0; i < $.view.routes.routePatterns.length; ++i){
-        var matches = $.view.routes.routePatterns[i][0].exec(path);
+      for(var i = 0; i < $.routes.routePatterns.length; ++i){
+        var matches = $.routes.routePatterns[i][0].exec(path);
         if(matches){
           var params = {};
-          for(var ii = 0; ii < $.view.routes.routePatterns[i][1].length; ++ii){
-            params[$.view.routes.routePatterns[i][1][ii]] = matches[((ii + 1) * 3) - 1];
+          for(var ii = 0; ii < $.routes.routePatterns[i][1].length; ++ii){
+            params[$.routes.routePatterns[i][1][ii]] = matches[((ii + 1) * 3) - 1];
           }
-          return [$.view.routes.setup($.view.routes.routes[i][1],i),params,i];
+          return [$.routes.setup($.routes.routes[i][1],i),params,i];
         }
       }
       return false;
     },
     generateUrl: function generateUrl(url,params){
-      url = url.replace(/(\(|\))/g,'');
       params = params || {};
       if(typeof(params) == 'string' && url.match(/\*/)){
         url = url.replace(/\*/,params).replace(/\/\//g,'/');
       }else{
-        var param_matcher = new RegExp('\\:' + $.view.routes.paramPattern,'g');
+        var param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?(/|$)','g');
         for(var param_name in params){
           url = url.replace(param_matcher,function(){
-            return arguments[1] == param_name ? params[param_name] + arguments[2] : ':' + arguments[1] + arguments[2];
+            return arguments[2] == param_name
+              ? params[param_name] + arguments[4]
+              : (arguments[1] || '') + ':' + arguments[2] + (arguments[3] || '') + arguments[4]
+            ;
           });
         }
       }
+      url = url.replace(/\([^\)]+\)/g,'');
       return url;
     },
     setAddress: function setAddress(path){
-      if($.view.routes.enabled){
-        if($.view.routes.currentRoute != path){
-          $.view.routes.historyManager.setAddress(path);
-          $.view.routes.currentRoute = path;
+      if($.routes.enabled){
+        if($.routes.currentRoute != path){
+          $.routes.historyManager.setAddress(path);
+          $.routes.currentRoute = path;
         }
       }
     },
@@ -705,44 +731,44 @@
       return path_bits[1] && (path_bits[1].match(/^\//) || path_bits[1] == '') ? path_bits[1] : '';
     },
     externalChangeHandler: function externalChangeHandler(){
-      if($.view.routes.enabled){
-        var current_path = $.view.routes.get();
-        if($.view.routes.ready){
-          if(current_path != $.view.routes.currentRoute){
-            $.view.routes.set(current_path);
+      if($.routes.enabled){
+        var current_path = $.routes.get();
+        if($.routes.ready){
+          if(current_path != $.routes.currentRoute){
+            $.routes.set(current_path);
           }
         }
       }
     },
     start: function start(){
-      if(!$.view.routes.startObserver && !$.view.routes.ready){
-        $.view.routes.startObserver = $(document).ready(function document_ready_observer(){
-          $.view.routes.historyManager.initialize();
-          $.view.routes.ready = true;
-          $.view.routes.enabled = true;
+      if(!$.routes.startObserver && !$.routes.ready){
+        $.routes.startObserver = $(document).ready(function document_ready_observer(){
+          $.routes.historyManager.initialize();
+          $.routes.ready = true;
+          $.routes.enabled = true;
           setTimeout(function initial_route_dispatcher(){
-            if(!$.view.routes.set($.view.routes.get(),true)){
-              $.view.routes.set('/');
+            if(!$.routes.set($.routes.get(),true)){
+              $.routes.set('/');
             }
           });
         });
       }else{
-        $.view.routes.ready = true;
-        $.view.routes.enabled = true;
+        $.routes.ready = true;
+        $.routes.enabled = true;
       }
     },
     stop: function stop(){
-      $.view.routes.enabled = false;
+      $.routes.enabled = false;
     },
     url: function url(class_and_method,params){
-      for(var i = 0; i < $.view.routes.routes.length; ++i){
-        if($.view.routes.routes[i][1] == class_and_method){
-          return $.view.routes.generateUrl($.view.routes.routes[i][0],params);
+      for(var i = 0; i < $.routes.routes.length; ++i){
+        if($.routes.routes[i][1] == class_and_method){
+          return $.routes.generateUrl($.routes.routes[i][0],params);
         }
       }
       return false;
     }
   });
-  $.view.fn.url = $.view.routes.url;
+  $.view.fn.url = $.routes.url;
   
 })(jQuery,this);
