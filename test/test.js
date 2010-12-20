@@ -354,5 +354,3 @@ asyncTest('Method calling and dispatch modifies address',function(){
     equal($.routes('get'),'/class_method/6');
   },50);
 });
-
-//test optional parameter url generation
