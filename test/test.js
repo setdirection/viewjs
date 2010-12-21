@@ -296,35 +296,35 @@ test('Url generation',function(){
 });
 
 test('Routes matching',function(){
-  equal($.routes.match('/')[0],ViewWithRoutes.instance().home);
-  equal($.routes.match('/article/5')[0],ViewWithRoutes.instance().article);
-  equal($.routes.match('/article/5')[1].id,"5");
-  equal($.routes.match('/one/two/3/4/5/6')[0],ViewWithRoutes.instance().multipleParams);
-  equal($.routes.match('/one/two/3/4/5/6')[1].three,"3");
-  equal($.routes.match('/one/two/3/4/5/6')[1].four,"4");
-  equal($.routes.match('/one/two/3/4/5/6')[1].five,"5");
-  equal($.routes.match('/one/two/3/4/5/6')[1].six,"6");
+  equal($.routes('match','/')[0],ViewWithRoutes.instance().home);
+  equal($.routes('match','/article/5')[0],ViewWithRoutes.instance().article);
+  equal($.routes('match','/article/5')[1].id,"5");
+  equal($.routes('match','/one/two/3/4/5/6')[0],ViewWithRoutes.instance().multipleParams);
+  equal($.routes('match','/one/two/3/4/5/6')[1].three,"3");
+  equal($.routes('match','/one/two/3/4/5/6')[1].four,"4");
+  equal($.routes('match','/one/two/3/4/5/6')[1].five,"5");
+  equal($.routes('match','/one/two/3/4/5/6')[1].six,"6");
 
-  equal($.routes.match('/one/a/b')[0],ViewWithRoutes.instance().optionalOne);
-  equal($.routes.match('/one/a/b')[1].a,'a');
-  equal($.routes.match('/one/a/b')[1].b,'b');
-  
-  equal($.routes.match('/one/a/b/c')[0],ViewWithRoutes.instance().optionalTwo);
-  equal($.routes.match('/one/a/b/c')[1].a,'a');
-  equal($.routes.match('/one/a/b/c')[1].b,'b');
-  equal($.routes.match('/one/a/b/c')[1].c,'c');
-  
-  equal($.routes.match('/one/a/b/c/d/e')[0],ViewWithRoutes.instance().optionalThree);
-  equal($.routes.match('/one/a/b/c/d/e')[1].a,'a');
-  equal($.routes.match('/one/a/b/c/d/e')[1].b,'b');
-  equal($.routes.match('/one/a/b/c/d/e')[1].c,'c');
-  equal($.routes.match('/one/a/b/c/d/e')[1].d,'d');
-  equal($.routes.match('/one/a/b/c/d/e')[1].e,'e');
-  equal($.routes.match('/one/a/b/c/d')[0],ViewWithRoutes.instance().optionalThree);
-  equal($.routes.match('/one/a/b/c/d')[1].a,'a');
-  equal($.routes.match('/one/a/b/c/d')[1].b,'b');
-  equal($.routes.match('/one/a/b/c/d')[1].c,'c');
-  equal($.routes.match('/one/a/b/c/d')[1].d,'d');
+  equal($.routes('match','/one/a/b')[0],ViewWithRoutes.instance().optionalOne);
+  equal($.routes('match','/one/a/b')[1].a,'a');
+  equal($.routes('match','/one/a/b')[1].b,'b');
+
+  equal($.routes('match','/one/a/b/c')[0],ViewWithRoutes.instance().optionalTwo);
+  equal($.routes('match','/one/a/b/c')[1].a,'a');
+  equal($.routes('match','/one/a/b/c')[1].b,'b');
+  equal($.routes('match','/one/a/b/c')[1].c,'c');
+
+  equal($.routes('match','/one/a/b/c/d/e')[0],ViewWithRoutes.instance().optionalThree);
+  equal($.routes('match','/one/a/b/c/d/e')[1].a,'a');
+  equal($.routes('match','/one/a/b/c/d/e')[1].b,'b');
+  equal($.routes('match','/one/a/b/c/d/e')[1].c,'c');
+  equal($.routes('match','/one/a/b/c/d/e')[1].d,'d');
+  equal($.routes('match','/one/a/b/c/d/e')[1].e,'e');
+  equal($.routes('match','/one/a/b/c/d')[0],ViewWithRoutes.instance().optionalThree);
+  equal($.routes('match','/one/a/b/c/d')[1].a,'a');
+  equal($.routes('match','/one/a/b/c/d')[1].b,'b');
+  equal($.routes('match','/one/a/b/c/d')[1].c,'c');
+  equal($.routes('match','/one/a/b/c/d')[1].d,'d');
 });
 
 test('Optional parameter url generation',function(){
@@ -347,7 +347,7 @@ asyncTest('Method calling and dispatch modifies address',function(){
     ViewWithRoutes.instance().article({
       id: 5
     });
-    equal($.routes('get'),$.routes.url('ViewWithRoutes#article',{id:'5'}));
+    equal($.routes('get'),$.routes('url','ViewWithRoutes#article',{id:'5'}));
     equal(ViewWithRoutes.instance().lastParams.id,5);
     $.routes('set','/class_method/6');
     equal(ViewWithRoutes.lastClassParams.id,6);

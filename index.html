@@ -5,7 +5,48 @@
           <link rel="stylesheet" media="screen" href="screen.css"/>
         </head>
         <body>
-          <h1 id='routes'>Routes</h1>
+          <h2 id='viewclassmethods__object'>$.view.classMethods -&gt; Object</h2>
+
+<p>Methods that will become available to all $.view classes.</p>
+
+<pre><code>$.view.classMethods.myClassMethod = function(){};
+MyClass = $.view(function(){});
+MyClass.myClassMethod();</code></pre>
+
+<h2 id='viewfn__object'>$.view.fn -&gt; Object</h2>
+
+<p>Methods that will be available to all instances of all $.view classes.</p>
+
+<pre><code>$.view.fn.myMethod = function(){
+  return this.get(&#39;key&#39;);
+};
+MyClass = $.view(function(){});
+var instance = new MyClass({
+  key: &#39;value&#39;
+});
+instance.myMethod(); //returns &quot;value&quot;</code></pre>
+
+<h2 id='instanceelement__elementinstanceelementelement_element__element'>instance.element() -&gt; Element<br />instance.element(Element element) -&gt; Element</h2>
+
+<p>Set or get the outermost element in the view. The element should only be set from within the view constructor.</p>
+
+<pre><code>var instance = new MyView(function(){
+  return this.div();
+});
+instance.element().tagName == &#39;div&#39;</code></pre>
+
+<h2 id='builderexportobject_target__null'>$.builder(&#8220;export&#8221;,Object target) -&gt; null</h2>
+
+<p>Copies all tag methods to the target object. By default tag methods are exported to <strong>$.builder</strong> and <strong>$.view.fn</strong></p>
+
+<pre><code>$.builder(&quot;export&quot;,MyObject);
+MyObject.div({id:&#39;test&#39;});</code></pre>
+
+<h2 id='builderremoveobject_target__null'>$.builder(&#8220;remove&#8221;,Object target) -&gt; null</h2>
+
+<p>Removes all tag methods from the target object that were copied from a call to <strong>$.builder(&#8220;export&#8221;,target)</strong></p>
+
+<h1 id='routes'>Routes</h1>
 
 <p>Maps urls to method calls and method calls to urls. This enables back button support, deep linking and allows methods to be called by normal links (A tags) in your application without adding event handlers or additional code to each link.</p>
 
@@ -13,6 +54,7 @@
   &quot;/&quot;: &quot;PageView#home&quot;,
   &quot;/article/:id&quot;: &quot;ArticlesView#article&quot;
 });
+
 //PageView.instance().home() automatically called 
 
 $.routes(&quot;set&quot;,&quot;/article/5&quot;);
@@ -58,7 +100,7 @@ ArticlesView.instance().article({id:6});
 <li>function(){} - Will call the specified function.</li>
 </ul>
 
-<h2 id='routesurlstring_callback__string'>$.routes(&#8220;url&#8221;,String callback) -&gt; String</h2>
+<h2 id='routesurlstring_callback_object_params__string'>$.routes(&#8220;url&#8221;,String callback [,Object params]) -&gt; String</h2>
 
 <p>Generates a url for a route.</p>
 
@@ -89,7 +131,7 @@ match[0](match[1]);</code></pre>
 <p>If lazy loading is enabled each callback will need to be setup to enable two way routing.</p>
 
 <pre><code>$.routes(&quot;setup&quot;,&quot;ArticlesView#article&quot;);
-ArticlesView.getInstance().article({id:5});
+ArticlesView.instance().article({id:5});
 $.routes(&quot;get&quot;) == &quot;/article/5&quot;</code></pre>
 
 <h2 id='routesstop__null'>$.routes(&#8220;stop&#8221;) -&gt; null</h2>
@@ -98,12 +140,18 @@ $.routes(&quot;get&quot;) == &quot;/article/5&quot;</code></pre>
 
 <h2 id='routesstart__null'>$.routes(&#8220;start&#8221;) -&gt; null</h2>
 
-<p>Called implicitly when you specify your routes. Only necessary if <strong>stop</strong> has been called. $.routes.dispatcher -&gt; Function The <strong>dispatcher</strong> property is a function invoked each time the route / path changes. It is called with Function callback, Object params, String path. The default dispatcher calls the callback with the params.</p>
+<p>Called implicitly when you specify your routes. Only necessary if <strong>stop</strong> has been called.</p>
+
+<h2 id='routesdispatcher__function'>$.routes.dispatcher -&gt; Function</h2>
+
+<p>The <strong>dispatcher</strong> property is a function invoked each time the route / path changes. It is called with Function callback, Object params, String path. The default dispatcher calls the callback with the params.</p>
 
 <pre><code>$.routes.dispatcher = function(callback,params,path){
   callback(params);
 };</code></pre>
 
-<p>$.routes.history -&gt; Array The history array contains a list of dispatched routes since $.routes was initialized. Each item in the array is an array containing [String path,Function callback,Object params]</p>
+<h2 id='routeshistory__array'>$.routes.history -&gt; Array</h2>
+
+<p>The history array contains a list of dispatched routes since $.routes was initialized. Each item in the array is an array containing [String path,Function callback,Object params]</p>
         </body>
       </html>

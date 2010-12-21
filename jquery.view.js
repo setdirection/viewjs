@@ -70,357 +70,299 @@
 * 
 */
 (function($,context){
-  $.view = function view(structure,methods){
-    var parent_class;
-    if($.view.isViewClass(structure)){
-      parent_class = structure;
-      structure = arguments[1];
-      methods = arguments[2];
-    }
-    var klass = function klass(attributes){
-      this.observers = {};
-      this.attributes = {};
-      //proxy all user specified methods
-      for(var i = 0; i < this.constructor.methodsToProxy.length; ++i){
-        this[this.constructor.methodsToProxy[i]] = $.proxy(this[this.constructor.methodsToProxy[i]],this);
+  
+  (function(){
+    $.view = function view(structure,methods){
+      var parent_class;
+      if(is_view_class(structure)){
+        parent_class = structure;
+        structure = arguments[1];
+        methods = arguments[2];
       }
-      this.initialize.apply(this,arguments);
-      if(klass.observers && 'ready' in klass.observers){
-        $.view.triggerOrDelayAttachedEventOnInstance(this);
-      }
-    };
-    klass.methodsToProxy = [];
-    for(var method_name in methods){
-      klass.methodsToProxy.push(method_name);
-    }
-    klass.observers = {};
-    klass._instance = false;
-    $.extend(klass,$.view.classMethods);
-    if(parent_class){
-      $.extend(klass.prototype,parent_class.prototype);
-      klass.prototype.structure = $.view.wrapFunction(parent_class.prototype.structure,function(proceed){
-        return structure.apply(this,[$.proxy(proceed,this)()]);
-      });
-      for(var i = 0; i < parent_class.methodsToProxy.length; ++i){
-        klass.methodsToProxy.push(parent_class.methodsToProxy[i]);
-      }
-    }else{
-      $.extend(klass.prototype,$.view.fn);
-      klass.prototype.structure = structure;
-    }
-    klass.prototype.bind = $.view.wrapFunction(klass.prototype.bind,$.view.observeWrapperForAttachedEventOnInstance);
-    if(parent_class){
-      klass.observers = {};
-      for(var observer_name in parent_class.observers){
-        klass.observers[observer_name] = parent_class.observers[observer_name];
-      }
-      klass.prototype.observers = {};
-      $.view.wrapEventMethodsForChildClass(klass,parent_class);
-    }
-    $.extend(klass.prototype,methods || {});
-    return klass;
-  };
-  
-  $.view.logging = false;
-  
-  $.view.isViewInstance = function isViewInstance(object){
-    return object && object.element && object.element().nodeType == 1 && object.attributes;
-  };
-  
-  $.view.isViewClass = function isViewClass(object){
-    return object && object.prototype && object.prototype.structure && object.prototype.element;
-  };
-  
-  $.view.isjQueryObject = function isjQueryObject(object){
-    return typeof(object) == 'object' && ('jquery' in object) && ('selector' in object) && ('context' in object) && ('length' in object);
-  };
-  
-  $.view.arrayFrom = function arrayFrom(object){
-    if(!object){
-      return [];
-    }
-    var length = object.length || 0;
-    var results = new Array(length);
-    while(length--){
-      results[length] = object[length];
-    }
-    return results;
-  };
-  
-  $.view.arrayWithoutValue = function without(arr){
-    var values = $.view.arrayFrom(arguments).slice(1);
-    var response = [];
-    for(var i = 0 ; i < arr.length; i++){
-      if(!($.inArray(arr[i],values) > -1)){
-        response.push(arr[i]);
-      }
-    }
-    return response;
-  };
-  
-  $.view.proxyAndCurryFunction = function proxyAndCurryFunction(func,object){
-    if(typeof(object) == 'undefined'){
-      return func;
-    }
-    if(arguments.length < 3){
-      return function bound(){
-        return func.apply(object,arguments);
-      };
-    }else{
-      var args = $.view.arrayFrom(arguments);
-      args.shift();
-      args.shift();
-      return function bound(){
-        return func.apply(object,args.concat($.view.arrayFrom(arguments)));
-      }
-    }
-  };
-  
-  $.view.wrapFunction = function wrapFunction(func,wrapper){
-    return function wrapped(){
-      return wrapper.apply(this,[$.view.proxyAndCurryFunction(func,this)].concat($.view.arrayFrom(arguments)));
-    };
-  };
-  
-  $.view.nodeInDomTree = function nodeInDomTree(node){
-    var ancestor = node;
-    while(ancestor.parentNode){
-      ancestor = ancestor.parentNode;
-    }
-    return !!(ancestor.body);
-  };
-  
-  $.view.wrapEventMethodsForChildClass = function wrapEventMethodsForChildClass(child_class,parent_class){
-    var methods = ['bind','unbind','one'];
-    for(var i = 0; i < methods.length; ++i){
-      (function method_wrapper_iterator(method_name){
-        parent_class[method_name] = $.view.wrapFunction(parent_class[method_name],function method_wrapper(proceed){
-          var arguments_array = $.view.arrayFrom(arguments).slice(1);
-          child_class[method_name].apply(child_class,arguments_array);
-          return proceed.apply(proceed,arguments_array);
-        });
-      })(methods[i]);
-    }
-  };
-  
-  $.view.observeWrapperForAttachedEventOnInstance = function observeWrapperForAttachedEventOnInstance(proceed,event_name){
-    var arguments_array = $.view.arrayFrom(arguments).slice(1);
-    var response = proceed.apply(proceed,arguments_array);
-    if(event_name == 'ready'){
-      $.view.triggerOrDelayAttachedEventOnInstance(this);
-    }
-    return response;
-  };
-  
-  $.view.triggerOrDelayAttachedEventOnInstance = function triggerOrDelayAttachedEventOnInstance(instance){
-    if(!instance._readyEventFired && instance._element && $.view.nodeInDomTree(instance._element)){
-      instance.trigger('ready');
-      instance._readyEventFired = true;
-      if(instance._readyEventInterval){
-        clearInterval(instance._readyEventInterval);
-      }
-    }else if(!('_readyEventInterval' in instance)){
-      instance._readyEventInterval = setInterval(function(){
-        if(instance._element && $.view.nodeInDomTree(instance._element)){
-          instance.trigger('ready');
-          instance._readyEventFired = true;
-          clearInterval(instance._readyEventInterval);
-          instance._readyEventInterval = false;
+      var klass = function klass(attributes){
+        this.observers = {};
+        this.attributes = {};
+        //proxy all user specified methods
+        for(var i = 0; i < this.constructor.methodsToProxy.length; ++i){
+          this[this.constructor.methodsToProxy[i]] = $.proxy(this[this.constructor.methodsToProxy[i]],this);
         }
-      },10);
-    }
-  };
-  
-  /* $.view.classMethods -> Object
-   * -------------------
-   * Methods that will become available to all $.view classes.
-   * 
-   *     $.view.classMethods.myClassMethod = function(){};
-   *     MyClass = $.view(function(){});
-   *     MyClass.myClassMethod();
-   */ 
-  $.view.classMethods = {
-    instance: function instance(instance){
-      if(typeof(instance) == 'undefined'){
-        if(!this._instance){
-          this._instance = new this();
+        this.initialize.apply(this,arguments);
+        if(klass.observers && 'ready' in klass.observers){
+          trigger_or_delay_ready_event_on_instance(this);
+        }
+      };
+      klass.methodsToProxy = [];
+      for(var method_name in methods){
+        klass.methodsToProxy.push(method_name);
+      }
+      klass.observers = {};
+      klass._instance = false;
+      $.extend(klass,$.view.classMethods);
+      if(parent_class){
+        $.extend(klass.prototype,parent_class.prototype);
+        klass.prototype.structure = wrap_function(parent_class.prototype.structure,function(proceed){
+          return structure.apply(this,[$.proxy(proceed,this)()]);
+        });
+        for(var i = 0; i < parent_class.methodsToProxy.length; ++i){
+          klass.methodsToProxy.push(parent_class.methodsToProxy[i]);
         }
       }else{
-        this._instance = instance;
+        $.extend(klass.prototype,$.view.fn);
+        klass.prototype.structure = structure;
       }
-      return this._instance;
-    },
-    bind: function bind(event_name,observer,context){
-      if(context){
-        observer = $.view.proxyAndCurryFunction.apply($.view,[observer].concat($.view.arrayFrom(arguments).slice(2)));
+      klass.prototype.bind = wrap_function(klass.prototype.bind,observe_wrapper_for_ready_event_on_instance);
+      if(parent_class){
+        klass.observers = {};
+        for(var observer_name in parent_class.observers){
+          klass.observers[observer_name] = parent_class.observers[observer_name];
+        }
+        klass.prototype.observers = {};
+        wrap_event_methods_for_child_class(klass,parent_class);
       }
-      if(typeof(event_name) === 'string' && typeof(observer) !== 'undefined'){
+      $.extend(klass.prototype,methods || {});
+      return klass;
+    };
+
+    $.view.logging = false;
+
+    /* $.view.classMethods -> Object
+     * -------------------
+     * Methods that will become available to all $.view classes.
+     * 
+     *     $.view.classMethods.myClassMethod = function(){};
+     *     MyClass = $.view(function(){});
+     *     MyClass.myClassMethod();
+     */ 
+    $.view.classMethods = {
+      instance: function instance(instance){
+        if(typeof(instance) == 'undefined'){
+          if(!this._instance){
+            this._instance = new this();
+          }
+        }else{
+          this._instance = instance;
+        }
+        return this._instance;
+      },
+      bind: function bind(event_name,observer,context){
+        if(context){
+          observer = proxy_and_curry.apply($.view,[observer].concat(array_from(arguments).slice(2)));
+        }
+        if(typeof(event_name) === 'string' && typeof(observer) !== 'undefined'){
+          if(!(event_name in this.observers)){
+            this.observers[event_name] = [];
+          }
+          this.observers[event_name].push(observer);
+        }
+        return observer;
+      },
+      one: function one(event_name,observer,context){
+        if(context){
+          outer_observer = proxy_and_curry.apply($.view,[outer_observer].concat(array_from(arguments).slice(2)));
+        }
+        var inner_observer = proxy_and_curry(function bound_inner_observer(){
+          outer_observer.apply(this,arguments);
+          this.unbind(event_name,inner_observer);
+        },this);
         if(!(event_name in this.observers)){
           this.observers[event_name] = [];
         }
-        this.observers[event_name].push(observer);
-      }
-      return observer;
-    },
-    one: function one(event_name,observer,context){
-      if(context){
-        outer_observer = $.view.proxyAndCurryFunction.apply($.view,[outer_observer].concat($.view.arrayFrom(arguments).slice(2)));
-      }
-      var inner_observer = $.view.proxyAndCurryFunction(function bound_inner_observer(){
-        outer_observer.apply(this,arguments);
-        this.unbind(event_name,inner_observer);
-      },this);
-      if(!(event_name in this.observers)){
-        this.observers[event_name] = [];
-      }
-      this.observers[event_name].push(inner_observer);
-      return inner_observer;
-    },
-    unbind: function unbind(event_name,observer){
-      if(!(event_name in this.observers)){
-        this.observers[event_name] = [];
-      }
-      if(event_name && observer){
-        this.observers[event_name] = $.view.arrayWithoutValue(this.observers[event_name],observer);
-      }
-      else if(event_name){
-        this.observers[event_name] = [];
-      }else{
-        this.observers = {};
-      }
-    },
-    trigger: function trigger(event_name){
-      if(!this.observers || !this.observers[event_name] || (this.observers[event_name] && this.observers[event_name].length == 0)){
-        return [];
-      }
-      if(!(event_name in this.observers)){
-        this.observers[event_name] = [];
-      }
-      var collected_return_values = [];
-      var args = $.view.arrayFrom(arguments).slice(1);
-      for(var i = 0; i < this.observers[event_name].length; ++i){
-        var response = this.observers[event_name][i].apply(this.observers[event_name][i],args);
-        if(response === false){
-          return false;
-        }else{
-          collected_return_values.push(response);
+        this.observers[event_name].push(inner_observer);
+        return inner_observer;
+      },
+      unbind: function unbind(event_name,observer){
+        if(!(event_name in this.observers)){
+          this.observers[event_name] = [];
         }
+        if(event_name && observer){
+          this.observers[event_name] = array_without_value(this.observers[event_name],observer);
+        }
+        else if(event_name){
+          this.observers[event_name] = [];
+        }else{
+          this.observers = {};
+        }
+      },
+      trigger: function trigger(event_name){
+        if(!this.observers || !this.observers[event_name] || (this.observers[event_name] && this.observers[event_name].length == 0)){
+          return [];
+        }
+        if(!(event_name in this.observers)){
+          this.observers[event_name] = [];
+        }
+        var collected_return_values = [];
+        var args = array_from(arguments).slice(1);
+        for(var i = 0; i < this.observers[event_name].length; ++i){
+          var response = this.observers[event_name][i].apply(this.observers[event_name][i],args);
+          if(response === false){
+            return false;
+          }else{
+            collected_return_values.push(response);
+          }
+        }
+        return collected_return_values;
+      },
+      ready: function ready(){
+        var args = array_from(arguments);
+        args.unshift('ready');
+        return this.bind.apply(this,args);
       }
-      return collected_return_values;
-    },
-    ready: function ready(){
-      var args = $.view.arrayFrom(arguments);
-      args.unshift('ready');
-      return this.bind.apply(this,args);
-    }
-  };
-    
-  /* $.view.fn -> Object
-   * ---------
-   * Methods that will be available to all instances of all $.view classes.
-   * 
-   *     $.view.fn.myMethod = function(){
-   *       return this.get('key');
-   *     };
-   *     MyClass = $.view(function(){});
-   *     var instance = new MyClass({
-   *       key: 'value'
-   *     });
-   *     instance.myMethod(); //returns "value"
-   */
-  $.view.fn = {
-    initialize: function initialize(attributes){
-      this.length = 0;
-      if($.view.logging){
-        console.log('jQuery.View: initialized ',this,' with attributes:',attributes);
-      }
-      for(var key in attributes){
-        this.set(key,attributes[key]);
-      }
-      var response = this.structure();
-      if(response && !this._element){
-        this.element(response);
-      }
-      if(!this._element || !this._element.nodeType || this._element.nodeType !== 1){
-        throw 'The view constructor must return either a DOM element or jQuery object, or call this.element() with a DOM element. View constructor returned:' + typeof(this._element);
-      }
-      this.trigger('initialized');
-    },
-    get: function get(key){
-      return this.attributes[key];
-    },
-    set: function set(key,value){
-      return this.attributes[key] = value;
-    },
-    /* instance.element() -> Element
-     * instance.element(Element element) -> Element
-     * ---------------------------------
-     * Set or get the outermost element in the view. The element should only be set
-     * from within the view constructor.
+    };
+
+    /* $.view.fn -> Object
+     * ---------
+     * Methods that will be available to all instances of all $.view classes.
      * 
-     *     var instance = new MyView(function(){
-     *       return this.div();
+     *     $.view.fn.myMethod = function(){
+     *       return this.get('key');
+     *     };
+     *     MyClass = $.view(function(){});
+     *     var instance = new MyClass({
+     *       key: 'value'
      *     });
-     *     instance.element().tagName == 'div'
-     */ 
-    element: function element(element){
-      if(typeof(element) == 'undefined'){
-        return this._element;
-      }else{
-        if($.view.isjQueryObject(element)){
-          element = element[0];
+     *     instance.myMethod(); //returns "value"
+     */
+    $.view.fn = {
+      initialize: function initialize(attributes){
+        this.length = 0;
+        if($.view.logging){
+          console.log('jQuery.View: initialized ',this,' with attributes:',attributes);
         }
-        this._element = element;
-        this.length = 1;
-        this[0] = this._element;
-        return this._element;
-      }
-    },
-    bind: $.view.classMethods.bind,
-    one: $.view.classMethods.one,
-    unbind: $.view.classMethods.unbind,
-    ready: $.view.classMethods.ready,
-    trigger: function trigger(event_name){
-      if(
-        (!this.constructor.observers || !this.constructor.observers[event_name] ||
-          (this.constructor.observers[event_name] && this.constructor.observers[event_name].length == 0)) &&
-        (!this.observers || !this.observers[event_name] || (this.observers[event_name] && this.observers[event_name].length == 0))
-      ){
-        return [];
-      }
-      var args = $.view.arrayFrom(arguments).slice(1);
-      var collected_return_values = [];
-      constructor_args = $.view.arrayFrom(arguments).slice(1);
-      constructor_args.unshift(this);
-      constructor_args.unshift(event_name);
-      var collected_return_values_from_constructor = this.constructor.trigger.apply(this.constructor,constructor_args);
-      if(collected_return_values_from_constructor === false){
-        return false;
-      }
-      collected_return_values = collected_return_values.concat(collected_return_values_from_constructor);
-      if(!(event_name in this.observers)){
-        this.observers[event_name] = [];
-      }
-      var response;
-      for(var i = 0; i < this.observers[event_name].length; ++i){
-        response = this.observers[event_name][i].apply(this.observers[event_name][i],args);
-        if(response === false){
-          return false;
+        for(var key in attributes){
+          this.set(key,attributes[key]);
+        }
+        var response = this.structure();
+        if(response && !this._element){
+          this.element(response);
+        }
+        if(!this._element || !this._element.nodeType || this._element.nodeType !== 1){
+          throw 'The view constructor must return either a DOM element or jQuery object, or call this.element() with a DOM element. View constructor returned:' + typeof(this._element);
+        }
+        this.trigger('initialized');
+      },
+      get: function get(key){
+        return this.attributes[key];
+      },
+      set: function set(key,value){
+        return this.attributes[key] = value;
+      },
+      /* instance.element() -> Element<br/>instance.element(Element element) -> Element
+       * -----------------------------
+       * Set or get the outermost element in the view. The element should only be set
+       * from within the view constructor.
+       * 
+       *     var instance = new MyView(function(){
+       *       return this.div();
+       *     });
+       *     instance.element().tagName == 'div'
+       */ 
+      element: function element(element){
+        if(typeof(element) == 'undefined'){
+          return this._element;
         }else{
-          collected_return_values.push(response);
+          if(is_jquery_object(element)){
+            element = element[0];
+          }
+          this._element = element;
+          this.length = 1;
+          this[0] = this._element;
+          return this._element;
         }
+      },
+      bind: $.view.classMethods.bind,
+      one: $.view.classMethods.one,
+      unbind: $.view.classMethods.unbind,
+      ready: $.view.classMethods.ready,
+      trigger: function trigger(event_name){
+        if(
+          (!this.constructor.observers || !this.constructor.observers[event_name] ||
+            (this.constructor.observers[event_name] && this.constructor.observers[event_name].length == 0)) &&
+          (!this.observers || !this.observers[event_name] || (this.observers[event_name] && this.observers[event_name].length == 0))
+        ){
+          return [];
+        }
+        var args = array_from(arguments).slice(1);
+        var collected_return_values = [];
+        constructor_args = array_from(arguments).slice(1);
+        constructor_args.unshift(this);
+        constructor_args.unshift(event_name);
+        var collected_return_values_from_constructor = this.constructor.trigger.apply(this.constructor,constructor_args);
+        if(collected_return_values_from_constructor === false){
+          return false;
+        }
+        collected_return_values = collected_return_values.concat(collected_return_values_from_constructor);
+        if(!(event_name in this.observers)){
+          this.observers[event_name] = [];
+        }
+        var response;
+        for(var i = 0; i < this.observers[event_name].length; ++i){
+          response = this.observers[event_name][i].apply(this.observers[event_name][i],args);
+          if(response === false){
+            return false;
+          }else{
+            collected_return_values.push(response);
+          }
+        }
+        return collected_return_values;
       }
-      return collected_return_values;
-    }
-  };
-      
-  $.builder = function(){
-    $.builder.tags
-  };
-  $.extend($.builder,{
-    cache: {},
-    methods: {},
-    tags: ('a abbr acronym address applet area b base basefont bdo big blockquote body ' +
+    };
+    
+    function wrap_event_methods_for_child_class(child_class,parent_class){
+      var methods = ['bind','unbind','one'];
+      for(var i = 0; i < methods.length; ++i){
+        (function method_wrapper_iterator(method_name){
+          parent_class[method_name] = wrap_function(parent_class[method_name],function method_wrapper(proceed){
+            var arguments_array = array_from(arguments).slice(1);
+            child_class[method_name].apply(child_class,arguments_array);
+            return proceed.apply(proceed,arguments_array);
+          });
+        })(methods[i]);
+      }
+    };
+
+    function observe_wrapper_for_ready_event_on_instance(proceed,event_name){
+      var arguments_array = array_from(arguments).slice(1);
+      var response = proceed.apply(proceed,arguments_array);
+      if(event_name == 'ready'){
+        trigger_or_delay_ready_event_on_instance(this);
+      }
+      return response;
+    };
+
+    function trigger_or_delay_ready_event_on_instance(instance){
+      if(!instance._readyEventFired && instance._element && node_in_dom_tree(instance._element)){
+        instance.trigger('ready');
+        instance._readyEventFired = true;
+        if(instance._readyEventInterval){
+          clearInterval(instance._readyEventInterval);
+        }
+      }else if(!('_readyEventInterval' in instance)){
+        instance._readyEventInterval = setInterval(function(){
+          if(instance._element && node_in_dom_tree(instance._element)){
+            instance.trigger('ready');
+            instance._readyEventFired = true;
+            clearInterval(instance._readyEventInterval);
+            instance._readyEventInterval = false;
+          }
+        },10);
+      }
+    };
+  })();
+        
+  (function(){
+    $.builder = function(method_name){
+      if(method_name == 'export'){
+        export_tag_methods(arguments[1]);
+      }
+      if(method_name == 'remove'){
+        export_tag_methods(arguments[1]);
+      }
+    };
+    
+    //private builder attributes
+    var methods = {};
+    var cache = {};
+    var tags = ('a abbr acronym address applet area b base basefont bdo big blockquote body ' +
       'br button canvas caption center cite code col colgroup dd del dfn dir div dl dt em embed fieldset ' +
       'font form frame frameset h1 h2 h3 h4 h5 h6 head hr html i iframe img input ins isindex ' +
       'kbd label legend li link map menu meta nobr noframes noscript object ol optgroup option p ' +
@@ -428,18 +370,20 @@
       'textarea tfoot th thead title tr tt u ul var ' +
       //html5 additions
       'article aside audio command details figcaption figure footer header hgroup keygen mark ' +
-      'meter nav output progress rp ruby section source summary time video').split(/\s+/),
-    processNodeArgument: function processNodeArgument(elements,attributes,argument){
+      'meter nav output progress rp ruby section source summary time video').split(/\s+/);
+    
+    //private builder methods
+    function process_node_argument(elements,attributes,argument){
       if(typeof(argument) === 'undefined' || argument === null || argument === false){
         return;
       }
-      if(typeof(argument) === 'function' && !$.view.isViewClass(argument)){
+      if(typeof(argument) === 'function' && !is_view_class(argument)){
         argument = argument();
       }
-      if($.view.isViewInstance(argument) || typeof(argument.element) == 'function'){
+      if(is_view_instance(argument) || typeof(argument.element) == 'function'){
         elements.push(argument.element());
         return;
-      }else if($.view.isViewClass(argument)){
+      }else if(is_view_class(argument)){
         elements.push(new argument().element());
         return;
       }
@@ -450,7 +394,7 @@
         typeof(argument) !== 'string' &&
         typeof(argument) !== 'number' &&
         !$.isArray(argument) &&
-        !$.view.isjQueryObject(argument) &&
+        !is_jquery_object(argument) &&
         !(argument && argument.nodeType === 1)
       ){
         for(attribute_name in argument){
@@ -458,12 +402,12 @@
         }
         return;
       }
-      if($.view.isjQueryObject(argument)){
+      if(is_jquery_object(argument)){
         argument = argument.toArray();
       }
       if($.isArray(argument)){
         for(ii = 0; ii < argument.length; ++ii){
-          $.builder.processNodeArgument(elements,attributes,argument[ii]);
+          process_node_argument(elements,attributes,argument[ii]);
         }
         return;
       }
@@ -471,13 +415,14 @@
         elements.push(argument);
         return;
       }
-    },
-    createElement: function createElement(tag_name){
+    };
+      
+    function create_element(tag_name){
       var i, argument, attributes, attribute_name, elements, element;
       elements = [];
       attributes = {};
       for(i = 1; i < arguments.length; ++i){
-        $.builder.processNodeArgument(elements,attributes,arguments[i]);
+        process_node_argument(elements,attributes,arguments[i]);
       }
       tag_name = tag_name.toLowerCase();
       if(!!(document.attachEvent && !window.opera) && (attributes.name || (tag_name == 'input' && attributes.type))){
@@ -494,10 +439,10 @@
         delete attributes.type;
         element = document.createElement(tag);
       }else{
-        if(!$.builder.cache[tag_name]){
-          $.builder.cache[tag_name] = document.createElement(tag_name);
+        if(!cache[tag_name]){
+          cache[tag_name] = document.createElement(tag_name);
         }
-        element = $.builder.cache[tag_name].cloneNode(false);
+        element = cache[tag_name].cloneNode(false);
       }
       $(element).attr(attributes);
       for(i = 0; i < elements.length; ++i){
@@ -508,191 +453,233 @@
         }
       }
       return element;
-    },
-    generateBuilderMethod: function generateBuilderMethod(tag_name){
+    };
+    
+    function generate_builder_method(tag_name){
       return function element_generator(){
         var args = [tag_name];
         for(var i = 0; i < arguments.length; ++i){
           args.push(arguments[i]);
         }
-        return $.builder.createElement.apply($.builder,args);
+        return create_element.apply($.builder,args);
       };
-    },
-    'static': function makeBuilderStatic(){
-      for(var i = 0; i < $.builder.tags.length; ++i){
-        delete $.view.fn[$.builder.tags[i]];
+    };
+    
+    /* $.builder("export",Object target) -> null
+     * ---------------------------------
+     * Copies all tag methods to the target object. By default tag methods
+     * are exported to **$.builder** and **$.view.fn**
+     * 
+     *     $.builder("export",MyObject);
+     *     MyObject.div({id:'test'});
+     */
+    function export_tag_methods(target){
+      for(var method_name in methods){
+        target[method_name] = methods[method_name];
       }
+    };
+    
+    /* $.builder("remove",Object target) -> null
+     * ---------------------------------
+     * Removes all tag methods from the target object that were copied
+     * from a call to **$.builder("export",target)**
+     */
+    function remove_tag_methods(target){
+      for(var method_name in methods){
+        delete target[method_name];
+      }
+    };
+
+    //generate tag methods
+    for(var i = 0; i < tags.length; ++i){
+      methods[tags[i]] = generate_builder_method(tags[i]);
     }
-  });
+    
+    //auto export
+    $.builder('export',$.builder);
+    $.builder('export',$.view.fn);
+  })();
   
-  //generate tag methods
-  for(var i = 0; i < $.builder.tags.length; ++i){
-    $.view[$.builder.tags[i]] = $.view.fn[$.builder.tags[i]] = $.builder.generateBuilderMethod($.builder.tags[i]);
-  }
-  
-  /* Routes
-   * ======
-   * Maps urls to method calls and method calls to urls. This enables back button
-   * support, deep linking and allows methods to be called by normal links (A tags)
-   * in your application without adding event handlers or additional code to each link.
-   * 
-   *     $.routes({
-   *       "/": "PageView#home",
-   *       "/article/:id": "ArticlesView#article"
-   *     });
-   *     
-   *     //PageView.instance().home() automatically called 
-   *     
-   *     $.routes("set","/article/5");
-   *     //ArticlesView.instance().article({id:5}) automatically called
-   *     
-   *     ArticlesView.instance().article({id:6});
-   *     //$.routes("set","/article/6"); automatically called
-   * 
-   * $.routes(Object routes \[,Boolean lazy_loading = false\]) -> null
-   * ----------------------------
-   * Calling routes will start routes in your appliction, dispatching the current
-   * address present in the url bar of the browser. If no address is present on
-   * the page **$.routes("set","/")** will automatically be called.
-   * 
-   * Setting **lazy_loading** to true will prevent your callbacks from being setup for
-   * to automatically set the path and will prevent **instance** from being called
-   * on each specified object. This is useful in large applications where you do
-   * not want all views with routes initialized when $.routes starts. You can
-   * manually setup each callback using **$.routes("setup",callback)**
-   * 
-   *     $.routes({
-   *       "/": "PageView#home",
-   *       "/article/:id": "ArticlesView#article",
-   *       "/about/(:page_name)": "PageView#page",
-   *       "/wiki/*": "WikiView#page",
-   *       "/class_method": "Object.method",
-   *       "/callback": function(){}
-   *     });
-   * 
-   * Supported types of paths:
-   * 
-   * - "/" - A plain path with no parameters.
-   * - "/article/:id" - A path with a required named parameter.
-   * - "/about/(:page_name)" - A path with an optional named paramter.
-   * - "/wiki/\*" - A path with an asterix / wildcard.
-   * 
-   * Supported types of callbacks:
-   * 
-   * - "PageView#home" - Will call PageView.instance().home()
-   * - "Object.method" - Will call Object.method()
-   * - function(){} - Will call the specified function.
-   * 
-   */
-  $.routes = function(routes,lazy_loading){
-    if(typeof($.address) == 'undefined'){
-      throw 'jQuery Address (http://www.asual.com/jquery/address/) is required to run jQuery View Routes';
-    }
-    if(typeof(routes) == 'string'){
-      var method_name = routes;
-      if($.inArray(method_name,[
-        'start',
-        'stop',
-        'match',
-        'set',
-        'get',
-        'url',
-        'setup',
-        'add'
-      ])){
-        return $.routes[method_name].apply($.routes,$.view.arrayFrom(arguments).slice(1));
-      }else{
+  (function(){
+    /* Routes
+     * ======
+     * Maps urls to method calls and method calls to urls. This enables back button
+     * support, deep linking and allows methods to be called by normal links (A tags)
+     * in your application without adding event handlers or additional code to each link.
+     * 
+     *     $.routes({
+     *       "/": "PageView#home",
+     *       "/article/:id": "ArticlesView#article"
+     *     });
+     *     
+     *     //PageView.instance().home() automatically called 
+     *     
+     *     $.routes("set","/article/5");
+     *     //ArticlesView.instance().article({id:5}) automatically called
+     *     
+     *     ArticlesView.instance().article({id:6});
+     *     //$.routes("set","/article/6"); automatically called
+     * 
+     * $.routes(Object routes \[,Boolean lazy_loading = false\]) -> null
+     * ----------------------------
+     * Calling routes will start routes in your appliction, dispatching the current
+     * address present in the url bar of the browser. If no address is present on
+     * the page **$.routes("set","/")** will automatically be called.
+     * 
+     * Setting **lazy_loading** to true will prevent your callbacks from being setup for
+     * to automatically set the path and will prevent **instance** from being called
+     * on each specified object. This is useful in large applications where you do
+     * not want all views with routes initialized when $.routes starts. You can
+     * manually setup each callback using **$.routes("setup",callback)**
+     * 
+     *     $.routes({
+     *       "/": "PageView#home",
+     *       "/article/:id": "ArticlesView#article",
+     *       "/about/(:page_name)": "PageView#page",
+     *       "/wiki/*": "WikiView#page",
+     *       "/class_method": "Object.method",
+     *       "/callback": function(){}
+     *     });
+     * 
+     * Supported types of paths:
+     * 
+     * - "/" - A plain path with no parameters.
+     * - "/article/:id" - A path with a required named parameter.
+     * - "/about/(:page_name)" - A path with an optional named paramter.
+     * - "/wiki/\*" - A path with an asterix / wildcard.
+     * 
+     * Supported types of callbacks:
+     * 
+     * - "PageView#home" - Will call PageView.instance().home()
+     * - "Object.method" - Will call Object.method()
+     * - function(){} - Will call the specified function.
+     * 
+     */
+    $.routes = function(routes,lazy_loading){
+      if(typeof($.address) == 'undefined'){
+        throw 'jQuery Address (http://www.asual.com/jquery/address/) is required to run jQuery View Routes';
+      }
+      if(typeof(routes) == 'string'){  
+        var method_name = routes;
+        if(method_name == 'start'){
+          return start();
+        }
+        if(method_name == 'stop'){
+          return stop();
+        }
+        if(method_name == 'match'){
+          return match(arguments[1]);
+        }
+        if(method_name == 'set'){
+          return set(arguments[1]);
+        }
+        if(method_name == 'get'){
+          return get();
+        }
+        if(method_name == 'url'){
+          return url(arguments[1],arguments[2]);
+        }
+        if(method_name == 'setup'){
+          return url(arguments[1]);
+        }
+        if(method_name == 'add'){
+          return url(arguments[1],arguments[2]);
+        }
         throw method_name + ' is not a supported method.';
-      }
-    }else{
-      $.routes.setRoutes(routes);
-      if(!lazy_loading){
-        for(var i = 0; i < $.routes.routes.length; ++i){
-          $.routes.setup($.routes.routes[i][1],i);
+      }else{
+        set_routes(routes);
+        if(!lazy_loading){
+          for(var i = 0; i < routes.length; ++i){
+            setup(routes[i][1],i);
+          }
         }
       }
-    }
-  };
-  $.extend($.routes,{
-    /* $.routes("url",String callback) -> String
+    };
+    
+    /* $.routes("url",String callback \[,Object params\]) -> String
      * ---------------------------------
      * Generates a url for a route.
      * 
      *     var url = $.routes("url","ArticlesView#article",{id:5});
      *     url == "/article/5"
      */
-    url: function url(class_and_method,params){
-      for(var i = 0; i < $.routes.routes.length; ++i){
-        if($.routes.routes[i][1] == class_and_method){
-          return $.routes.generateUrl($.routes.routes[i][0],params);
+    function url(class_and_method,params){
+      for(var i = 0; i < routes.length; ++i){
+        if(routes[i][1] == class_and_method){
+          return generate_url(routes[i][0],params);
         }
       }
       return false;
-    },
+    };
+    
     /* $.routes("get") -> String
      * --------------------
      * Returns the current address / path.
      */
-    get: function get(){
+    function get(){
       var path_bits = window.location.href.split('#');
       return path_bits[1] && (path_bits[1].match(/^\//) || path_bits[1] == '') ? path_bits[1] : '';
-    },
+    };
+    
     /* $.routes("set") -> null
      * --------------------
      * Sets the current address / path, calling the matched route if a match is found.
      * 
      *     $.routes("set","/article/5");
      */
-    set: function set(path,force){
-      var match = $.routes.match(path);
-      var should_dispatch = path != $.routes.currentRoute;
+    function set(path,force){
+      var matched_path = match(path);
+      var should_dispatch = path != current_route;
       if(!should_dispatch && force == true){
         should_dispatch = true;
       }
-      if($.routes.enabled && should_dispatch && match){
-        match[0] = $.routes.setup(match[0],match[2]);
-        if(!('callOriginal' in match[0])){
-          $.routes.setAddress(path);
+      if(enabled && should_dispatch && matched_path){
+        matched_path[0] = setup(matched_path[0],matched_path[2]);
+        if(!('callOriginal' in matched_path[0])){
+          set_address(path);
         }
-        this.history.push([path,match[0],match[1]]);
-        $.routes.dispatcher(match[0],match[1],path);
+        $.routes.history.push([path,matched_path[0],matched_path[1]]);
+        $.routes.dispatcher(matched_path[0],matched_path[1],path);
         return true;
       }else{
         return false;
       }
-    },
+    };
+    
     /* $.routes("add",String path,String callback) -> null
      * Add a new route.
      * 
      *     $.routes("add","/article/:id","ArticlesView#article");
      */
-    add: function add(path,callback){
-      $.routes.routes.push([path,callback]);
-      $.routes.routePatterns.push($.routes.routeMatcherFromPath(path));
-    },
+    function add(path,callback){
+      routes.push([path,callback]);
+      route_patterns.push(route_matcher_regex_from_path(path));
+    };
+    
     /* $.routes("match",String path) -> Array \[Function callback, Object params, Number index_of_route\]
      * ----------------------------------
      *     var match = $.routes("match","/article/5");
      *     match[0](match[1]);
      */
-    match: function match(path){
-      for(var i = 0; i < $.routes.routes.length; ++i){
-        if($.routes.routes[i][0] == path){
-          return [$.routes.setup($.routes.routes[i][1],i),{},i];
+    function match(path){
+      for(var i = 0; i < routes.length; ++i){
+        if(routes[i][0] == path){
+          return [setup(routes[i][1],i),{},i];
         }
       }
-      for(var i = 0; i < $.routes.routePatterns.length; ++i){
-        var matches = $.routes.routePatterns[i][0].exec(path);
+      for(var i = 0; i < route_patterns.length; ++i){
+        var matches = route_patterns[i][0].exec(path);
         if(matches){
           var params = {};
-          for(var ii = 0; ii < $.routes.routePatterns[i][1].length; ++ii){
-            params[$.routes.routePatterns[i][1][ii]] = matches[((ii + 1) * 3) - 1];
+          for(var ii = 0; ii < route_patterns[i][1].length; ++ii){
+            params[route_patterns[i][1][ii]] = matches[((ii + 1) * 3) - 1];
           }
-          return [$.routes.setup($.routes.routes[i][1],i),params,i];
+          return [setup(routes[i][1],i),params,i];
         }
       }
       return false;
-    },
+    };
+    
     /* $.routes("setup",String callback) -> null
      * --------------------------------------
      * If lazy loading is enabled each callback will need to be setup to enable two way routing.
@@ -701,10 +688,10 @@
      *     ArticlesView.instance().article({id:5});
      *     $.routes("get") == "/article/5"
      */
-    setup: function setup(callback,index_of_route){
+    function setup(callback,index_of_route){
       if(typeof(callback) == 'string' && typeof(index_of_route) == 'undefined'){
-        for(var i = 0; i < $.routes.routes.length; ++i){
-          if($.routes.routes[i][1] == callback){
+        for(var i = 0; i < routes.length; ++i){
+          if(routes[i][1] == callback){
             index_of_route = i;
             break; 
           }
@@ -715,7 +702,7 @@
       if(typeof(callback) == 'function'){
         return callback;
       }
-      var path = $.routes.routes[index_of_route][0];
+      var path = routes[index_of_route][0];
       var callback_bits = callback.split(/(\.|\#)/);
       var object = context[callback_bits[0]];
       if(callback.match(/[\w]+\#[\w]+/)){
@@ -730,42 +717,45 @@
         throw 'The method "' + method_name + '" does not exist for the route "' + path + '"';
       }
       object[method_name] = function routing_wrapper(params){
-        $.routes.setAddress($.routes.generateUrl(path,params));
+        set_address(generate_url(path,params));
         original_method.apply(object,arguments);
       };
       object[method_name].callOriginal = function original_method_callback(){
         return original_method.apply(object,arguments);
       };
       return object[method_name];
-    },
+    };
+    
     /* $.routes("stop") -> null
      * ---------------------
      * Stops the routing plugin from handling changes in the page address.
      */
-    stop: function stop(){
-      $.routes.enabled = false;
-    },
+    function stop(){
+      enabled = false;
+    };
+    
     /* $.routes("start") -> null
      * ----------------------
      * Called implicitly when you specify your routes. Only necessary if **stop** has been called.
      */
-    start: function start(){
-      if(!$.routes.startObserver && !$.routes.ready){
-        $.routes.startObserver = $(document).ready(function document_ready_observer(){
-          $.address.bind('externalChange',$.routes.externalChangeHandler);
-          $.routes.ready = true;
-          $.routes.enabled = true;
+    function start(){
+      if(!start_observer && !ready){
+        start_observer = $(document).ready(function document_ready_observer(){
+          $.address.bind('externalChange',external_change_handler);
+          ready = true;
+          enabled = true;
           setTimeout(function initial_route_dispatcher(){
-            if(!$.routes.set($.routes.get(),true)){
-              $.routes.set('/');
+            if(!set(get(),true)){
+              set('/');
             }
           });
         });
       }else{
-        $.routes.ready = true;
-        $.routes.enabled = true;
+        ready = true;
+        enabled = true;
       }
-    },
+    };
+    
     /* $.routes.dispatcher -> Function
      * -------------------
      * The **dispatcher** property is a function invoked each time the route / path changes.
@@ -776,30 +766,34 @@
      *       callback(params);
      *     };
      */ 
-    dispatcher: function dispatcher(callback,params,path){
+    $.routes.dispatcher = function dispatcher(callback,params,path){
       callback(params);
-    },
+    };
     /*
      * $.routes.history -> Array
      * ----------------
      * The history array contains a list of dispatched routes since $.routes was initialized.
      * Each item in the array is an array containing \[String path,Function callback,Object params\] 
      */
-    history: [],
-    //internal
-    startObserver: false,
-    ready: false,
-    routes: [], //array of [path,method]
-    routePatterns: [], //array of [regexp,param_name_array]
-    currentRoute: false,
-    enabled: false,
-    setRoutes: function setRoutes(routes){
+    $.routes.history = [];
+    
+    //private attributes
+    var start_observer = false;
+    var ready = false;
+    var routes = []; //array of [path,method]
+    var route_patterns = []; //array of [regexp,param_name_array]
+    var current_route = false;
+    var enabled = false;
+    
+    //private methods
+    function set_routes(routes){
       for(var path in routes){
-        $.routes.add(path,routes[path]);
+        add(path,routes[path]);
       }
-      $.routes.start();
-    },
-    routeMatcherFromPath: function routeMatcherFromPath(path){
+      start();
+    };
+    
+    function route_matcher_regex_from_path(path){
       var params = [];
       var reg_exp_pattern = String(path);
       reg_exp_pattern = reg_exp_pattern.replace(/\((\:?[\w]+)\)/g,function(){
@@ -815,8 +809,9 @@
         reg_exp_pattern = reg_exp_pattern.replace(/\*/g,'((.+$))?');
       }
       return [new RegExp('^' + reg_exp_pattern + '$'),params];
-    },
-    generateUrl: function generateUrl(url,params){
+    };
+    
+    function generate_url(url,params){
       params = params || {};
       if(typeof(params) == 'string' && url.match(/\*/)){
         url = url.replace(/\*/,params).replace(/\/\//g,'/');
@@ -833,26 +828,96 @@
       }
       url = url.replace(/\([^\)]+\)/g,'');
       return url;
-    },
-    setAddress: function setAddress(path){
-      if($.routes.enabled){
-        if($.routes.currentRoute != path){
+    };
+    
+    function set_address(path){
+      if(enabled){
+        if(current_route != path){
           $.address.value(path);
-          $.routes.currentRoute = path;
+          current_route = path;
         }
       }
-    },
-    externalChangeHandler: function externalChangeHandler(){
-      if($.routes.enabled){
-        var current_path = $.routes.get();
-        if($.routes.ready){
-          if(current_path != $.routes.currentRoute){
-            $.routes.set(current_path);
+    };
+    
+    function external_change_handler(){
+      if(enabled){
+        var current_path = get();
+        if(ready){
+          if(current_path != current_route){
+            set(current_path);
           }
         }
       }
-    }
-  });
-  $.view.fn.url = $.routes.url;
+    };
+
+    $.view.fn.url = url;
+  })();
   
+  //private utility methods shared between $.view, $.builder, $.routes
+  function is_view_instance(object){
+    return object && object.element && object.element().nodeType == 1 && object.attributes;
+  };
+  
+  function is_view_class(object){
+    return object && object.prototype && object.prototype.structure && object.prototype.element;
+  };
+  
+  function is_jquery_object(object){
+    return typeof(object) == 'object' && ('jquery' in object) && ('selector' in object) && ('context' in object) && ('length' in object);
+  };
+  
+  function array_from(object){
+    if(!object){
+      return [];
+    }
+    var length = object.length || 0;
+    var results = new Array(length);
+    while(length--){
+      results[length] = object[length];
+    }
+    return results;
+  };
+  
+  function array_without_value(arr){
+    var values = array_from(arguments).slice(1);
+    var response = [];
+    for(var i = 0 ; i < arr.length; i++){
+      if(!($.inArray(arr[i],values) > -1)){
+        response.push(arr[i]);
+      }
+    }
+    return response;
+  };
+  
+  function proxy_and_curry(func,object){
+    if(typeof(object) == 'undefined'){
+      return func;
+    }
+    if(arguments.length < 3){
+      return function bound(){
+        return func.apply(object,arguments);
+      };
+    }else{
+      var args = array_from(arguments);
+      args.shift();
+      args.shift();
+      return function bound(){
+        return func.apply(object,args.concat(array_from(arguments)));
+      }
+    }
+  };
+  
+  function wrap_function(func,wrapper){
+    return function wrapped(){
+      return wrapper.apply(this,[proxy_and_curry(func,this)].concat(array_from(arguments)));
+    };
+  };
+  
+  function node_in_dom_tree(node){
+    var ancestor = node;
+    while(ancestor.parentNode){
+      ancestor = ancestor.parentNode;
+    }
+    return !!(ancestor.body);
+  };
 })(jQuery,this);
