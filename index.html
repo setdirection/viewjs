@@ -2,34 +2,108 @@
       <html>
         <head>
           <title>jQuery View</title>
+          <link rel="stylesheet" media="screen" href="screen.css"/>
         </head>
         <body>
-          <p>TODO:</p>
+          <h1 id='routes'>Routes</h1>
+
+<p>Maps urls to method calls and method calls to urls. This enables back button support, deep linking and allows methods to be called by normal links (A tags) in your application without adding event handlers or additional code to each link.</p>
+
+<pre><code>$.routes({
+  &quot;/&quot;: &quot;PageView#home&quot;,
+  &quot;/article/:id&quot;: &quot;ArticlesView#article&quot;
+});
+//PageView.instance().home() automatically called 
+
+$.routes(&quot;set&quot;,&quot;/article/5&quot;);
+//ArticlesView.instance().article({id:5}) automatically called
+
+ArticlesView.instance().article({id:6});
+//$.routes(&quot;set&quot;,&quot;/article/6&quot;); automatically called</code></pre>
+
+<h2 id='routesobject_routes_boolean_lazy_loading__false__null'>$.routes(Object routes [,Boolean lazy_loading = false]) -&gt; null</h2>
+
+<p>Calling routes will start routes in your appliction, dispatching the current address present in the url bar of the browser. If no address is present on the page <strong>$.routes(&#8220;set&#8221;,&#8221;/&#8221;)</strong> will automatically be called.</p>
+
+<p>Setting <strong>lazy_loading</strong> to true will prevent your callbacks from being setup for to automatically set the path and will prevent <strong>instance</strong> from being called on each specified object. This is useful in large applications where you do not want all views with routes initialized when $.routes starts. You can manually setup each callback using <strong>$.routes(&#8220;setup&#8221;,callback)</strong></p>
+
+<pre><code>$.routes({
+  &quot;/&quot;: &quot;PageView#home&quot;,
+  &quot;/article/:id&quot;: &quot;ArticlesView#article&quot;,
+  &quot;/about/(:page_name)&quot;: &quot;PageView#page&quot;,
+  &quot;/wiki/*&quot;: &quot;WikiView#page&quot;,
+  &quot;/class_method&quot;: &quot;Object.method&quot;,
+  &quot;/callback&quot;: function(){}
+});</code></pre>
+
+<p>Supported types of paths:</p>
 
 <ul>
-<li>try &#8220;MyView = $.view(&#8220;create&#8221;</li>
+<li>&#8221;/&#8221; - A plain path with no parameters.</li>
 
-<li>investiage jQuery custom events</li>
+<li>&#8220;/article/:id&#8221; - A path with a required named parameter.</li>
 
-<li>change bindOnce to one Existing functionality to document</li>
+<li>&#8220;/about/(:page_name)&#8221; - A path with an optional named paramter.</li>
 
-<li>all class and instance attributes (in &#8220;internals&#8221; section)</li>
+<li>&#8220;/wiki/*&#8221; - A path with an asterix / wildcard.</li>
 </ul>
 
-<p>New functionality to document:</p>
+<p>Supported types of callbacks:</p>
 
-<p>MyView = $.view(function(){ $(this.div()).click() });</p>
+<ul>
+<li>&#8220;PageView#home&#8221; - Will call PageView.instance().home()</li>
 
-<p>$(&#8216;li a&#8217;,new MyView()) $(new MyView())</p>
+<li>&#8220;Object.method&#8221; - Will call Object.method()</li>
 
-<p>Hypothetical routes API:</p>
+<li>function(){} - Will call the specified function.</li>
+</ul>
 
-<p>$.view.routes({ &#8217;/&#8217;: function(){ }, &#8216;/test&#8217;: <span>MyView,&#8217;method&#8217;</span> }); $.view.routes.change(function(path,target){</p>
+<h2 id='routesurlstring_callback__string'>$.routes(&#8220;url&#8221;,String callback) -&gt; String</h2>
 
-<p>}); $.view.routes.set(&#8221;); MyView.method() //also calls $.view.routes.set(&#8216;/test&#8217;);</p>
+<p>Generates a url for a route.</p>
 
-<h2 id='attributes'>Attributes</h2>
+<pre><code>var url = $.routes(&quot;url&quot;,&quot;ArticlesView#article&quot;,{id:5});
+url == &quot;/article/5&quot;</code></pre>
 
-<p>MyViewWithAttributes = $.view(function(){ this.get(&#8216;key&#8217;); }); new MyViewWithAttributes({ key: &#8216;value&#8217; });</p>
+<h2 id='routesget__string'>$.routes(&#8220;get&#8221;) -&gt; String</h2>
+
+<p>Returns the current address / path.</p>
+
+<h2 id='routesset__null'>$.routes(&#8220;set&#8221;) -&gt; null</h2>
+
+<p>Sets the current address / path, calling the matched route if a match is found.</p>
+
+<pre><code>$.routes(&quot;set&quot;,&quot;/article/5&quot;);</code></pre>
+
+<p>$.routes(&#8220;add&#8221;,String path,String callback) -&gt; null Add a new route.</p>
+
+<pre><code>$.routes(&quot;add&quot;,&quot;/article/:id&quot;,&quot;ArticlesView#article&quot;);</code></pre>
+
+<h2 id='routesmatchstring_path__array_function_callback_object_params_number_index_of_route'>$.routes(&#8220;match&#8221;,String path) -&gt; Array [Function callback, Object params, Number index_of_route]</h2>
+
+<pre><code>var match = $.routes(&quot;match&quot;,&quot;/article/5&quot;);
+match[0](match[1]);</code></pre>
+
+<h2 id='routessetupstring_callback__null'>$.routes(&#8220;setup&#8221;,String callback) -&gt; null</h2>
+
+<p>If lazy loading is enabled each callback will need to be setup to enable two way routing.</p>
+
+<pre><code>$.routes(&quot;setup&quot;,&quot;ArticlesView#article&quot;);
+ArticlesView.getInstance().article({id:5});
+$.routes(&quot;get&quot;) == &quot;/article/5&quot;</code></pre>
+
+<h2 id='routesstop__null'>$.routes(&#8220;stop&#8221;) -&gt; null</h2>
+
+<p>Stops the routing plugin from handling changes in the page address.</p>
+
+<h2 id='routesstart__null'>$.routes(&#8220;start&#8221;) -&gt; null</h2>
+
+<p>Called implicitly when you specify your routes. Only necessary if <strong>stop</strong> has been called. $.routes.dispatcher -&gt; Function The <strong>dispatcher</strong> property is a function invoked each time the route / path changes. It is called with Function callback, Object params, String path. The default dispatcher calls the callback with the params.</p>
+
+<pre><code>$.routes.dispatcher = function(callback,params,path){
+  callback(params);
+};</code></pre>
+
+<p>$.routes.history -&gt; Array The history array contains a list of dispatched routes since $.routes was initialized. Each item in the array is an array containing [String path,Function callback,Object params]</p>
         </body>
       </html>

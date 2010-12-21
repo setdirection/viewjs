@@ -45,13 +45,13 @@ var ViewWithJQuery = $.view(function(){
 
 test("Node creation with mix and match of text and elements",function(){
   var arguments_instance = new ArgumentsTestView();
-  equal(arguments_instance.getElement().firstChild.firstChild.nodeValue,'one');
-  equal(arguments_instance.getElement().firstChild.childNodes[2].tagName,'B');
+  equal(arguments_instance.element().firstChild.firstChild.nodeValue,'one');
+  equal(arguments_instance.element().firstChild.childNodes[2].tagName,'B');
 });
 
 test("Node creation with jQuery methods being chained in builder",function(){
   var jquery_view_instance = new ViewWithJQuery();
-  var list_items = $('li',jquery_view_instance.getElement());
+  var list_items = $('li',jquery_view_instance.element());
   equal(list_items.length,3);
   equal(list_items[1].innerHTML,'b');
   equal(list_items[2].innerHTML,'c');
@@ -72,12 +72,12 @@ test("Constructor can return a jQuery object",function(){
   var TestView = $.view(function(){
     return $(this.div('test'));
   });
-  equal(new TestView().getElement().innerHTML,'test');
+  equal(new TestView().element().innerHTML,'test');
 });
 
 test("Node creation with deep nesting",function(){
   var deep_instance = new DeepView();
-  equal(deep_instance.getElement().firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.nodeValue,'test');
+  equal(deep_instance.element().firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.nodeValue,'test');
 });
 
 test("User specified view methods are proxied",function(){
@@ -93,7 +93,7 @@ test("User specified view methods are proxied",function(){
     }
   });
   var instance = new ProxyTestView();
-  $(instance.getElement()).trigger('click');
+  $(instance.element()).trigger('click');
   equal(test_value,'test');
 });
 
@@ -117,7 +117,7 @@ test('ready event firing on class, instance and after ready',function(){
   parent_instance.ready(function(){
     ++trigger_count;
   });
-  document.body.appendChild(parent_instance.getElement());
+  document.body.appendChild(parent_instance.element());
   parent_instance.bind('ready',function(){
     ++trigger_count;
   });
@@ -126,7 +126,7 @@ test('ready event firing on class, instance and after ready',function(){
 test('ready event cascades to child class',function(){
   //observing "ready" immediately after inserting will syncrhonusly trigger other observers that had been delayed
   child_instance = new ChildView();
-  document.body.appendChild(child_instance.getElement());
+  document.body.appendChild(child_instance.element());
   child_instance.bind('ready',function(){
     ++trigger_count;
   });
@@ -182,10 +182,10 @@ test('View subclass attributes cascades to child',function(){
 
 test('Parent element passed to child constructor',function(){
   var child = new ChildViewTwo({value:'test'});
-  document.body.appendChild(child.getElement());
+  document.body.appendChild(child.element());
   equal(child.getText(),'test');
   equal(child.textNode.className,'added');
-  $(child.getElement()).detach();
+  $(child.element()).detach();
 });
 
 test('Events triggered and cascade properly between parent and child',function(){
@@ -276,7 +276,7 @@ $.routes({
   '/article/:id': 'ViewWithRoutes#article',
   '/article/:id/:comment_id': 'ViewWithRoutes#articleComment',
   '/wiki/*': 'ViewWithRoutes#wiki',
-  '/one/two/:three/:four/:five/:six': ViewWithRoutes.getInstance().multipleParams,
+  '/one/two/:three/:four/:five/:six': ViewWithRoutes.instance().multipleParams,
   '/one/:a/(:b)': 'ViewWithRoutes#optionalOne',
   '/one/:a/(:b)/(:c)': 'ViewWithRoutes#optionalTwo',
   '/one/:a/(:b)/(:c)/(:d)/(:e)': 'ViewWithRoutes#optionalThree',
@@ -296,31 +296,31 @@ test('Url generation',function(){
 });
 
 test('Routes matching',function(){
-  equal($.routes.match('/')[0],ViewWithRoutes.getInstance().home);
-  equal($.routes.match('/article/5')[0],ViewWithRoutes.getInstance().article);
+  equal($.routes.match('/')[0],ViewWithRoutes.instance().home);
+  equal($.routes.match('/article/5')[0],ViewWithRoutes.instance().article);
   equal($.routes.match('/article/5')[1].id,"5");
-  equal($.routes.match('/one/two/3/4/5/6')[0],ViewWithRoutes.getInstance().multipleParams);
+  equal($.routes.match('/one/two/3/4/5/6')[0],ViewWithRoutes.instance().multipleParams);
   equal($.routes.match('/one/two/3/4/5/6')[1].three,"3");
   equal($.routes.match('/one/two/3/4/5/6')[1].four,"4");
   equal($.routes.match('/one/two/3/4/5/6')[1].five,"5");
   equal($.routes.match('/one/two/3/4/5/6')[1].six,"6");
 
-  equal($.routes.match('/one/a/b')[0],ViewWithRoutes.getInstance().optionalOne);
+  equal($.routes.match('/one/a/b')[0],ViewWithRoutes.instance().optionalOne);
   equal($.routes.match('/one/a/b')[1].a,'a');
   equal($.routes.match('/one/a/b')[1].b,'b');
   
-  equal($.routes.match('/one/a/b/c')[0],ViewWithRoutes.getInstance().optionalTwo);
+  equal($.routes.match('/one/a/b/c')[0],ViewWithRoutes.instance().optionalTwo);
   equal($.routes.match('/one/a/b/c')[1].a,'a');
   equal($.routes.match('/one/a/b/c')[1].b,'b');
   equal($.routes.match('/one/a/b/c')[1].c,'c');
   
-  equal($.routes.match('/one/a/b/c/d/e')[0],ViewWithRoutes.getInstance().optionalThree);
+  equal($.routes.match('/one/a/b/c/d/e')[0],ViewWithRoutes.instance().optionalThree);
   equal($.routes.match('/one/a/b/c/d/e')[1].a,'a');
   equal($.routes.match('/one/a/b/c/d/e')[1].b,'b');
   equal($.routes.match('/one/a/b/c/d/e')[1].c,'c');
   equal($.routes.match('/one/a/b/c/d/e')[1].d,'d');
   equal($.routes.match('/one/a/b/c/d/e')[1].e,'e');
-  equal($.routes.match('/one/a/b/c/d')[0],ViewWithRoutes.getInstance().optionalThree);
+  equal($.routes.match('/one/a/b/c/d')[0],ViewWithRoutes.instance().optionalThree);
   equal($.routes.match('/one/a/b/c/d')[1].a,'a');
   equal($.routes.match('/one/a/b/c/d')[1].b,'b');
   equal($.routes.match('/one/a/b/c/d')[1].c,'c');
@@ -343,12 +343,12 @@ test('Optional parameter url generation',function(){
 asyncTest('Method calling and dispatch modifies address',function(){
   setTimeout(function(){
     start();
-    ViewWithRoutes.getInstance().home();
-    ViewWithRoutes.getInstance().article({
+    ViewWithRoutes.instance().home();
+    ViewWithRoutes.instance().article({
       id: 5
     });
     equal($.routes('get'),$.routes.url('ViewWithRoutes#article',{id:'5'}));
-    equal(ViewWithRoutes.getInstance().lastParams.id,5);
+    equal(ViewWithRoutes.instance().lastParams.id,5);
     $.routes('set','/class_method/6');
     equal(ViewWithRoutes.lastClassParams.id,6);
     equal($.routes('get'),'/class_method/6');

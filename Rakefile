@@ -22,7 +22,7 @@ task :docs do
   source = File.read 'jquery.view.js'
   source_for_markdown = []
   source.split(10.chr).each do |line|
-    source_for_markdown.push(line.gsub(/^\s?\*\s/,'')) if line.match /^\s?\*\s/
+    source_for_markdown.push(line.gsub(/^\s+?\/?\*\s/,'')) if line.match /^\s+?\/?\*\s/
   end
   File.open('index.html', 'w+') do |file|
     file.write <<-eos
