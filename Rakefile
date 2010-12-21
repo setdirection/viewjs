@@ -33,7 +33,7 @@ task :docs do
           <link rel="stylesheet" media="screen" href="screen.css"/>
         </head>
         <body>
-          #{Maruku.new(source_for_markdown.join(10.chr)).to_html}
+          #{Maruku.new(source_for_markdown.join(10.chr),:unsafe_features => false).to_html}
         </body>
       </html>
     eos
