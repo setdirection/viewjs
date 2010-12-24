@@ -842,8 +842,9 @@
         argument = argument.toArray();
       }
       if($.isArray(argument)){
-        for(ii = 0; ii < argument.length; ++ii){
-          process_node_argument(elements,attributes,argument[ii]);
+        var flattened = flatten_array(argument);
+        for(ii = 0; ii < flattened.length; ++ii){
+          process_node_argument(elements,attributes,flattened[ii]);
         }
         return;
       }
@@ -889,6 +890,18 @@
         }
       }
       return element;
+    };
+    
+    function flatten_array(array){
+      var flattened = [];
+      for(var i = 0; i < array.length; ++i){
+        if($.isArray(array[i])){
+          flattened = flattened.concat(flatten_array(array[i]));
+        }else{
+          flattened.push(array[i]);
+        }
+      }
+      return flattened;
     };
     
     function generate_builder_method(tag_name){

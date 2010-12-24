@@ -14,7 +14,17 @@ var DeepView = $.view(function(){
           this.td(
             this.ul(
               this.li(this.span(this.b('test'))),
-              this.li()
+              this.li(),
+              [
+                this.li(),
+                [
+                  this.li(),
+                  this.li(),
+                  [
+                    this.li()
+                  ]
+                ]
+              ]
             )
           ),
           this.td(
