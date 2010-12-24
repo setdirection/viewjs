@@ -667,11 +667,9 @@
           $.address.bind('externalChange',external_change_handler);
           ready = true;
           enabled = true;
-          setTimeout(function initial_route_dispatcher(){
-            if(!set(get(),true)){
-              set('/');
-            }
-          });
+          if(!set(get(),true)){
+            set('/');
+          }
         });
       }else{
         ready = true;
@@ -739,14 +737,19 @@
       if(typeof(params) == 'string' && url.match(/\*/)){
         url = url.replace(/\*/,params).replace(/\/\//g,'/');
       }else{
+        if(params.path){
+          url = url.replace(/\*/,params.path.replace(/^\//,''));
+        }
         var param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?(/|$)','g');
         for(var param_name in params){
-          url = url.replace(param_matcher,function(){
-            return arguments[2] == param_name
-              ? params[param_name] + arguments[4]
-              : (arguments[1] || '') + ':' + arguments[2] + (arguments[3] || '') + arguments[4]
-            ;
-          });
+          if(param_name != 'path'){
+            url = url.replace(param_matcher,function(){
+              return arguments[2] == param_name
+                ? params[param_name] + arguments[4]
+                : (arguments[1] || '') + ':' + arguments[2] + (arguments[3] || '') + arguments[4]
+              ;
+            });
+          }
         }
       }
       url = url.replace(/\([^\)]+\)/g,'');

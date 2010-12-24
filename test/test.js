@@ -308,6 +308,7 @@ test('Url generation',function(){
   equal($.routes("url",'ViewWithRoutes#home'),'/');
   equal($.routes("url",'ViewWithRoutes#article',{id:'5'}),'/article/5');
   equal($.routes("url",'ViewWithRoutes#wiki','/one/two/three'),'/wiki/one/two/three');
+  equal($.routes("url",'ViewWithRoutes#wiki',{path:'/one/two/three'}),'/wiki/one/two/three');
   equal($.routes("url",'ViewWithRoutes#test',{
     ViewWithRoutes: 'contacts',
     method: 'create',
