@@ -6,9 +6,11 @@
 // 
 // Released under the MIT license.
 
+// To do:
+// 
 // Introduction Outline
-// - no MVC, only Model + View + routes
-// - builder
+// - MVC has no place in many browser apps, only Model + View + routes
+// - builder (and where to export it: $, window, $.view.fn)
 // - jQuery integration
 // - pure DOM programming vs string based templates + jQuery
 // - attributes
@@ -46,6 +48,10 @@
  * ===========
  */ 
 (function($,context){
+  
+  if(Number($.fn.jquery.replace(/\./g)) < 143){
+    throw 'jQuery View requires jQuery 1.4.3 or later.';
+  }
   
   (function(){ 
     $.view = function view(structure,methods){
@@ -310,7 +316,36 @@
           }
         }
         return collected_return_values;
-      }
+      },
+      /* Helpers
+       * =======
+       * 
+       * instance.map(mixed) -> Array
+       * ------------
+       * 
+       *     var navigation = $.view(function(){
+       *       return this.ul(this.map({
+       *         'Page Title: 'http://page.com/'
+       *       },function(title,url){
+       *         return this.li(
+       *           this.a({href:url},title)
+       *         );
+       *       }));
+       *     });
+       */
+       map: function map(object,callback){
+         var elements = [];
+         if($.isArray(object)){
+           for(var i = 0; i < object.length; ++i){
+             elements.push(callback.apply(this,[object[i],i]));
+           }
+         }else{
+           for(var key in object){
+             elements.push(callback.apply(this,[key,object[key]]));
+           }
+         }
+         return elements;
+       }
     };
     
     /* Properties
@@ -405,7 +440,7 @@
      *     ArticlesView.instance().article({id:6});
      *     //$.routes("set","/article/6"); automatically called
      * 
-     * $.routes(Object routes \[,Boolean lazy_loading = false\]) -> null
+     * $.routes*(Object routes \[,Boolean lazy_loading = false\]) -> null*
      * ----------------------------
      * Calling routes will start routes in your appliction, dispatching the current
      * address present in the url bar of the browser. If no address is present on
@@ -568,7 +603,8 @@
     
     /* $.routes("setup"*, String callback*) *-> null*
      * --------
-     * If lazy loading is enabled each callback will need to be setup to enable two way routing.
+     * If lazy loading is enabled each callback will need to be setup to enable
+     * the automatic call to $.routes("set",path) when the callback is invoked.
      * 
      *     $.routes("setup","ArticlesView#article");
      *     ArticlesView.instance().article({id:5});
@@ -589,12 +625,13 @@
         return callback;
       }
       var path = routes[index_of_route][0];
-      var callback_bits = callback.split(/(\.|\#)/);
-      var object = context[callback_bits[0]];
-      if(callback.match(/[\w]+\#[\w]+/)){
-        object = object.instance();
+      var method_name = callback.match(/\#(.+)$/)[1];
+      var object_name_bits = callback.replace(/\#.+$/,'').split('.');
+      var object = context[object_name_bits[0]];
+      for(var i = 1; i < object_name_bits.length; ++i){
+        object = object[object_name_bits[i]];
       }
-      var method_name = callback_bits[2];
+      object = object.instance();
       if('callOriginal' in object[method_name]){
         return object[method_name];
       }
@@ -764,7 +801,7 @@
     var tags = ('a abbr acronym address applet area b base basefont bdo big blockquote body ' +
       'br button canvas caption center cite code col colgroup dd del dfn dir div dl dt em embed fieldset ' +
       'font form frame frameset h1 h2 h3 h4 h5 h6 head hr html i iframe img input ins isindex ' +
-      'kbd label legend li link map menu meta nobr noframes noscript object ol optgroup option p ' +
+      'kbd label legend li link menu meta nobr noframes noscript object ol optgroup option p ' +
       'param pre q s samp script select small span strike strong style sub sup table tbody td ' +
       'textarea tfoot th thead title tr tt u ul var ' +
       //html5 additions
@@ -874,7 +911,9 @@
      */
     function export_tag_methods(target){
       for(var method_name in methods){
-        target[method_name] = methods[method_name];
+        if(!(method_name in target)){
+          target[method_name] = methods[method_name];
+        }
       }
     };
     

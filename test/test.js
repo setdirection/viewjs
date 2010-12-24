@@ -268,9 +268,19 @@ ViewWithRoutes = $.view(function(){
   optionalTwo: function(){},
   optionalThree: function(){}
 });
-ViewWithRoutes.classMethodTest = function(params){
-  ViewWithRoutes.lastClassParams = params;
+
+Deep = {
+  Nested: {
+    TestView: $.view(function(){
+      return this.div();
+    },{
+      test: function(){
+        Deep.Nested.TestView.wasCalled = true;
+      }
+    })
+  }
 };
+
 $.routes({
   '/': 'ViewWithRoutes#home',
   '/article/:id': 'ViewWithRoutes#article',
@@ -281,7 +291,7 @@ $.routes({
   '/one/:a/(:b)/(:c)': 'ViewWithRoutes#optionalTwo',
   '/one/:a/(:b)/(:c)/(:d)/(:e)': 'ViewWithRoutes#optionalThree',
   '/:ViewWithRoutes/:method/:id': 'ViewWithRoutes#test',
-  '/class_method/:id': 'ViewWithRoutes.classMethodTest'
+  '/nested_test/': 'Deep.Nested.TestView#test'
 });
 
 test('Url generation',function(){
@@ -340,6 +350,11 @@ test('Optional parameter url generation',function(){
   }),'/one/:a/');
 });
 
+test('Nested objects can contain routable views',function(){
+  $.routes("set",'/nested_test/');
+  equal(Deep.Nested.TestView.wasCalled,true);
+});
+
 asyncTest('Method calling and dispatch modifies address',function(){
   setTimeout(function(){
     start();
@@ -349,8 +364,5 @@ asyncTest('Method calling and dispatch modifies address',function(){
     });
     equal($.routes('get'),$.routes('url','ViewWithRoutes#article',{id:'5'}));
     equal(ViewWithRoutes.instance().lastParams.id,5);
-    $.routes('set','/class_method/6');
-    equal(ViewWithRoutes.lastClassParams.id,6);
-    equal($.routes('get'),'/class_method/6');
   },50);
 });
