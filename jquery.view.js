@@ -62,14 +62,14 @@
         methods = arguments[2];
       }
       var klass = function klass(attributes){
-        this.observers = {};
-        this.attributes = {};
+        this._observers = {};
+        this._attributes = {};
         //proxy all user specified methods
         for(var i = 0; i < this.constructor.methodsToProxy.length; ++i){
           this[this.constructor.methodsToProxy[i]] = $.proxy(this[this.constructor.methodsToProxy[i]],this);
         }
         this.initialize.apply(this,arguments);
-        if(klass.observers && 'ready' in klass.observers){
+        if(klass._observers && 'ready' in klass._observers){
           trigger_or_delay_ready_event_on_instance(this);
         }
       };
@@ -77,7 +77,7 @@
       for(var method_name in methods){
         klass.methodsToProxy.push(method_name);
       }
-      klass.observers = {};
+      klass._observers = {};
       klass._instance = false;
       $.extend(klass,$.view.classMethods);
       if(parent_class){
@@ -94,11 +94,11 @@
       }
       klass.prototype.bind = wrap_function(klass.prototype.bind,observe_wrapper_for_ready_event_on_instance);
       if(parent_class){
-        klass.observers = {};
-        for(var observer_name in parent_class.observers){
-          klass.observers[observer_name] = parent_class.observers[observer_name];
+        klass._observers = {};
+        for(var observer_name in parent_class._observers){
+          klass._observers[observer_name] = parent_class._observers[observer_name];
         }
-        klass.prototype.observers = {};
+        klass.prototype._observers = {};
         wrap_event_methods_for_child_class(klass,parent_class);
       }
       $.extend(klass.prototype,methods || {});
@@ -138,17 +138,17 @@
           observer = proxy_and_curry.apply($.view,[observer].concat(array_from(arguments).slice(2)));
         }
         if(typeof(event_name) === 'string' && typeof(observer) !== 'undefined'){
-          if(!(event_name in this.observers)){
-            this.observers[event_name] = [];
+          if(!(event_name in this._observers)){
+            this._observers[event_name] = [];
           }
-          this.observers[event_name].push(observer);
+          this._observers[event_name].push(observer);
         }
         return observer;
       },
       /* Class.one*(String event_name, Function callback \[,Object context\]) -> Function*
        * ---------
        */ 
-      one: function one(event_name,observer,context){
+      one: function one(event_name,outer_observer,context){
         if(context){
           outer_observer = proxy_and_curry.apply($.view,[outer_observer].concat(array_from(arguments).slice(2)));
         }
@@ -156,42 +156,42 @@
           outer_observer.apply(this,arguments);
           this.unbind(event_name,inner_observer);
         },this);
-        if(!(event_name in this.observers)){
-          this.observers[event_name] = [];
+        if(!(event_name in this._observers)){
+          this._observers[event_name] = [];
         }
-        this.observers[event_name].push(inner_observer);
+        this._observers[event_name].push(inner_observer);
         return inner_observer;
       },
       /* Class.unbind*(\[String event_name\] \[,Function callback\] \[,Object context\]) -> null*
        * ------------
        */
       unbind: function unbind(event_name,observer){
-        if(!(event_name in this.observers)){
-          this.observers[event_name] = [];
+        if(!(event_name in this._observers)){
+          this._observers[event_name] = [];
         }
         if(event_name && observer){
-          this.observers[event_name] = array_without_value(this.observers[event_name],observer);
+          this._observers[event_name] = array_without_value(this._observers[event_name],observer);
         }
         else if(event_name){
-          this.observers[event_name] = [];
+          this._observers[event_name] = [];
         }else{
-          this.observers = {};
+          this._observers = {};
         }
       },
       /* Class.trigger*(String event_name) -> Array or false*
        * -------------
        */ 
       trigger: function trigger(event_name){
-        if(!this.observers || !this.observers[event_name] || (this.observers[event_name] && this.observers[event_name].length == 0)){
+        if(!this._observers || !this._observers[event_name] || (this._observers[event_name] && this._observers[event_name].length == 0)){
           return [];
         }
-        if(!(event_name in this.observers)){
-          this.observers[event_name] = [];
+        if(!(event_name in this._observers)){
+          this._observers[event_name] = [];
         }
         var collected_return_values = [];
         var args = array_from(arguments).slice(1);
-        for(var i = 0; i < this.observers[event_name].length; ++i){
-          var response = this.observers[event_name][i].apply(this.observers[event_name][i],args);
+        for(var i = 0; i < this._observers[event_name].length; ++i){
+          var response = this._observers[event_name][i].apply(this._observers[event_name][i],args);
           if(response === false){
             return false;
           }else{
@@ -235,13 +235,13 @@
        * ------------
        */ 
       get: function get(key){
-        return this.attributes[key];
+        return this._attributes[key];
       },
       /* instance.set*(String key,mixed value) -> mixed*
        * ------------
        */ 
       set: function set(key,value){
-        return this.attributes[key] = value;
+        return this._attributes[key] = value;
       },
       /* instance.element*() -> Element*<br/>instance.element*(Element element) -> Element*
        * ----------------
@@ -287,9 +287,9 @@
        */ 
       trigger: function trigger(event_name){
         if(
-          (!this.constructor.observers || !this.constructor.observers[event_name] ||
-            (this.constructor.observers[event_name] && this.constructor.observers[event_name].length == 0)) &&
-          (!this.observers || !this.observers[event_name] || (this.observers[event_name] && this.observers[event_name].length == 0))
+          (!this.constructor._observers || !this.constructor._observers[event_name] ||
+            (this.constructor._observers[event_name] && this.constructor._observers[event_name].length == 0)) &&
+          (!this._observers || !this._observers[event_name] || (this._observers[event_name] && this._observers[event_name].length == 0))
         ){
           return [];
         }
@@ -303,12 +303,12 @@
           return false;
         }
         collected_return_values = collected_return_values.concat(collected_return_values_from_constructor);
-        if(!(event_name in this.observers)){
-          this.observers[event_name] = [];
+        if(!(event_name in this._observers)){
+          this._observers[event_name] = [];
         }
         var response;
-        for(var i = 0; i < this.observers[event_name].length; ++i){
-          response = this.observers[event_name][i].apply(this.observers[event_name][i],args);
+        for(var i = 0; i < this._observers[event_name].length; ++i){
+          response = this._observers[event_name][i].apply(this._observers[event_name][i],args);
           if(response === false){
             return false;
           }else{
@@ -627,6 +627,7 @@
       var path = routes[index_of_route][0];
       var method_name = callback.match(/\#(.+)$/)[1];
       var object_name_bits = callback.replace(/\#.+$/,'').split('.');
+      //context was set by the outer function wrapper and usually refers to window
       var object = context[object_name_bits[0]];
       for(var i = 1; i < object_name_bits.length; ++i){
         object = object[object_name_bits[i]];
@@ -956,7 +957,7 @@
   
   //private utility methods shared between $.view, $.builder, $.routes
   function is_view_instance(object){
-    return object && object.element && object.element().nodeType == 1 && object.attributes;
+    return object && object.element && object.element().nodeType == 1 && object._attributes;
   };
   
   function is_view_class(object){
