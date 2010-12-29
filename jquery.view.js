@@ -42,6 +42,11 @@
 // 
 // $('li a',new MyView())
 // $(new MyView())
+//
+// 
+//
+//
+//
 
 /* 
  * jQuery View
@@ -257,7 +262,9 @@
         if(typeof(element) == 'undefined'){
           return this._element;
         }else{
-          if(is_jquery_object(element)){
+          if(is_html(element)){
+            element = $(element)[0];
+          }else if(is_jquery_object(element)){
             element = element[0];
           }
           this._element = element;
@@ -847,12 +854,18 @@
       }
       if($.isArray(argument)){
         var flattened = flatten_array(argument);
-        for(ii = 0; ii < flattened.length; ++ii){
-          process_node_argument(elements,attributes,flattened[ii]);
+        for(var i = 0; i < flattened.length; ++i){
+          process_node_argument(elements,attributes,flattened[i]);
         }
         return;
       }
-      if((argument && argument.nodeType === 1) || typeof(argument) === 'string' || typeof(argument) === 'number'){
+      if(is_html(argument)){
+        var generated_elements = $(argument);
+        for(var i = 0; i < generated_elements.length; ++i){
+          elements.push(generated_elements[i]);
+        }
+        return;
+      }else if((argument && argument.nodeType === 1) || typeof(argument) === 'string' || typeof(argument) === 'number'){
         elements.push(argument);
         return;
       }
@@ -966,6 +979,10 @@
   
   function is_jquery_object(object){
     return typeof(object) == 'object' && ('jquery' in object) && ('selector' in object) && ('context' in object) && ('length' in object);
+  };
+  
+  function is_html(string){
+    return typeof(string) == 'string' && string.match(/^<[\w\W]+>/);
   };
   
   function array_from(object){

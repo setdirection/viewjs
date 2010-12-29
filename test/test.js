@@ -53,6 +53,23 @@ var ViewWithJQuery = $.view(function(){
   return element;
 });
 
+var HTMLStringView = $.view(function(){
+  return this.div(
+    this.ul(
+      '<li>one</li>',
+      this.li('<span class="test"><b>two</b></span>'),
+      [
+        '<li>three</li>',
+        this.li('<b>four</b>')
+      ],
+      '<li>five</li><li>six</li>'
+    )
+  );
+});
+var HTMLStringConstructorView = $.view(function(){
+  return '<ul><li><span class="test">test</span></li></ul>';
+});
+
 test("Node creation with mix and match of text and elements",function(){
   var arguments_instance = new ArgumentsTestView();
   equal(arguments_instance.element().firstChild.firstChild.nodeValue,'one');
@@ -85,9 +102,24 @@ test("Constructor can return a jQuery object",function(){
   equal(new TestView().element().innerHTML,'test');
 });
 
+test('HTML strings can be mixed and matched with builder args',function(){
+  var instance = new HTMLStringView();
+  equal($($('li',instance)[0]).html(),'one');
+  equal($('span.test',instance)[0].firstChild.innerHTML,'two');
+  equal($($('li',instance)[2]).html(),'three');
+  equal($('li',instance)[3].firstChild.innerHTML,'four');
+  equal($('li',instance)[4].innerHTML,'five');
+  equal($('li',instance)[5].innerHTML,'six');
+});
+
 test("Node creation with deep nesting",function(){
   var deep_instance = new DeepView();
   equal(deep_instance.element().firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.nodeValue,'test');
+});
+
+test("Constructor can return an HTML string",function(){
+  var instance = new HTMLStringConstructorView();
+  equal($('span.test',instance).html(),'test');
 });
 
 test("User specified view methods are proxied",function(){
