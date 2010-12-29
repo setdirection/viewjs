@@ -978,7 +978,7 @@
   };
   
   function is_jquery_object(object){
-    return typeof(object) == 'object' && ('jquery' in object) && ('selector' in object) && ('context' in object) && ('length' in object);
+    return typeof(object) == 'object' && ('jquery' in object) && ('length' in object);
   };
   
   function is_html(string){
