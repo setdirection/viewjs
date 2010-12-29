@@ -63,7 +63,8 @@ var HTMLStringView = $.view(function(){
         this.li('<b>four</b>')
       ],
       '<li>five</li><li>six</li>',
-      $('<li>seven</li>')
+      $('<li>seven</li>'),
+      this.li(' <b>eight</b>')
     )
   );
 });
@@ -112,6 +113,7 @@ test('HTML strings can be mixed and matched with builder args',function(){
   equal($('li',instance)[4].innerHTML,'five');
   equal($('li',instance)[5].innerHTML,'six');
   equal($('li',instance)[6].innerHTML,'seven');
+  equal($('li',instance)[7].innerHTML,' &lt;b&gt;eight&lt;/b&gt;');
 });
 
 test("Node creation with deep nesting",function(){

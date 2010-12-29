@@ -18,6 +18,8 @@
 // - ready event
 // - nesting views
 // - subclasses
+// - mixing of HTML strings / javascript templates
+// - forcing HTML like strings to be plain text (just put a space)
 // 
 //
 //
@@ -341,17 +343,17 @@
        *     });
        */
        map: function map(object,callback){
-         var elements = [];
+         var response = [];
          if($.isArray(object)){
            for(var i = 0; i < object.length; ++i){
-             elements.push(callback.apply(this,[object[i],i]));
+             response.push(callback.apply(this,[object[i],i]));
            }
          }else{
            for(var key in object){
-             elements.push(callback.apply(this,[key,object[key]]));
+             response.push(callback.apply(this,[key,object[key]]));
            }
          }
-         return elements;
+         return response;
        }
     };
     
