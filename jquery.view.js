@@ -7,23 +7,40 @@
 // Released under the MIT license.
 
 // To do:
+//   data link support
+// 
+// Docs To do:
 // 
 // Introduction Outline
 // - MVC has no place in many browser apps, only Model + View + routes
 // - builder (and where to export it: $, window, $.view.fn)
-// - jQuery integration
-// - pure DOM programming vs string based templates + jQuery
+// - jQuery integration (show chaining in builder)
+// - coding styles
+//   - pure DOM (show example of elements indexed by data id)
+//   - string HTML or string based templating (show mix and match)
+//   - using delegates
+//   - string constructor
+//     View = $.view('<a href="#"></a>',{
+//       handleClick: function(){
+//         
+//       }
+//     });
+//     View.delegate('a','click','handleClick');
+//     View.ready(function(instance){
+//       $('a',instance).click(instance.handleClick);
+//     });
+//     
 // - attributes
 // - events
 // - ready event
 // - nesting views
 // - subclasses
-// - mixing of HTML strings / javascript templates
 // - forcing HTML like strings to be plain text (just put a space)
-// 
+// - adding to existing views without modifying them
+//     FormView.ready(function(instance){
+//       $('form',instance).validate();
+//     });
 //
-//
-// TODO:
 // - Demonstrate good application practices in docs (jQuery View manifesto)
 //   - each app should have it's own small View plugin system (adding app specific functions to $.view.fn)
 //   - application / file structure
@@ -31,24 +48,9 @@
 //   - point out in docs how most id="whatever" in HTML is for jQuery to reference
 //     - jQuery View removes the need to write markup for the sake of identifaction in the code
 //     - jQuery View allows more meaningful connections between DOM elements and your data model
-// - ensure routing only listens when a match happens, that all other hash changes defer to the page (and ids on the page)
 // 
 // Existing functionality to document
 // - all class and instance attributes (in "internals" section)
-// 
-// New functionality to document:
-// 
-// MyView = $.view(function(){
-//   $(this.div()).click()
-// });
-// 
-// $('li a',new MyView())
-// $(new MyView())
-//
-// 
-//
-//
-//
 
 /* 
  * jQuery View
@@ -60,7 +62,7 @@
     throw 'jQuery View requires jQuery 1.4.3 or later.';
   }
   
-  (function(){ 
+  (function(){
     $.view = function view(structure,methods){
       var parent_class;
       if(is_view_class(structure)){
@@ -68,36 +70,43 @@
         structure = arguments[1];
         methods = arguments[2];
       }
+      if(typeof(structure) == 'string'){
+        var html = String(structure);
+        structure = function(){
+          return html;
+        };
+      }
       var klass = function klass(attributes){
+        this._delegates = [];
         this._observers = {};
         this._attributes = {};
         //proxy all user specified methods
-        for(var i = 0; i < this.constructor.methodsToProxy.length; ++i){
-          this[this.constructor.methodsToProxy[i]] = $.proxy(this[this.constructor.methodsToProxy[i]],this);
+        for(var i = 0; i < this.constructor._methodsToProxy.length; ++i){
+          this[this.constructor._methodsToProxy[i]] = $.proxy(this[this.constructor._methodsToProxy[i]],this);
         }
         this.initialize.apply(this,arguments);
         if(klass._observers && 'ready' in klass._observers){
           trigger_or_delay_ready_event_on_instance(this);
         }
       };
-      klass.methodsToProxy = [];
+      klass._methodsToProxy = [];
       for(var method_name in methods){
-        klass.methodsToProxy.push(method_name);
+        klass._methodsToProxy.push(method_name);
       }
       klass._observers = {};
       klass._instance = false;
       $.extend(klass,$.view.classMethods);
       if(parent_class){
         $.extend(klass.prototype,parent_class.prototype);
-        klass.prototype.structure = wrap_function(parent_class.prototype.structure,function(proceed){
+        klass.prototype._structure = wrap_function(parent_class.prototype._structure,function(proceed){
           return structure.apply(this,[$.proxy(proceed,this)()]);
         });
-        for(var i = 0; i < parent_class.methodsToProxy.length; ++i){
-          klass.methodsToProxy.push(parent_class.methodsToProxy[i]);
+        for(var i = 0; i < parent_class._methodsToProxy.length; ++i){
+          klass._methodsToProxy.push(parent_class._methodsToProxy[i]);
         }
       }else{
         $.extend(klass.prototype,$.view.fn);
-        klass.prototype.structure = structure;
+        klass.prototype._structure = structure;
       }
       klass.prototype.bind = wrap_function(klass.prototype.bind,observe_wrapper_for_ready_event_on_instance);
       if(parent_class){
@@ -229,7 +238,7 @@
         for(var key in attributes){
           this.set(key,attributes[key]);
         }
-        var response = this.structure();
+        var response = this._structure();
         if(response && !this._element){
           this.element(response);
         }
@@ -272,6 +281,13 @@
           this._element = element;
           this.length = 1;
           this[0] = this._element;
+          //bind delegate events
+          if(this._delegates.length > 0){
+            for(var i = 0; i < this._delegates.length; ++i){
+              this.delegate(this._delegates[i][0],this._delegates[i][1],this._delegates[i][2]);
+            }
+            this._delegates = [];
+          }
           return this._element;
         }
       },
@@ -354,6 +370,22 @@
            }
          }
          return response;
+       },
+       /* instance.delegate(String selector,String event_name,Function callback[,Object context]) -> null
+        * -----------------
+        * Equivelent to calling [jQuery's delegate()](http://api.jquery.com/delegate/) method, but can
+        * be called before the view's element has been created.
+        */ 
+       delegate: function delegate(selector,event_name,callback,context){
+         if(context){
+           callback = $.proxy(callback,context);
+         }
+         if(this._element){
+           $(this._element).delegate(selector,event_name,callback);
+         }else{
+           this._delegates.push([selector,event_name,callback]);
+           //will call this.delegate() when this.element(element) is called
+         }
        }
     };
     
@@ -811,7 +843,7 @@
     //private builder attributes
     var methods = {};
     var cache = {};
-    var tags = ('a abbr acronym address applet area b base basefont bdo big blockquote body ' +
+    var supported_html_tags = ('a abbr acronym address applet area b base basefont bdo big blockquote body ' +
       'br button canvas caption center cite code col colgroup dd del dfn dir div dl dt em embed fieldset ' +
       'font form frame frameset h1 h2 h3 h4 h5 h6 head hr html i iframe img input ins isindex ' +
       'kbd label legend li link menu meta nobr noframes noscript object ol optgroup option p ' +
@@ -961,10 +993,10 @@
     };
 
     //generate tag methods
-    for(var i = 0; i < tags.length; ++i){
-      methods[tags[i]] = generate_builder_method(tags[i]);
+    for(var i = 0; i < supported_html_tags.length; ++i){
+      methods[supported_html_tags[i]] = generate_builder_method(supported_html_tags[i]);
     }
-    
+
     //auto export
     $.builder('export',$.builder);
     $.builder('export',$.view.fn);
@@ -976,7 +1008,7 @@
   };
   
   function is_view_class(object){
-    return object && object.prototype && object.prototype.structure && object.prototype.element;
+    return object && object.prototype && object.prototype._structure && object.prototype.element;
   };
   
   function is_jquery_object(object){

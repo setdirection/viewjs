@@ -72,6 +72,8 @@ var HTMLStringConstructorView = $.view(function(){
   return '<ul><li><span class="test">test</span></li></ul>';
 });
 
+var HTMLView = $.view('<ul><li><span><b>test</b></span></li></ul>');
+
 test("Node creation with mix and match of text and elements",function(){
   var arguments_instance = new ArgumentsTestView();
   equal(arguments_instance.element().firstChild.firstChild.nodeValue,'one');
@@ -124,6 +126,11 @@ test("Node creation with deep nesting",function(){
 test("Constructor can return an HTML string",function(){
   var instance = new HTMLStringConstructorView();
   equal($('span.test',instance).html(),'test');
+});
+
+test("Constructor can be an HTML string",function(){
+  var instance = new HTMLView();
+  equal($('b',instance).html(),'test');
 });
 
 test("User specified view methods are proxied",function(){
@@ -216,8 +223,8 @@ ChildViewTwo.prototype.className = 'ChildView.Instnace';
 test('List of methods to proxy correctly cascades',function(){
   var parent = new ParentViewTwo();
   var child = new ChildViewTwo();
-  equal(parent.constructor.methodsToProxy.length,'3');
-  equal(child.constructor.methodsToProxy.length,'4');
+  equal(parent.constructor._methodsToProxy.length,'3');
+  equal(child.constructor._methodsToProxy.length,'4');
 });
 
 test('View subclass attributes cascades to child',function(){
