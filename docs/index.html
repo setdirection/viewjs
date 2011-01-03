@@ -37,6 +37,18 @@
 
 <h2 id='events'>Events</h2>
 
+<ul>
+<li>instance events</li>
+
+<li>class events</li>
+
+<li>ready event</li>
+
+<li>changed event</li>
+
+<li>stopping events</li>
+</ul>
+
 <h2 id='subclasses'>Subclasses</h2>
 
 <h2 id='examples'>Examples</h2>
@@ -111,9 +123,9 @@ instance.element().tagName == &#39;div&#39;</code></pre>
 
 <h3 id='instancetriggerstring_event_name__array_or_false'>instance.trigger<em>(String event_name) -&gt; Array or false</em></h3>
 
-<h2 id='helpers'>Helpers</h2>
+<h3 id='instancemapmixedfunction_iterator__array'>instance.map<em>(mixed,Function iterator) -&gt; Array</em></h3>
 
-<h3 id='instancemapmixed__array'>instance.map<em>(mixed) -&gt; Array</em></h3>
+<p>Similar to Array#map or Ruby&#8217;s Array#collect. Works on objects or Arrays. If an object is passed the iterator will be called with (key,value), if an Array is passed the iterator will be called with (value,index). Inside the iterator &#8220;this&#8221; will always refer to the view instance.</p>
 
 <pre><code>var navigation = $.view(function(){
   return this.ul(this.map({
@@ -127,7 +139,7 @@ instance.element().tagName == &#39;div&#39;</code></pre>
 
 <h3 id='instancedelegatestring_selectorstring_event_namefunction_callbackobject_context__null'>instance.delegate<em>(String selector,String event_name,Function callback[,Object context]) -&gt; null</em></h3>
 
-<p>Equivelent to calling <a href='http://api.jquery.com/delegate/'>jQuery&#8217;s delegate()</a> method, but can be called before the view&#8217;s element has been created.</p>
+<p>Equivelent to calling <a href='http://api.jquery.com/delegate/'>jQuery&#8217;s delegate</a> method, but can be called before the view&#8217;s element has been created.</p>
 
 <pre><code>MyView = $.view(function(){
   this.delegate(&#39;a&#39;,&#39;click&#39;,this.handleClick);
@@ -165,6 +177,12 @@ MyClass.myClassMethod();</code></pre>
 <h3 id='viewlogging__boolean'>$.view.logging <em>-&gt; Boolean</em></h3>
 
 <p>Set this to true to have view classes output console.log messages.</p>
+
+<h2 id='change_log'>Change Log</h2>
+
+<p><strong>1.0.0</strong> - <em>Jan 7, 2011</em> Initial release.</p>
+<hr />
+<p>Copyright 2011 <a href='http://syntacticx.com/'>Syntacticx</a>. Released under the <a href='http://jquery.org/license'>MIT or GPL License</a></p>
     <div id="toc"><ul>
 <h1><a href='#jquery_view'>jQuery View</a></h1>
 <h2><a href='#builder'>Builder</a></h2>
@@ -191,13 +209,13 @@ MyClass.myClassMethod();</code></pre>
 <h3>- <a href='#instancereadyfunction_callback_object_context__function'>ready</a></h3>
 <h3>- <a href='#instanceonestring_event_name_function_callback_object_context__function'>one</a></h3>
 <h3>- <a href='#instancetriggerstring_event_name__array_or_false'>trigger</a></h3>
-<h2><a href='#helpers'>Helpers</a></h2>
-<h3>- <a href='#instancemapmixed__array'>map</a></h3>
+<h3>- <a href='#instancemapmixedfunction_iterator__array'>map</a></h3>
 <h3>- <a href='#instancedelegatestring_selectorstring_event_namefunction_callbackobject_context__null'>delegate</a></h3>
 <h2><a href='#properties'>Properties</a></h2>
 <h3>- <a href='#viewfn__object'>fn </a></h3>
 <h3>- <a href='#viewclassmethods__object'>classMethods </a></h3>
 <h3>- <a href='#viewlogging__boolean'>logging </a></h3>
+<h2><a href='#change_log'>Change Log</a></h2>
 </ul></div>
   </body>
 </html>

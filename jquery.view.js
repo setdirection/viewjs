@@ -13,7 +13,7 @@
  * **Download:** [Development](https://github.com/syntacticx/viewjs/zipball/master) | [Production (4KB)](https://github.com/syntacticx/viewjs/raw/master/jquery.view.min.js)  
  * **See Also:** [jQuery Model](http://modeljs.com/) | [jQuery Routes](http://routesjs.com/)
  * 
- * -  most id="whatever" in HTML is for jQuery to reference
+ * - most id="whatever" in HTML is for jQuery to reference
  * - jQuery View removes the need to write markup for the sake of identifaction in the code
  * - jQuery View allows more meaningful connections between DOM elements and your data model
  * 
@@ -29,6 +29,11 @@
  * 
  * Events
  * ------
+ * - instance events
+ * - class events
+ * - ready event
+ * - changed event
+ * - stopping events
  * 
  * Subclasses
  * ----------
@@ -346,10 +351,12 @@
       }
       return collected_return_values;
     },
-    /* Helpers
-     * -------
-     * 
-     * ### instance.map*(mixed) -> Array*
+    /*
+     * ### instance.map*(mixed,Function iterator) -> Array*
+     * Similar to Array#map or Ruby's Array#collect. Works on objects or Arrays.
+     * If an object is passed the iterator will be called with (key,value), if
+     * an Array is passed the iterator will be called with (value,index). Inside
+     * the iterator "this" will always refer to the view instance.
      * 
      *     var navigation = $.view(function(){
      *       return this.ul(this.map({
@@ -375,8 +382,7 @@
        return response;
      },
      /* ### instance.delegate*(String selector,String event_name,Function callback\[,Object context\]) -> null*
-      * 
-      * Equivelent to calling [jQuery's delegate()](http://api.jquery.com/delegate/) method, but can
+      * Equivelent to calling [jQuery's delegate](http://api.jquery.com/delegate/) method, but can
       * be called before the view's element has been created.
       * 
       *     MyView = $.view(function(){
@@ -702,3 +708,14 @@
     return !!(ancestor.body);
   };
 })(jQuery,this);
+
+/* 
+ * Change Log
+ * ----------
+ * **1.0.0** - *Jan 7, 2011*
+ * Initial release.
+ * 
+ * ---
+ * 
+ * Copyright 2011 [Syntacticx](http://syntacticx.com/). Released under the [MIT or GPL License](http://jquery.org/license)
+ */

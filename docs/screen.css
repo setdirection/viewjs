@@ -85,15 +85,16 @@ li {
 }
 
 #toc {
-  width:150px;
   position:fixed;
-  top:35px;
-  left:35px;
+  top:0;
+  left:0;
+  height:100%;
+  overflow-y:auto;
 }
 
 #toc ul {
   list-style:none;
-  padding:0;
+  padding:35px 35px 35px 35px;
   margin:0;
 }
 
