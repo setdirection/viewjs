@@ -13,19 +13,101 @@
  * **Download:** [Development](https://github.com/syntacticx/viewjs/zipball/master) | [Production (4KB)](https://github.com/syntacticx/viewjs/raw/master/jquery.view.min.js)  
  * **See Also:** [jQuery Model](http://modeljs.com/) | [jQuery Routes](http://routesjs.com/)
  * 
+ * A DOM centric class and inheritence system for jQuery.
+ * 
  * - most id="whatever" in HTML is for jQuery to reference
  * - jQuery View removes the need to write markup for the sake of identifaction in the code
  * - jQuery View allows more meaningful connections between DOM elements and your data model
+ * - passing a View instance to jQuery is the same as passing the View instance's element to jQuery
  * 
  * Builder
  * -------
- * - flexible syntax
- * - using map
- * - jquery integration / using chaining inline
- * - mixing and matching of HTML strings / templates
- * - string constructor
- * - forcing HTML like strings to be plain text (just put a space)
- * - static builder
+ * All HTML tag names are available as methods inside of View classes. Each view method takes a variable number of arguments which can be passed in any order and returns a DOM element. Possible arguments are:
+ *
+ * A hash of HTML attributes:
+ * 
+ *     this.a({href:'#',className:'my_link'});
+ * 
+ * A string:
+ * 
+ *     this.p('Paragraph text.');
+ *
+ * DOM Elements:
+ * 
+ *     this.ul({className:'my_list'},
+ *       this.li('Item One')
+ *       this.li(this.b('Bold List Item Two'))
+ *     );
+ * 
+ * HTML strings can be mixed and matched:
+ * 
+ *     this.form(
+ *       '<p class="label">Author</p>',
+ *       this.input({name:'author',type:'text'}),
+ *       this.p({className:'label'},'Body <b>Required</b>'),
+ *       '<textarea name="body"></textarea>'
+ *     );
+ * 
+ * jQuery objects can be used. Any instance methods defined by the class will automatically be proxied, so "this" will always refer to the view instance if passed to an event handler.
+ * 
+ *     MyView = $.view(function(){
+ *       return this.ul(
+ *         this.li(
+ *           $(this.a({href:'#'},'My Link')).click(this.handleClick)
+ *         )
+ *       );
+ *     },{
+ *       handleClick: function(event){
+ *         //this == MyView instance
+ *         var element = event.target;
+ *         return false;
+ *       }
+ *     });
+ * 
+ * An array of strings, object attributes or DOM elements can be used.
+ * 
+ *     this.ul(
+ *       this.li('Item One'),
+ *       [
+ *         this.li('Item Two'),
+ *         this.li('Item Three')
+ *       ]
+ *     );
+ * 
+ * The **map** method returns an Array and is designed to be used with builder methods. It accepts an array or object. "this" will always refer to the view instance inside of the iterator.
+ * 
+ *     this.ul(
+ *       this.map(['One','Two','Three'],function(item,i){
+ *         return this.li('Item ' + item);
+ *       })
+ *     );
+ *
+ *     this.ul(
+ *       this.map({
+ *         'jQuery': 'http://jquery.com/',
+ *         'NodeJS': 'http://nodejs.org/'
+ *       },function(key,value){
+ *         return this.li(this.a({href:value},key));
+ *       })
+ *     );
+ * 
+ * Methods that are used will be called:
+ * 
+ *     this.ul(this.generateListItems);
+ * 
+ * View classes and view instances can also be used:
+ * 
+ *     this.ul(
+ *       this.li('Item Two'),
+ *       ListItemView, //will be initialized with no attributes
+ *       new ListItemView({name:'Item Three'})
+ *     );
+ * 
+ * Builder methods can be referenced inside of **$.view** outside of view classes:
+ * 
+ *     MyView.classMethod = function(){
+ *       return $.view.div();
+ *     };
  * 
  * Events
  * ------
@@ -358,7 +440,7 @@
      * an Array is passed the iterator will be called with (value,index). Inside
      * the iterator "this" will always refer to the view instance.
      * 
-     *     var navigation = $.view(function(){
+     *     var NavigationView = $.view(function(){
      *       return this.ul(this.map({
      *         'Page Title: 'http://page.com/'
      *       },function(title,url){
