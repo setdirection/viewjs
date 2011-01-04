@@ -7,6 +7,12 @@
 // Dual licensed under the MIT or GPL Version 2 licenses.
 //
 
+//* - most id="whatever" in HTML is for jQuery to reference
+//* - jQuery View removes the need to write markup for the sake of identifaction in the code
+//* - jQuery View allows more meaningful connections between DOM elements and your data model
+//* - passing a View instance to jQuery is the same as passing the View instance's element to jQuery
+
+
 /* 
  * jQuery View
  * ===========
@@ -14,11 +20,6 @@
  * **See Also:** [jQuery Model](http://modeljs.com/) | [jQuery Routes](http://routesjs.com/)
  * 
  * A DOM centric class and inheritence system for jQuery.
- * 
- * - most id="whatever" in HTML is for jQuery to reference
- * - jQuery View removes the need to write markup for the sake of identifaction in the code
- * - jQuery View allows more meaningful connections between DOM elements and your data model
- * - passing a View instance to jQuery is the same as passing the View instance's element to jQuery
  * 
  * Builder
  * -------
@@ -111,14 +112,19 @@
  * 
  * Events
  * ------
+ * View events 
  * - instance events
  * - class events
  * - ready event
  * - changed event
  * - stopping events
  * 
- * Subclasses
- * ----------
+ * View classes have two built in events:
+ * 
+ * - **ready** is triggered when the View's element has been attached to the DOM, calling the **ready** method is equivelent to calling **bind('ready',handler)**
+ * - **changed** is triggered when any attributes have been changed via *set* or *attributes*
+ * 
+
  * 
  * Examples
  * --------
@@ -138,15 +144,8 @@
  *       myMethod: function(){}
  *     });
  * 
- * ### new Class*(\[Object attributes\]) -> instance*
- * Creates a new instance of a View class.
+ * ### Subclasses
  * 
- *     var instance = new MyView({
- *       key: 'value'
- *     });
- *     $(instance).appendTo(document.body);
- * 
- 
  */ 
 (function($,context){
   
@@ -232,9 +231,11 @@
     /* ### Class.bind*(String event_name, Function callback \[,Object context\]) -> Function*
      */ 
     bind: function bind(event_name,observer,context){
-      if(context){
-        observer = proxy_and_curry.apply($.view,[observer].concat(array_from(arguments).slice(2)));
+      var arguments_array = array_from(arguments);
+      if(typeof(arguments_array[2]) == 'undefined'){
+        arguments_array[2] = this;
       }
+      observer = proxy_and_curry.apply($.view,[observer].concat(arguments_array.slice(2)));
       if(typeof(event_name) === 'string' && typeof(observer) !== 'undefined'){
         if(!(event_name in this._observers)){
           this._observers[event_name] = [];
@@ -243,7 +244,7 @@
       }
       return observer;
     },
-    /* ### Class.unbind*(\[String event_name\] \[,Function callback\] \[,Object context\]) -> null*
+    /* ### Class.unbind*(\[String event_name\] \[,Function callback\]) -> null*
      */
     unbind: function unbind(event_name,observer){
       if(!(event_name in this._observers)){
@@ -261,9 +262,11 @@
     /* ### Class.one*(String event_name, Function callback \[,Object context\]) -> Function*
      */ 
     one: function one(event_name,outer_observer,context){
-      if(context){
-        outer_observer = proxy_and_curry.apply($.view,[outer_observer].concat(array_from(arguments).slice(2)));
+      var arguments_array = array_from(arguments);
+      if(typeof(arguments_array[2]) == 'undefined'){
+        arguments_array[2] = this;
       }
+      outer_observer = proxy_and_curry.apply($.view,[outer_observer].concat(arguments_array.slice(2)));
       var inner_observer = proxy_and_curry(function bound_inner_observer(){
         outer_observer.apply(this,arguments);
         this.unbind(event_name,inner_observer);
@@ -307,6 +310,15 @@
   /* 
    * Instance Methods
    * ----------------
+   * 
+   * ### new Class*(\[Object attributes\]) -> instance*
+   * Creates a new instance of a View class.
+   * 
+   *     var instance = new MyView({
+   *       key: 'value'
+   *     });
+   *     $(instance).appendTo(document.body);
+   * 
    */ 
   $.view.fn = {
     initialize: function initialize(attributes){
@@ -390,7 +402,7 @@
     /* ### instance.bind*(String event_name, Function callback \[,Object context\]) -> Function*
      */ 
     bind: $.view.classMethods.bind,
-    /* ### instance.unbind*(\[String event_name\] \[,Function callback\] \[,Object context\]) -> null*
+    /* ### instance.unbind*(\[String event_name\] \[,Function callback\]) -> null*
      */ 
     unbind: $.view.classMethods.unbind,
     /* ### instance.ready*(Function callback \[,Object context\]) -> Function*
@@ -794,10 +806,11 @@
 /* 
  * Change Log
  * ----------
- * **1.0.0** - *Jan 7, 2011*
+ * **1.0.0** - *Jan 7, 2011*  
  * Initial release.
  * 
  * ---
  * 
- * Copyright 2011 [Syntacticx](http://syntacticx.com/). Released under the [MIT or GPL License](http://jquery.org/license)
+ * Copyright 2011 [Syntacticx](http://syntacticx.com/). Released under the [MIT or GPL License](http://jquery.org/license).  
+ * Style inspired by [Backbone.js](http://documentcloud.github.com/backbone/)
  */
