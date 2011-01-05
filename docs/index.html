@@ -13,25 +13,47 @@
 
 <h2 id='class_creation'>Class Creation</h2>
 
-<h3 id='viewfunction_builder_object_instance_methods__classviewobject_parent_class_function_builder_object_instance_methods__class'>$.view<em>(Function builder [,Object instance_methods]) -&gt; Class</em><br />$.view<em>(Object parent_class, Function builder [,Object instance_methods]) -&gt; Class</em></h3>
+<h3 id='viewfunction_constructor_object_instance_methods__classviewobject_parent_class_function_constructor_object_instance_methods__class'>$.view<em>(Function constructor [,Object instance_methods]) -&gt; Class</em><br />$.view<em>(Object parent_class, Function constructor [,Object instance_methods]) -&gt; Class</em></h3>
 
-<p>Creates a new View class.</p>
+<p>Creates a new View class. Takes two arguments, a constructor function that must return a DOM element or HTML string, and an optional hash of instance methods.</p>
 
 <pre><code>MyView = $.view(function(){
   return this.div();
 },{
-  myMethod: function(){}
+  handleClick: function(){}
 });</code></pre>
+
+<p>The element returned by the constructor is available via the <strong>element</strong> method. Passing a View instance to jQuery is the same as passing the View&#8217;s element to jQuery.</p>
+
+<pre><code>var instance = new MyView();
+instance.element().tagName == &#39;DIV&#39;;
+$(instance).appendTo(document.body);</code></pre>
+
+<p>All instance methods specified are automatically proxied, so you can pass an instance method as an event handler and &#8220;this&#8221; will still refer to the view instance.</p>
+
+<pre><code>$(&#39;&lt;a href=&quot;#&quot;&gt;My Link&lt;/a&gt;&#39;).click(this.handleClick);</code></pre>
+
+<h3 id='attributes'>Attributes</h3>
+
+<p>View classes take only one argument when creating a new instance: an optional hash of attributes. Attributes are accessed using <strong>get</strong>, <strong>set</strong>, and <strong>attributes</strong> which will return a plain hash of the View&#8217;s attributes.</p>
+
+<pre><code>var instance = new MyView({
+  key: &#39;value&#39;
+});
+instance.get(&#39;key&#39;);
+instance.attributes();</code></pre>
 
 <h3 id='subclasses'>Subclasses</h3>
 
-<p>Views can be subclassed by passing a View class as the first argument to <strong>$.view</strong>. The constructor will receive the parent&#8217;s element as the only argument.</p>
+<p>Views can be subclassed by passing a View class as the first argument to <strong>$.view</strong>. The constructor will receive the parent&#8217;s element as the only argument. The constructor does not need to return an element since the parent&#8217;s constructor has already generated it. Any events bound to the parent class will be triggered on the child class.</p>
 
-<pre><code>MyViewTwo = $.view(MyView,function(element){
+<pre><code>MyViewSubclass = $.view(MyView,function(element){
   $(element).addClass(&#39;two&#39;);
   this.ready(function(){
     //do something special only in this subclass
   });
+},{
+  childMethod: function(){}
 });</code></pre>
 
 <h3 id='singletons'>Singletons</h3>
@@ -128,11 +150,17 @@ this.ul(
   return $.view.div();
 };</code></pre>
 
+<p>References to elements can be assigned as you build your elements. This saves writing a query to find a particular element you need later.</p>
+
+<pre><code>this.ul(
+  this.listItemOne = this.li(),
+  this.li()
+);
+$(this.listItemOne).click(this.clickHandler);</code></pre>
+
 <h2 id='events'>Events</h2>
 
-<p>View class</p>
-
-<p>Each View class has the same event method names as jQuery: <strong>bind</strong>, <strong>unbind</strong>, <strong>one</strong>, <strong>trigger</strong>. Unlike jQuery/DOM events, there is no Event object, and the event handlers can take an arbi</p>
+<p>Each View class has the same event method names as jQuery: <strong>bind</strong>, <strong>unbind</strong>, <strong>one</strong>, <strong>trigger</strong>. View events are not DOM events, there is no event object and an arbitrary number of arguments can be passed to event handlers. Events should be the primary way multiple View&#8217;s communicate with each other.</p>
 
 <p>Events are created with the <strong>trigger</strong> method. All arguments passed to trigger are passed to any registered event handlers. If any event handler returns false, the call to <strong>trigger</strong> will return false. Otherwise it will return an array of responses from the handlers.</p>
 
@@ -143,6 +171,12 @@ this.ul(
 <pre><code>MyView.bind(&#39;event_name&#39;,function(instance,a,b){
 
 });</code></pre>
+
+<p>View&#8217;s <strong>bind</strong> method accepts an optional context parameter. Any arguments after that will be curried onto the handler.</p>
+
+<pre><code>this.bind(&#39;event_name&#39;,function(c,a,b){
+  this == context;
+},context,c);</code></pre>
 
 <p>View classes have two built in events. The <strong>ready</strong> event is triggered when the View&#8217;s element has been attached to the DOM. It can be accessed by the <strong>ready</strong> method or by calling <strong>bind(&#8216;ready&#8217;,handler)</strong>.</p>
 
@@ -196,7 +230,7 @@ $(instance).appendTo(document.body);</code></pre>
 <pre><code>var instance = new MyView(function(){
   return this.div();
 });
-instance.element().tagName == &#39;div&#39;</code></pre>
+instance.element().tagName == &#39;DIV&#39;</code></pre>
 
 <h3 id='instanceattributes__objectinstanceattributesobject_attributes__null'>instance.attributes<em>() -&gt; Object</em><br />instance.attributes<em>(Object attributes) -&gt; null</em></h3>
 
@@ -272,22 +306,19 @@ MyClass.myClassMethod();</code></pre>
 <h2 id='examples'>Examples</h2>
 
 <ul>
-<li>nested views</li>
-
-<li>modifying classes without modifying the original code (Class ready event)</li>
-
-<li>string constructors / mustache templates / jquery templates</li>
+<li><a href='http://photofolder.org/'>PhotoFolder</a></li>
 </ul>
 
 <h2 id='change_log'>Change Log</h2>
 
-<p><strong>1.0.0</strong> - <em>Jan 7, 2011</em><br />Initial release.</p>
+<p><strong>1.0.0</strong> - <em>Jan 4, 2011</em><br />Initial release.</p>
 <hr />
 <p>Copyright 2011 <a href='http://syntacticx.com/'>Syntacticx</a>. Released under the <a href='http://jquery.org/license'>MIT or GPL License</a>.<br />Style inspired by <a href='http://documentcloud.github.com/backbone/'>Backbone.js</a></p>
     <div id="toc"><ul>
 <h1><a href='#jquery_view'>jQuery View</a></h1>
 <h2><a href='#class_creation'>Class Creation</a></h2>
-<h3>- <a href='#viewfunction_builder_object_instance_methods__classviewobject_parent_class_function_builder_object_instance_methods__class'>$.view</a></h3>
+<h3>- <a href='#viewfunction_constructor_object_instance_methods__classviewobject_parent_class_function_constructor_object_instance_methods__class'>$.view</a></h3>
+<h3>- <a href='#attributes'>Attributes</a></h3>
 <h3>- <a href='#subclasses'>Subclasses</a></h3>
 <h3>- <a href='#singletons'>Singletons</a></h3>
 <h2><a href='#builder'>Builder</a></h2>

@@ -32,24 +32,52 @@
  * Class Creation
  * --------------
  * 
- * ### $.view*(Function builder \[,Object instance_methods\]) -> Class*<br/>$.view*(Object parent_class, Function builder \[,Object instance_methods\]) -> Class*
- * Creates a new View class.
+ * ### $.view*(Function constructor \[,Object instance_methods\]) -> Class*<br/>$.view*(Object parent_class, Function constructor \[,Object instance_methods\]) -> Class*
+ * Creates a new View class. Takes two arguments, a constructor function that must return a DOM element or HTML string,
+ * and an optional hash of instance methods.
  * 
  *     MyView = $.view(function(){
  *       return this.div();
  *     },{
- *       myMethod: function(){}
+ *       handleClick: function(){}
  *     });
+ * 
+ * The element returned by the constructor is available via the **element** method. Passing a View
+ * instance to jQuery is the same as passing the View's element to jQuery.
+ * 
+ *     var instance = new MyView();
+ *     instance.element().tagName == 'DIV';
+ *     $(instance).appendTo(document.body);
+ * 
+ * All instance methods specified are automatically proxied, so you can pass an instance method
+ * as an event handler and "this" will still refer to the view instance.
+ * 
+ *     $('<a href="#">My Link</a>').click(this.handleClick);
+ * 
+ * ### Attributes
+ * View classes take only one argument when creating a new instance: an optional hash of attributes.
+ * Attributes are accessed using **get**, **set**, and **attributes** which will return a plain
+ * hash of the View's attributes.
+ * 
+ *     var instance = new MyView({
+ *       key: 'value'
+ *     });
+ *     instance.get('key');
+ *     instance.attributes();
  * 
  * ### Subclasses
  * Views can be subclassed by passing a View class as the first argument to **$.view**. The constructor
- * will receive the parent's element as the only argument.
+ * will receive the parent's element as the only argument. The constructor does not need to return
+ * an element since the parent's constructor has already generated it. Any events bound to the parent
+ * class will be triggered on the child class.
  * 
- *     MyViewTwo = $.view(MyView,function(element){
+ *     MyViewSubclass = $.view(MyView,function(element){
  *       $(element).addClass('two');
  *       this.ready(function(){
  *         //do something special only in this subclass
  *       });
+ *     },{
+ *       childMethod: function(){}
  *     });
  * 
  * ### Singletons
@@ -152,13 +180,21 @@
  *       return $.view.div();
  *     };
  * 
+ * References to elements can be assigned as you build your elements. This saves
+ * writing a query to find a particular element you need later.
+ * 
+ *     this.ul(
+ *       this.listItemOne = this.li(),
+ *       this.li()
+ *     );
+ *     $(this.listItemOne).click(this.clickHandler);
+ * 
  * Events
  * ------
- * View class
- * 
  * Each View class has the same event method names as jQuery: **bind**, **unbind**, **one**, **trigger**.
- * Unlike jQuery/DOM events, there is no Event object, and the event handlers can take an arbi
- * 
+ * View events are not DOM events, there is no event object and an arbitrary number of arguments
+ * can be passed to event handlers. Events should be the primary way multiple View's communicate with
+ * each other.
  * 
  * Events are created with the **trigger** method. All arguments passed to trigger are passed
  * to any registered event handlers. If any event handler returns false, the call to
@@ -172,6 +208,13 @@
  *     MyView.bind('event_name',function(instance,a,b){
  *     
  *     });
+ * 
+ * View's **bind** method accepts an optional context parameter.
+ * Any arguments after that will be curried onto the handler.
+ * 
+ *     this.bind('event_name',function(c,a,b){
+ *       this == context;
+ *     },context,c);
  * 
  * View classes have two built in events. The **ready** event is triggered when the View's element has been attached to the DOM.
  * It can be accessed by the **ready** method or by calling **bind('ready',handler)**.
@@ -392,7 +435,7 @@
      *     var instance = new MyView(function(){
      *       return this.div();
      *     });
-     *     instance.element().tagName == 'div'
+     *     instance.element().tagName == 'DIV'
      */ 
     element: function element(element){
       if(typeof(element) == 'undefined'){
@@ -855,13 +898,11 @@
 /* 
  * Examples
  * --------
- *  - nested views
- *  - modifying classes without modifying the original code (Class ready event)
- *  - string constructors / mustache templates / jquery templates
+ *  - [PhotoFolder](http://photofolder.org/)
  * 
  * Change Log
  * ----------
- * **1.0.0** - *Jan 7, 2011*  
+ * **1.0.0** - *Jan 4, 2011*  
  * Initial release.
  * 
  * ---
