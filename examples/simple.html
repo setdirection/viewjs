@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="qunit.css" type="text/css" media="screen">
+    <script type="text/javascript" src="../lib/jquery.js"></script>
+    <script type="text/javascript" src="../jquery.view.js"></script>
+    <script>
+      $(document).ready(function(){
+        NavigationView = $.view(function(){
+          return this.ul(
+            this.map(this.get('links'),function(title,url){
+              return this.li(
+                $(this.a({
+                  href:url
+                },title)).click(this.handleClick)
+              );
+            })
+          );
+        },{
+          handleClick: function(event){
+            var element = event.target;
+            //do something here
+          }
+        });
+
+        $(new NavigationView({
+          links: {
+            'Google': 'http://google.com/',
+            'jQuery': 'http://jquery.com/'
+          }
+        })).appendTo(document.body);
+      });
+    </script>
+  </head>
+  <body>
+
+  </body>
+</html>
