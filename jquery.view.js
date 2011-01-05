@@ -12,6 +12,14 @@
 //* - jQuery View allows more meaningful connections between DOM elements and your data model
 //* - passing a View instance to jQuery is the same as passing the View instance's element to jQuery
 
+//break API into sections, with format:
+//Tutorial, example, API
+//
+//Builder
+//Events
+//Attributes (including changed event, data binding)
+//Helpers
+
 
 /* 
  * jQuery View
@@ -21,8 +29,41 @@
  * 
  * A DOM centric class and inheritence system for jQuery.
  * 
+ * Class Creation
+ * --------------
+ * 
+ * ### $.view*(Function builder \[,Object instance_methods\]) -> Class*<br/>$.view*(Object parent_class, Function builder \[,Object instance_methods\]) -> Class*
+ * Creates a new View class.
+ * 
+ *     MyView = $.view(function(){
+ *       return this.div();
+ *     },{
+ *       myMethod: function(){}
+ *     });
+ * 
+ * ### Subclasses
+ * Views can be subclassed by passing a View class as the first argument to **$.view**. The constructor
+ * will receive the parent's element as the only argument.
+ * 
+ *     MyViewTwo = $.view(MyView,function(element){
+ *       $(element).addClass('two');
+ *       this.ready(function(){
+ *         //do something special only in this subclass
+ *       });
+ *     });
+ * 
+ * ### Singletons
+ * 
+ * View classes implement a variant of the [Singleton pattern](http://en.wikipedia.org/wiki/Singleton_pattern)
+ * with the **instance** method. This method will return the same instance of a view every time it is called,
+ * or will create it if **instance** is being called for the first time on that class.
+ * 
+ *     var instance = MyView.instance();
+ * 
  * Builder
  * -------
+ * ### instance.tag*(\[String text\] \[,Element\] \[,Object attributes\]) -> Element*
+ * 
  * All HTML tag names are available as methods inside of View classes. Each view method takes a variable number of arguments which can be passed in any order and returns a DOM element. Possible arguments are:
  *
  * A hash of HTML attributes:
@@ -104,7 +145,8 @@
  *       new ListItemView({name:'Item Three'})
  *     );
  * 
- * Builder methods can be referenced inside of **$.view** outside of view classes:
+ * Builder methods are also available in the **$.view** object if builder
+ * methods are needed outside of view classes:
  * 
  *     MyView.classMethod = function(){
  *       return $.view.div();
@@ -112,39 +154,45 @@
  * 
  * Events
  * ------
- * View events 
- * - instance events
- * - class events
- * - ready event
- * - changed event
- * - stopping events
+ * View class
  * 
- * View classes have two built in events:
+ * Each View class has the same event method names as jQuery: **bind**, **unbind**, **one**, **trigger**.
+ * Unlike jQuery/DOM events, there is no Event object, and the event handlers can take an arbi
  * 
- * - **ready** is triggered when the View's element has been attached to the DOM, calling the **ready** method is equivelent to calling **bind('ready',handler)**
- * - **changed** is triggered when any attributes have been changed via *set* or *attributes*
  * 
-
+ * Events are created with the **trigger** method. All arguments passed to trigger are passed
+ * to any registered event handlers. If any event handler returns false, the call to
+ * **trigger** will return false. Otherwise it will return an array of responses from the handlers.
+ *     
+ *     this.trigger('event_name',a,b);
  * 
- * Examples
- * --------
- *  - nested views
- *  - modifying classes without modifying the original code (Class ready event)
- *  - string constructors / mustache templates / jquery templates
+ * Events can be observed on all instances of a class. Handlers will receive the instance that
+ * triggered the event followed by any arguments passed in the event.
  * 
- * Class Creation
- * --------------
- * 
- * ### $.view*(Function builder \[,Object instance_methods\]) -> Class*<br/>$.view*(Object parent_class, Function builder \[,Object instance_methods\]) -> Class*
- * Creates a new View class.
- * 
- *     MyView = $.view(function(){
- *       return this.div();
- *     },{
- *       myMethod: function(){}
+ *     MyView.bind('event_name',function(instance,a,b){
+ *     
  *     });
  * 
- * ### Subclasses
+ * View classes have two built in events. The **ready** event is triggered when the View's element has been attached to the DOM.
+ * It can be accessed by the **ready** method or by calling **bind('ready',handler)**.
+ * 
+ *     MyView = $.view(function(){
+ *       this.ready(function(){
+ *         this.nameInput.focus();
+ *       });
+ *       return this.form(
+ *         this.p({className:'label','Name'}),
+ *         this.nameInput = this.input({type:'text'})
+ *       );
+ *     });
+ * 
+ * The **changed** event is triggered whenever attributes in the view have been changed.
+ * 
+ *     MyView.bind('changed',function(instance,changed_attributes){
+ *       for(var key in changed_attributes){
+ *         
+ *       }
+ *     });
  * 
  */ 
 (function($,context){
@@ -228,7 +276,7 @@
       }
       return this._instance;
     },
-    /* ### Class.bind*(String event_name, Function callback \[,Object context\]) -> Function*
+    /* ### Class.bind*(String event_name, Function handler \[,Object context\]) -> Function*
      */ 
     bind: function bind(event_name,observer,context){
       var arguments_array = array_from(arguments);
@@ -244,7 +292,7 @@
       }
       return observer;
     },
-    /* ### Class.unbind*(\[String event_name\] \[,Function callback\]) -> null*
+    /* ### Class.unbind*(\[String event_name\] \[,Function handler\]) -> null*
      */
     unbind: function unbind(event_name,observer){
       if(!(event_name in this._observers)){
@@ -259,7 +307,7 @@
         this._observers = {};
       }
     },
-    /* ### Class.one*(String event_name, Function callback \[,Object context\]) -> Function*
+    /* ### Class.one*(String event_name, Function handler \[,Object context\]) -> Function*
      */ 
     one: function one(event_name,outer_observer,context){
       var arguments_array = array_from(arguments);
@@ -268,8 +316,9 @@
       }
       outer_observer = proxy_and_curry.apply($.view,[outer_observer].concat(arguments_array.slice(2)));
       var inner_observer = proxy_and_curry(function bound_inner_observer(){
-        outer_observer.apply(this,arguments);
+        var response = outer_observer.apply(this,arguments);
         this.unbind(event_name,inner_observer);
+        return response;
       },this);
       if(!(event_name in this._observers)){
         this._observers[event_name] = [];
@@ -278,7 +327,7 @@
       return inner_observer;
     },
     /* ### Class.trigger*(String event_name) -> Array or false*
-     */ 
+     */
     trigger: function trigger(event_name){
       if(!this._observers || !this._observers[event_name] || (this._observers[event_name] && this._observers[event_name].length == 0)){
         return [];
@@ -298,7 +347,7 @@
       }
       return collected_return_values;
     },
-    /* ### Class.ready*(Function callback \[,Object context\]) -> Function*
+    /* ### Class.ready*(Function handler \[,Object context\]) -> Function*
      */
     ready: function ready(){
       var args = array_from(arguments);
@@ -399,16 +448,16 @@
       }
       return value;
     },
-    /* ### instance.bind*(String event_name, Function callback \[,Object context\]) -> Function*
+    /* ### instance.bind*(String event_name, Function handler \[,Object context\]) -> Function*
      */ 
     bind: $.view.classMethods.bind,
-    /* ### instance.unbind*(\[String event_name\] \[,Function callback\]) -> null*
+    /* ### instance.unbind*(\[String event_name\] \[,Function handler\]) -> null*
      */ 
     unbind: $.view.classMethods.unbind,
-    /* ### instance.ready*(Function callback \[,Object context\]) -> Function*
+    /* ### instance.ready*(Function handler \[,Object context\]) -> Function*
      */
     ready: $.view.classMethods.ready,
-    /* ### instance.one*(String event_name, Function callback \[,Object context\]) -> Function*
+    /* ### instance.one*(String event_name, Function handler \[,Object context\]) -> Function*
      */ 
     one: $.view.classMethods.one,
     /* ### instance.trigger*(String event_name) -> Array or false*
@@ -804,6 +853,12 @@
 })(jQuery,this);
 
 /* 
+ * Examples
+ * --------
+ *  - nested views
+ *  - modifying classes without modifying the original code (Class ready event)
+ *  - string constructors / mustache templates / jquery templates
+ * 
  * Change Log
  * ----------
  * **1.0.0** - *Jan 7, 2011*  
