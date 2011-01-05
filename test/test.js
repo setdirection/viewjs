@@ -301,11 +301,25 @@ test('Events triggered and cascade properly between parent and child',function()
   equal(notify_arg_from_parent_class,'a');
 });
 
+OneEventTestView = $.view(function(){
+  this.numberOfTriggers = 0;
+  this.one('test',function(){
+    ++this.numberOfTriggers;
+  });
+  this.trigger('test');
+  this.trigger('test');
+  return this.div();
+});
+test('"one" only observes first event call',function(){
+  var test = new OneEventTestView();
+  equal(test.numberOfTriggers,1);
+})
+
 var ReadyTestView = $.view(function(){
   this.readyEventHasFired = false;
-  this.ready($.proxy(function(){
+  this.ready(function(){
     this.readyEventHasFired = true;
-  },this));
+  });
   return this.div();
 });
 

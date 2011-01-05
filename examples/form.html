@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>jQuery View Test Suite</title>
+	<script type="text/javascript" src="showdown.js"></script>
+	<script type="text/javascript" src="../lib/jquery.js"></script>
+	<script type="text/javascript" src="../../modeljs/jquery.model.js"></script>
+	<script type="text/javascript" src="../jquery.view.js"></script>
+  <script>
+    $(document).ready(function(){
+      Post = $.model();
+      
+      CreatePostView = $.view(function(){
+        var form = this.form(
+          '<p>Title</p>',
+          '<input type="text" name="title"/>',
+          '<p>Author</p>',
+          '<input type="text" name="author"/>',
+          '<p>Body</p>',
+          '<textarea name="body"></textarea>',
+          '<input type="submit"/>'
+        );
+        $(form).submit(this.handleSubmit).link(this.get('post'));
+        return form;
+      },{
+        handleSubmit: function(event){
+          console.log('post object',this.get('post'));
+          return false;
+        }
+      });
+      
+      PreviewPostView = $.view(function(){
+        var element = this.div(
+          '<p></p>',
+          '<div class="preview"></div>'
+        );
+        $(element).link(this.get('post'),{
+          'p:first': 'title',
+          'div.preview': {
+            key: 'body',
+            get: function(value){
+              return new Showdown.converter().makeHtml(value);
+            }
+          }
+        });
+        return element;
+      });
+      
+      var post = new Post({
+        title: 'title'
+      });
+      
+      $(new CreatePostView({
+        post: post
+      })).appendTo(document.body);
+      
+      $(new PreviewPostView({
+        post: post
+      })).appendTo(document.body);
+    });
+  </script>
+</head>
+<body>
+
+</body>
+</html>

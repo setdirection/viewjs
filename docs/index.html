@@ -11,17 +11,38 @@
 
 <p>A DOM centric class and inheritence system for jQuery.</p>
 
-<ul>
-<li>most id=&#8221;whatever&#8221; in HTML is for jQuery to reference</li>
+<h2 id='class_creation'>Class Creation</h2>
 
-<li>jQuery View removes the need to write markup for the sake of identifaction in the code</li>
+<h3 id='viewfunction_builder_object_instance_methods__classviewobject_parent_class_function_builder_object_instance_methods__class'>$.view<em>(Function builder [,Object instance_methods]) -&gt; Class</em><br />$.view<em>(Object parent_class, Function builder [,Object instance_methods]) -&gt; Class</em></h3>
 
-<li>jQuery View allows more meaningful connections between DOM elements and your data model</li>
+<p>Creates a new View class.</p>
 
-<li>passing a View instance to jQuery is the same as passing the View instance&#8217;s element to jQuery</li>
-</ul>
+<pre><code>MyView = $.view(function(){
+  return this.div();
+},{
+  myMethod: function(){}
+});</code></pre>
+
+<h3 id='subclasses'>Subclasses</h3>
+
+<p>Views can be subclassed by passing a View class as the first argument to <strong>$.view</strong>. The constructor will receive the parent&#8217;s element as the only argument.</p>
+
+<pre><code>MyViewTwo = $.view(MyView,function(element){
+  $(element).addClass(&#39;two&#39;);
+  this.ready(function(){
+    //do something special only in this subclass
+  });
+});</code></pre>
+
+<h3 id='singletons'>Singletons</h3>
+
+<p>View classes implement a variant of the <a href='http://en.wikipedia.org/wiki/Singleton_pattern'>Singleton pattern</a> with the <strong>instance</strong> method. This method will return the same instance of a view every time it is called, or will create it if <strong>instance</strong> is being called for the first time on that class.</p>
+
+<pre><code>var instance = MyView.instance();</code></pre>
 
 <h2 id='builder'>Builder</h2>
+
+<h3 id='instancetagstring_text_element_object_attributes__element'>instance.tag<em>([String text] [,Element] [,Object attributes]) -&gt; Element</em></h3>
 
 <p>All HTML tag names are available as methods inside of View classes. Each view method takes a variable number of arguments which can be passed in any order and returns a DOM element. Possible arguments are: A hash of HTML attributes:</p>
 
@@ -101,7 +122,7 @@ this.ul(
   new ListItemView({name:&#39;Item Three&#39;})
 );</code></pre>
 
-<p>Builder methods can be referenced inside of <strong>$.view</strong> outside of view classes:</p>
+<p>Builder methods are also available in the <strong>$.view</strong> object if builder methods are needed outside of view classes:</p>
 
 <pre><code>MyView.classMethod = function(){
   return $.view.div();
@@ -109,41 +130,55 @@ this.ul(
 
 <h2 id='events'>Events</h2>
 
-<ul>
-<li>instance events</li>
+<p>View class</p>
 
-<li>class events</li>
+<p>Each View class has the same event method names as jQuery: <strong>bind</strong>, <strong>unbind</strong>, <strong>one</strong>, <strong>trigger</strong>. Unlike jQuery/DOM events, there is no Event object, and the event handlers can take an arbi</p>
 
-<li>ready event</li>
+<p>Events are created with the <strong>trigger</strong> method. All arguments passed to trigger are passed to any registered event handlers. If any event handler returns false, the call to <strong>trigger</strong> will return false. Otherwise it will return an array of responses from the handlers.</p>
 
-<li>changed event</li>
+<pre><code>this.trigger(&#39;event_name&#39;,a,b);</code></pre>
 
-<li>stopping events</li>
-</ul>
+<p>Events can be observed on all instances of a class. Handlers will receive the instance that triggered the event followed by any arguments passed in the event.</p>
 
-<h2 id='subclasses'>Subclasses</h2>
+<pre><code>MyView.bind(&#39;event_name&#39;,function(instance,a,b){
 
-<h2 id='examples'>Examples</h2>
+});</code></pre>
 
-<ul>
-<li>nested views</li>
-
-<li>modifying classes without modifying the original code (Class ready event)</li>
-
-<li>string constructors / mustache templates / jquery templates</li>
-</ul>
-
-<h2 id='class_creation'>Class Creation</h2>
-
-<h3 id='viewfunction_builder_object_instance_methods__classviewobject_parent_class_function_builder_object_instance_methods__class'>$.view<em>(Function builder [,Object instance_methods]) -&gt; Class</em><br />$.view<em>(Object parent_class, Function builder [,Object instance_methods]) -&gt; Class</em></h3>
-
-<p>Creates a new View class.</p>
+<p>View classes have two built in events. The <strong>ready</strong> event is triggered when the View&#8217;s element has been attached to the DOM. It can be accessed by the <strong>ready</strong> method or by calling <strong>bind(&#8216;ready&#8217;,handler)</strong>.</p>
 
 <pre><code>MyView = $.view(function(){
-  return this.div();
-},{
-  myMethod: function(){}
+  this.ready(function(){
+    this.nameInput.focus();
+  });
+  return this.form(
+    this.p({className:&#39;label&#39;,&#39;Name&#39;}),
+    this.nameInput = this.input({type:&#39;text&#39;})
+  );
 });</code></pre>
+
+<p>The <strong>changed</strong> event is triggered whenever attributes in the view have been changed.</p>
+
+<pre><code>MyView.bind(&#39;changed&#39;,function(instance,changed_attributes){
+  for(var key in changed_attributes){
+    
+  }
+});</code></pre>
+
+<h2 id='class_methods'>Class Methods</h2>
+
+<h3 id='classinstance__instance'>Class.instance<em>() -&gt; instance</em></h3>
+
+<h3 id='classbindstring_event_name_function_handler_object_context__function'>Class.bind<em>(String event_name, Function handler [,Object context]) -&gt; Function</em></h3>
+
+<h3 id='classunbindstring_event_name_function_handler__null'>Class.unbind<em>([String event_name] [,Function handler]) -&gt; null</em></h3>
+
+<h3 id='classonestring_event_name_function_handler_object_context__function'>Class.one<em>(String event_name, Function handler [,Object context]) -&gt; Function</em></h3>
+
+<h3 id='classtriggerstring_event_name__array_or_false'>Class.trigger<em>(String event_name) -&gt; Array or false</em></h3>
+
+<h3 id='classreadyfunction_handler_object_context__function'>Class.ready<em>(Function handler [,Object context]) -&gt; Function</em></h3>
+
+<h2 id='instance_methods'>Instance Methods</h2>
 
 <h3 id='new_classobject_attributes__instance'>new Class<em>([Object attributes]) -&gt; instance</em></h3>
 
@@ -153,22 +188,6 @@ this.ul(
   key: &#39;value&#39;
 });
 $(instance).appendTo(document.body);</code></pre>
-
-<h2 id='class_methods'>Class Methods</h2>
-
-<h3 id='classinstance__instance'>Class.instance<em>() -&gt; instance</em></h3>
-
-<h3 id='classbindstring_event_name_function_callback_object_context__function'>Class.bind<em>(String event_name, Function callback [,Object context]) -&gt; Function</em></h3>
-
-<h3 id='classunbindstring_event_name_function_callback_object_context__null'>Class.unbind<em>([String event_name] [,Function callback] [,Object context]) -&gt; null</em></h3>
-
-<h3 id='classonestring_event_name_function_callback_object_context__function'>Class.one<em>(String event_name, Function callback [,Object context]) -&gt; Function</em></h3>
-
-<h3 id='classtriggerstring_event_name__array_or_false'>Class.trigger<em>(String event_name) -&gt; Array or false</em></h3>
-
-<h3 id='classreadyfunction_callback_object_context__function'>Class.ready<em>(Function callback [,Object context]) -&gt; Function</em></h3>
-
-<h2 id='instance_methods'>Instance Methods</h2>
 
 <h3 id='instanceelement__elementinstanceelementelement_element__element'>instance.element<em>() -&gt; Element</em><br />instance.element<em>(Element element) -&gt; Element</em></h3>
 
@@ -185,13 +204,13 @@ instance.element().tagName == &#39;div&#39;</code></pre>
 
 <h3 id='instancesetstring_keymixed_value__mixed'>instance.set<em>(String key,mixed value) -&gt; mixed</em></h3>
 
-<h3 id='instancebindstring_event_name_function_callback_object_context__function'>instance.bind<em>(String event_name, Function callback [,Object context]) -&gt; Function</em></h3>
+<h3 id='instancebindstring_event_name_function_handler_object_context__function'>instance.bind<em>(String event_name, Function handler [,Object context]) -&gt; Function</em></h3>
 
-<h3 id='instanceunbindstring_event_name_function_callback_object_context__null'>instance.unbind<em>([String event_name] [,Function callback] [,Object context]) -&gt; null</em></h3>
+<h3 id='instanceunbindstring_event_name_function_handler__null'>instance.unbind<em>([String event_name] [,Function handler]) -&gt; null</em></h3>
 
-<h3 id='instancereadyfunction_callback_object_context__function'>instance.ready<em>(Function callback [,Object context]) -&gt; Function</em></h3>
+<h3 id='instancereadyfunction_handler_object_context__function'>instance.ready<em>(Function handler [,Object context]) -&gt; Function</em></h3>
 
-<h3 id='instanceonestring_event_name_function_callback_object_context__function'>instance.one<em>(String event_name, Function callback [,Object context]) -&gt; Function</em></h3>
+<h3 id='instanceonestring_event_name_function_handler_object_context__function'>instance.one<em>(String event_name, Function handler [,Object context]) -&gt; Function</em></h3>
 
 <h3 id='instancetriggerstring_event_name__array_or_false'>instance.trigger<em>(String event_name) -&gt; Array or false</em></h3>
 
@@ -250,36 +269,46 @@ MyClass.myClassMethod();</code></pre>
 
 <p>Set this to true to have view classes output console.log messages.</p>
 
+<h2 id='examples'>Examples</h2>
+
+<ul>
+<li>nested views</li>
+
+<li>modifying classes without modifying the original code (Class ready event)</li>
+
+<li>string constructors / mustache templates / jquery templates</li>
+</ul>
+
 <h2 id='change_log'>Change Log</h2>
 
-<p><strong>1.0.0</strong> - <em>Jan 7, 2011</em> Initial release.</p>
+<p><strong>1.0.0</strong> - <em>Jan 7, 2011</em><br />Initial release.</p>
 <hr />
-<p>Copyright 2011 <a href='http://syntacticx.com/'>Syntacticx</a>. Released under the <a href='http://jquery.org/license'>MIT or GPL License</a></p>
+<p>Copyright 2011 <a href='http://syntacticx.com/'>Syntacticx</a>. Released under the <a href='http://jquery.org/license'>MIT or GPL License</a>.<br />Style inspired by <a href='http://documentcloud.github.com/backbone/'>Backbone.js</a></p>
     <div id="toc"><ul>
 <h1><a href='#jquery_view'>jQuery View</a></h1>
-<h2><a href='#builder'>Builder</a></h2>
-<h2><a href='#events'>Events</a></h2>
-<h2><a href='#subclasses'>Subclasses</a></h2>
-<h2><a href='#examples'>Examples</a></h2>
 <h2><a href='#class_creation'>Class Creation</a></h2>
 <h3>- <a href='#viewfunction_builder_object_instance_methods__classviewobject_parent_class_function_builder_object_instance_methods__class'>$.view</a></h3>
-<h3>- <a href='#new_classobject_attributes__instance'>new Class</a></h3>
+<h3>- <a href='#subclasses'>Subclasses</a></h3>
+<h3>- <a href='#singletons'>Singletons</a></h3>
+<h2><a href='#builder'>Builder</a></h2>
+<h2><a href='#events'>Events</a></h2>
 <h2><a href='#class_methods'>Class Methods</a></h2>
 <h3>- <a href='#classinstance__instance'>instance</a></h3>
-<h3>- <a href='#classbindstring_event_name_function_callback_object_context__function'>bind</a></h3>
-<h3>- <a href='#classunbindstring_event_name_function_callback_object_context__null'>unbind</a></h3>
-<h3>- <a href='#classonestring_event_name_function_callback_object_context__function'>one</a></h3>
+<h3>- <a href='#classbindstring_event_name_function_handler_object_context__function'>bind</a></h3>
+<h3>- <a href='#classunbindstring_event_name_function_handler__null'>unbind</a></h3>
+<h3>- <a href='#classonestring_event_name_function_handler_object_context__function'>one</a></h3>
 <h3>- <a href='#classtriggerstring_event_name__array_or_false'>trigger</a></h3>
-<h3>- <a href='#classreadyfunction_callback_object_context__function'>ready</a></h3>
+<h3>- <a href='#classreadyfunction_handler_object_context__function'>ready</a></h3>
 <h2><a href='#instance_methods'>Instance Methods</a></h2>
+<h3>- <a href='#new_classobject_attributes__instance'>new Class</a></h3>
 <h3>- <a href='#instanceelement__elementinstanceelementelement_element__element'>element</a></h3>
 <h3>- <a href='#instanceattributes__objectinstanceattributesobject_attributes__null'>attributes</a></h3>
 <h3>- <a href='#instancegetstring_key__mixed'>get</a></h3>
 <h3>- <a href='#instancesetstring_keymixed_value__mixed'>set</a></h3>
-<h3>- <a href='#instancebindstring_event_name_function_callback_object_context__function'>bind</a></h3>
-<h3>- <a href='#instanceunbindstring_event_name_function_callback_object_context__null'>unbind</a></h3>
-<h3>- <a href='#instancereadyfunction_callback_object_context__function'>ready</a></h3>
-<h3>- <a href='#instanceonestring_event_name_function_callback_object_context__function'>one</a></h3>
+<h3>- <a href='#instancebindstring_event_name_function_handler_object_context__function'>bind</a></h3>
+<h3>- <a href='#instanceunbindstring_event_name_function_handler__null'>unbind</a></h3>
+<h3>- <a href='#instancereadyfunction_handler_object_context__function'>ready</a></h3>
+<h3>- <a href='#instanceonestring_event_name_function_handler_object_context__function'>one</a></h3>
 <h3>- <a href='#instancetriggerstring_event_name__array_or_false'>trigger</a></h3>
 <h3>- <a href='#instancemapmixedfunction_iterator__array'>map</a></h3>
 <h3>- <a href='#instancedelegatestring_selectorstring_event_namefunction_callbackobject_context__null'>delegate</a></h3>
@@ -287,6 +316,7 @@ MyClass.myClassMethod();</code></pre>
 <h3>- <a href='#viewfn__object'>fn </a></h3>
 <h3>- <a href='#viewclassmethods__object'>classMethods </a></h3>
 <h3>- <a href='#viewlogging__boolean'>logging </a></h3>
+<h2><a href='#examples'>Examples</a></h2>
 <h2><a href='#change_log'>Change Log</a></h2>
 </ul></div>
   </body>

@@ -94,7 +94,12 @@ class SimpleDoc
       end
       content = content.gsub(/^\./,'') #remove starting dot if present
       content = content.gsub(/.*\(/,'') #remove anything before ( if present
-      toc.push("<#{tag}>#{tag == 'h3' ? '- ' : ''}<a href='##{id}'>#{content}</a></#{tag}>")
+      if content == 'tag'
+        content = false
+      end
+      if content && content != ''
+        toc.push("<#{tag}>#{tag == 'h3' ? '- ' : ''}<a href='##{id}'>#{content}</a></#{tag}>")
+      end
     end
     toc.push("</ul>")
     toc.join("\n")
