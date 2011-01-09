@@ -753,7 +753,7 @@
     'meter nav output progress rp ruby section source summary time video').split(/\s+/);
   var attribute_map = {
     "htmlFor": "for",
-    "className": "class",
+    "className": "class"
   };
   
   //private builder methods
