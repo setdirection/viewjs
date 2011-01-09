@@ -20,14 +20,18 @@
 //Attributes (including changed event, data binding)
 //Helpers
 
-
 /* 
  * jQuery View
  * ===========
  * **Download:** [Development](https://github.com/syntacticx/viewjs/zipball/master) | [Production (4KB)](https://github.com/syntacticx/viewjs/raw/master/jquery.view.min.js)  
- * **See Also:** [jQuery Model](http://modeljs.com/) | [jQuery Routes](http://routesjs.com/)
+ * **See Also:** [jQuery Routes](http://routesjs.com/) | [Backbone.js](http://)
  * 
- * A DOM centric class and inheritence system for jQuery.
+ * A DOM centric class and inheritence system for jQuery or Node.
+ * 
+ * - Pure JavaScript DOM templating with Builder ([Markup as JavaScript](http://en.wikipedia.org/wiki/Markaby))
+ * - Mix and match Builder with HTML strings, [Mustache](https://github.com/janl/mustache.js/) and [jQuery templates](http://api.jquery.com/jQuery.template/)
+ * - "this" is always in context, no calls to $.proxy
+ * - View's generate the same Node
  * 
  * Class Creation
  * --------------
@@ -189,6 +193,13 @@
  *     );
  *     $(this.listItemOne).click(this.clickHandler);
  * 
+ * Using Templates
+ * ---------------
+ * 
+ * ###Mustache
+ * 
+ * ###jQuery Templates
+ * 
  * Events
  * ------
  * Each View class has the same event method names as jQuery: **bind**, **unbind**, **one**, **trigger**.
@@ -238,9 +249,11 @@
  *     });
  * 
  */ 
-(function($,context){
+;(function($){
   
-  if(Number($.fn.jquery.replace(/\./g)) < 143){
+  var jquery_available = 'fn' in $ && 'jquery' in $.fn;
+  
+  if(jquery_available && Number($.fn.jquery.replace(/\./g)) < 143){
     throw 'jQuery View requires jQuery 1.4.3 or later.';
   }
   
@@ -264,7 +277,7 @@
       this._changes = {};
       //proxy all user specified methods
       for(var i = 0; i < this.constructor._methodsToProxy.length; ++i){
-        this[this.constructor._methodsToProxy[i]] = $.proxy(this[this.constructor._methodsToProxy[i]],this);
+        this[this.constructor._methodsToProxy[i]] = proxy(this[this.constructor._methodsToProxy[i]],this);
       }
       this.initialize.apply(this,arguments);
       if(klass._observers && 'ready' in klass._observers){
@@ -277,17 +290,17 @@
     }
     klass._observers = {};
     klass._instance = false;
-    $.extend(klass,$.view.classMethods);
+    extend(klass,$.view.classMethods);
     if(parent_class){
-      $.extend(klass.prototype,parent_class.prototype);
+      extend(klass.prototype,parent_class.prototype);
       klass.prototype._structure = wrap_function(parent_class.prototype._structure,function(proceed){
-        return structure.apply(this,[$.proxy(proceed,this)()]);
+        return structure.apply(this,[proxy(proceed,this)()]);
       });
       for(var i = 0; i < parent_class._methodsToProxy.length; ++i){
         klass._methodsToProxy.push(parent_class._methodsToProxy[i]);
       }
     }else{
-      $.extend(klass.prototype,$.view.fn);
+      extend(klass.prototype,$.view.fn);
       klass.prototype._structure = structure;
     }
     klass.prototype.bind = wrap_function(klass.prototype.bind,observe_wrapper_for_ready_event_on_instance);
@@ -299,7 +312,7 @@
       klass.prototype._observers = {};
       wrap_event_methods_for_child_class(klass,parent_class);
     }
-    $.extend(klass.prototype,methods || {});
+    extend(klass.prototype,methods || {});
     return klass;
   };
   /*
@@ -326,7 +339,7 @@
       if(typeof(arguments_array[2]) == 'undefined'){
         arguments_array[2] = this;
       }
-      observer = proxy_and_curry.apply($.view,[observer].concat(arguments_array.slice(2)));
+      observer = proxy.apply($.view,[observer].concat(arguments_array.slice(2)));
       if(typeof(event_name) === 'string' && typeof(observer) !== 'undefined'){
         if(!(event_name in this._observers)){
           this._observers[event_name] = [];
@@ -357,8 +370,8 @@
       if(typeof(arguments_array[2]) == 'undefined'){
         arguments_array[2] = this;
       }
-      outer_observer = proxy_and_curry.apply($.view,[outer_observer].concat(arguments_array.slice(2)));
-      var inner_observer = proxy_and_curry(function bound_inner_observer(){
+      outer_observer = proxy.apply($.view,[outer_observer].concat(arguments_array.slice(2)));
+      var inner_observer = proxy(function bound_inner_observer(){
         var response = outer_observer.apply(this,arguments);
         this.unbind(event_name,inner_observer);
         return response;
@@ -423,7 +436,7 @@
       if(response && !this._element){
         this.element(response);
       }
-      if(!this._element || !this._element.nodeType || this._element.nodeType !== 1){
+      if(jquery_available && (!this._element || !this._element.nodeType || this._element.nodeType !== 1)){
         throw 'The view constructor must return either a DOM element or jQuery object, or call this.element() with a DOM element. View constructor returned:' + typeof(this._element);
       }
       this.trigger('initialized');
@@ -442,7 +455,7 @@
         return this._element;
       }else{
         if(is_html(element)){
-          element = $(element)[0];
+          element = jquery_available ? $(element)[0] : element; 
         }else if(is_jquery_object(element)){
           element = element[0];
         }
@@ -503,7 +516,7 @@
     /* ### instance.one*(String event_name, Function handler \[,Object context\]) -> Function*
      */ 
     one: $.view.classMethods.one,
-    /* ### instance.trigger*(String event_name) -> Array or false*
+    /* ### instance.trigger*(String event_name \[,mixed arg\]) -> Array or false*
      */ 
     trigger: function trigger(event_name){
       if(
@@ -537,6 +550,18 @@
       }
       return collected_return_values;
     },
+    /* ### instance.emit*(event_name \[,mixed arg\]) -> Function*
+     * Creates a callback that will trigger event_name with the supplied arguments.
+     * 
+     *     this.bind('event_name',function(a,b,c){});
+     *     $(this.a({href:'#'},'My Link')).click(this.emit('event_name',a,b,c))
+     */ 
+    emit: function emit(){
+      var args = array_from(arguments);
+      return proxy(function emitter(){
+        return this.trigger.apply(this,args);
+      },this);
+    },
     /*
      * ### instance.map*(mixed,Function iterator) -> Array*
      * Similar to Array#map or Ruby's Array#collect. Works on objects or Arrays.
@@ -556,7 +581,7 @@
      */
      map: function map(object,callback){
        var response = [];
-       if($.isArray(object)){
+       if(is_array(object)){
          for(var i = 0; i < object.length; ++i){
            response.push(callback.apply(this,[object[i],i]));
          }
@@ -567,7 +592,7 @@
        }
        return response;
      },
-     /* ### instance.delegate*(String selector,String event_name,Function callback\[,Object context\]) -> null*
+     /* ### instance.delegate*(String selector, String event_name, Function callback \[,Object context\]) -> null*
       * Equivelent to calling [jQuery's delegate](http://api.jquery.com/delegate/) method, but can
       * be called before the view's element has been created.
       * 
@@ -583,7 +608,7 @@
       */ 
      delegate: function delegate(selector,event_name,callback,context){
        if(context){
-         callback = $.proxy(callback,context);
+         callback = proxy(callback,context);
        }
        if(this._element){
          $(this._element).delegate(selector,event_name,callback);
@@ -591,6 +616,46 @@
          this._delegates.push([selector,event_name,callback]);
          //will call this.delegate() when this.element(element) is called
        }
+     },
+     /* ### instance.toString*() -> String*
+      */ 
+     toString: function toString(){
+       return jquery_available ? this.element().innerHTML : this.element();
+     },
+     /* ### instance.mustache*(String template \[,Object partials\] \[,Function line_iterator\]) -> String*
+      * Render a [Mustache template](https://github.com/janl/mustache.js/) with the view's attributes.
+      * 
+      *     MyView = $.view(function(){
+      *       this.set('key','value');
+      *       return this.ul(
+      *         this.mustache('<li>{{value}}</li>')
+      *       );
+      *     });
+      * 
+      */
+     mustache: function mustache(template,partials,send_func){
+       if(typeof(Mustache) == 'undefined'){
+         throw 'the mustache() function requires the Mustache.js library: https://github.com/janl/mustache.js/';
+       }
+       return Mustache.to_html(template,this.attributes(),partials,send_func);
+     },
+     /* ### instance.tmpl*(String template_name \[,Object options\]) -> String*
+      * Render a named [jQuery template](https://github.com/jquery/jquery-tmpl) with the view's attributes.
+      * 
+      *     $.template('my_template','<li>${value}</li>');
+      *     MyView = $.view(function(){
+      *       this.set('key','value');
+      *       return this.ul(
+      *         this.tmpl('my_template')
+      *       );
+      *     });
+      * 
+      */ 
+     tmpl: function tmpl(name,options){
+       if(!('tmpl' in $)){
+         throw 'the tmpl() function requires the jQuery Templates plugin: https://github.com/jquery/jquery-tmpl';
+       }
+       return $.tmpl(name,this.attributes(),options);
      }
   };
   
@@ -686,6 +751,10 @@
     //html5 additions
     'article aside audio command details figcaption figure footer header hgroup keygen mark ' +
     'meter nav output progress rp ruby section source summary time video').split(/\s+/);
+  var attribute_map = {
+    "htmlFor": "for",
+    "className": "class",
+  };
   
   //private builder methods
   function process_node_argument(elements,attributes,argument){
@@ -708,7 +777,7 @@
     if(
       typeof(argument) !== 'string' &&
       typeof(argument) !== 'number' &&
-      !$.isArray(argument) &&
+      !is_array(argument) &&
       !is_jquery_object(argument) &&
       !(argument && argument.nodeType === 1)
     ){
@@ -720,7 +789,7 @@
     if(is_jquery_object(argument)){
       argument = argument.toArray();
     }
-    if($.isArray(argument)){
+    if(is_array(argument)){
       var flattened = flatten_array(argument);
       for(var i = 0; i < flattened.length; ++i){
         process_node_argument(elements,attributes,flattened[i]);
@@ -728,7 +797,7 @@
       return;
     }
     if(is_html(argument)){
-      var generated_elements = $(argument);
+      var generated_elements = jquery_available ? $(argument) : [argument];
       for(var i = 0; i < generated_elements.length; ++i){
         elements.push(generated_elements[i]);
       }
@@ -747,31 +816,47 @@
       process_node_argument(elements,attributes,arguments[i]);
     }
     tag_name = tag_name.toLowerCase();
-    if(!!(document.attachEvent && !window.opera) && (attributes.name || (tag_name == 'input' && attributes.type))){
-      //ie needs these attributes to be written in the string passed to createElement
-      tag = '<' + tag_name;
-      if(attributes.name){
-        tag += ' name="' + attributes.name + '"';
-      }
-      if(tag_name == 'input' && attributes.type){
-        tag += ' type="' + attributes.type + '"';
-      }
-      tag += '>';
-      delete attributes.name;
-      delete attributes.type;
-      element = document.createElement(tag);
-    }else{
-      if(!cache[tag_name]){
-        cache[tag_name] = document.createElement(tag_name);
-      }
-      element = cache[tag_name].cloneNode(false);
-    }
-    $(element).attr(attributes);
-    for(i = 0; i < elements.length; ++i){
-      if(elements[i] && elements[i].nodeType === 1){
-        element.appendChild(elements[i]);
+    if(jquery_available){
+      if(!!(document.attachEvent && !window.opera) && (attributes.name || (tag_name == 'input' && attributes.type))){
+        //ie needs these attributes to be written in the string passed to createElement
+        tag = '<' + tag_name;
+        if(attributes.name){
+          tag += ' name="' + attributes.name + '"';
+        }
+        if(tag_name == 'input' && attributes.type){
+          tag += ' type="' + attributes.type + '"';
+        }
+        tag += '>';
+        delete attributes.name;
+        delete attributes.type;
+        element = document.createElement(tag);
       }else{
-        element.appendChild(document.createTextNode(String(elements[i])));
+        if(!cache[tag_name]){
+          cache[tag_name] = document.createElement(tag_name);
+        }
+        element = cache[tag_name].cloneNode(false);
+      }
+      $(element).attr(attributes);
+      for(i = 0; i < elements.length; ++i){
+        if(elements[i] && elements[i].nodeType === 1){
+          element.appendChild(elements[i]);
+        }else{
+          element.appendChild(document.createTextNode(String(elements[i])));
+        }
+      }
+    }else{
+      element = '<' + tag_name;
+      for(var attribute_name in attributes){
+        element += ' ' + (attribute_map[attribute_name] || attribute_name) + '="' + attributes[attribute_name] + '"'
+      }
+      if(elements.length == 0){
+        element += ' />';
+      }else{
+        element += '>';
+        for(i = 0; i < elements.length; ++i){
+          element += elements[i];
+        }
+        element += '</' + tag_name + '>';
       }
     }
     return element;
@@ -780,7 +865,7 @@
   function flatten_array(array){
     var flattened = [];
     for(var i = 0; i < array.length; ++i){
-      if($.isArray(array[i])){
+      if(is_array(array[i])){
         flattened = flattened.concat(flatten_array(array[i]));
       }else{
         flattened.push(array[i]);
@@ -795,7 +880,7 @@
       for(var i = 0; i < arguments.length; ++i){
         args.push(arguments[i]);
       }
-      return create_element.apply($.builder,args);
+      return create_element.apply(create_element,args);
     };
   };
   
@@ -822,7 +907,14 @@
   export_tag_methods($.view);
   export_tag_methods($.view.fn);
   
-  //private utility methods shared between $.view and $.builder
+  //private utility methods shared between $.view and builder
+  function extend(destination,source){
+    for(var property in source){
+      destination[property] = source[property];
+    }
+    return destination;
+  };
+  
   function is_view_instance(object){
     return object && object.element && object.element().nodeType == 1 && object._attributes;
   };
@@ -837,6 +929,22 @@
   
   function is_html(string){
     return typeof(string) == 'string' && string.match(/^<[\w\W]+>/);
+  };
+  
+  function is_array(array){
+    return Object.prototype.toString.call(array) === '[object Array]';
+  };
+  
+  function in_array(element,array){
+    if(array.indexOf){
+      return array.indexOf(element);
+    }
+    for(var i = 0, length = array.length; i < length; i++){
+      if(array[i] === element){
+        return i;
+      }
+    }
+    return -1;
   };
   
   function array_from(object){
@@ -855,14 +963,15 @@
     var values = array_from(arguments).slice(1);
     var response = [];
     for(var i = 0 ; i < arr.length; i++){
-      if(!($.inArray(arr[i],values) > -1)){
+      if(!(in_array(arr[i],values) > -1)){
         response.push(arr[i]);
       }
     }
     return response;
   };
   
-  function proxy_and_curry(func,object){
+  //includes curry functionality if more than two arguments are passed
+  function proxy(func,object){
     if(typeof(object) == 'undefined'){
       return func;
     }
@@ -882,7 +991,7 @@
   
   function wrap_function(func,wrapper){
     return function wrapped(){
-      return wrapper.apply(this,[proxy_and_curry(func,this)].concat(array_from(arguments)));
+      return wrapper.apply(this,[proxy(func,this)].concat(array_from(arguments)));
     };
   };
   
@@ -893,9 +1002,12 @@
     }
     return !!(ancestor.body);
   };
-})(jQuery,this);
+})('jQuery' in this ? jQuery : this);
 
-/* 
+/* Node Support
+ * ------------
+ * jQuery View will run without jQuery
+ * 
  * Examples
  * --------
  *  - [PhotoFolder](http://photofolder.org/)
