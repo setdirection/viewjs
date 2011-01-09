@@ -685,6 +685,7 @@
    * ### $.view.logging *-> Boolean*
    *
    * Set this to true to have view classes output console.log messages.
+   * 
    */
   $.view.logging = false;
   
@@ -1006,7 +1007,7 @@
 
 /* Node Support
  * ------------
- * jQuery View will run without jQuery
+ * 
  * 
  * Examples
  * --------
