@@ -19,10 +19,79 @@ end
 
 task :docs do
   require 'Maruku'
-  SimpleDoc.new('jquery.view.js',
+  require '../markprocdoc/markprocdoc'
+  MarkProcDoc.new('jquery.view.js',
     :title => 'jQuery View',
     :target => 'docs/index.html',
-    :namespace => /(\$\.view|Class\.|instance)/
+    :toc => Proc.new{|toc|
+      ignore = true
+      toc_html = ''
+      last_tag = false
+      toc.each do |item|
+        tag, id, content = item
+        ignore = true if content == 'Change Log'
+        ignore = false if tag == 'h2' && content == 'Class'
+        if !ignore
+          toc_html += '</td><td>' if last_tag == 'h3' && tag == 'h2'
+          if tag == 'h2'
+            toc_html += "<h2>#{content}</h2>"
+          elsif tag == 'h3'
+            content = content.gsub(/^(Class|instance|\$\.view)\./,'')
+            toc_html += "<h3>- <a href=\"##{id}\">#{content}</a></h3>"
+          end
+        end
+        last_tag = tag
+      end
+      toc_html
+    },
+    :html => Proc.new{|title,body,toc|
+      <<-EOS
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>jQuery View</title>
+    <link type="text/css" rel="stylesheet" href="stylesheets/syntax.css"/>
+    <link type="text/css" rel="stylesheet" href="stylesheets/screen.css"/>
+    <script type="text/javascript" src="javascripts/jquery.js"></script>
+    <script type="text/javascript" src="javascripts/jquery.address.js"></script>
+    <script type="text/javascript" src="javascripts/jquery.routes.js"></script>
+    <script type="text/javascript" src="javascripts/syntax.js"></script>
+    <script type="text/javascript" src="javascripts/docs.js"></script>    
+  </head>
+  <body>
+    <div id="content">
+      <div id="main">
+        #{body}
+      </div>
+      <div id="api_toc">
+        <table>
+          <tbody>
+            <tr>
+              <td>
+                #{toc}
+              </td>
+            </tr>
+           </tbody>
+        </table>
+        <div id="api_example"></div>
+      </div>
+    </div>
+    <script type="text/javascript">
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-20387990-1']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+
+    </script>
+  </body>
+</html>
+      EOS
+    }
   )
   #write README
   source = File.read('jquery.view.js')
@@ -37,87 +106,5 @@ task :docs do
   readme_lines.pop
   File.open("README.markdown",'w+') do |file|
     file.write readme_lines.join("\n")
-  end
-end
-
-class SimpleDoc
-  def initialize(files,args = {})
-    @files = [files] if !files.is_a?(Array)
-    @params = {
-      :target => args[:target] || 'docs.html',
-      :title => args[:title] || ('SimpleDoc Results for ' + @files.join(",")),
-      :html => args[:html] || false,
-      :namespace => args[:namespace] || false
-    }
-    File.open(@params[:target],'w+') do |file|
-      generated_html = html_from_doc_lines(doc_lines)
-      file.write((@params[:html] ? @params[:html] : SimpleDoc.method(:default_html)).call(
-        generated_html,
-        toc_from_html(generated_html),
-        @params[:title]
-      ))
-    end
-  end
-  
-  protected
-  
-  def doc_lines
-    source_code = @files.collect do |file|
-      File.read(file)
-    end
-    doc_lines = []
-    source_code.join("\n").split(10.chr).each do |line|
-      doc_lines.push(line.gsub(/^\s+?\/?\*\s/,'')) if line.match /^\s+?\/?\*\s/
-    end
-    doc_lines
-  end
-  
-  def html_from_doc_lines(source_lines)
-    Maruku.new(source_lines.join(10.chr),:unsafe_features => true).to_html
-  end
-  
-  def toc_from_html(html)
-    toc = ["<ul>"]
-    html.scan(/\<(h1|h2|h3) id='([^']+)'>(.+)/).each do |match|
-      tag = match[0]
-      id = match[1]
-      content = match[2]
-      content = content.gsub(/<.+/,'') #remove anything after an HTML tag
-      content = content.gsub(/\).+/,'') #remove anything after a method signature
-      content = content.gsub('&#8220;','').gsub('&#8221;','') #remove quotes
-      if content == 'Class.instance'
-        content = 'instance'
-      elsif content == '$.view'
-        content = '$.view'
-      else
-        content = content.gsub(@params[:namespace],'') if @params[:namespace] && content != @params[:namespace] #remove namespace
-      end
-      content = content.gsub(/^\./,'') #remove starting dot if present
-      content = content.gsub(/.*\(/,'') #remove anything before ( if present
-      if content == 'tag'
-        content = false
-      end
-      if content && content != ''
-        toc.push("<#{tag}>#{tag == 'h3' ? '- ' : ''}<a href='##{id}'>#{content}</a></#{tag}>")
-      end
-    end
-    toc.push("</ul>")
-    toc.join("\n")
-  end
-  
-  def self.default_html(body,toc,title)
-    <<-EOS
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>#{title}</title>
-    <link rel="stylesheet" media="screen" href="screen.css"/>
-  </head>
-  <body>
-    #{body}
-    <div id="toc">#{toc}</div>
-  </body>
-</html>
-    EOS
   end
 end

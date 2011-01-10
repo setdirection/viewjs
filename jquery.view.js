@@ -23,27 +23,28 @@
 /* 
  * jQuery View
  * ===========
- * **Download:** [Development](https://github.com/syntacticx/viewjs/zipball/master) | [Production (4KB)](https://github.com/syntacticx/viewjs/raw/master/jquery.view.min.js)  
- * **See Also:** [jQuery Routes](http://routesjs.com/) | [Backbone.js](http://)
+ * Markup as JavaScript **[Development](https://github.com/syntacticx/viewjs/zipball/master) | [Production (4KB)](https://github.com/syntacticx/viewjs/raw/master/jquery.view.min.js)**  
  * 
- * A DOM centric class and inheritence system for jQuery or Node.
+ * <ul id="nav">
+ *   <li><a href="#features">Features</a></li>
+ *   <li><a href="#tutorial">Tutorial</a></li>
+ *   <li><a href="#api">API</a></li>
+ *   <li><a href="#changelog">Change Log</a></li>
+ * </ul>
+ * <br class="clear"/>
  * 
- * - Pure JavaScript DOM templating with Builder ([Markup as JavaScript](http://en.wikipedia.org/wiki/Markaby))
- * - Mix and match Builder with HTML strings, [Mustache](https://github.com/janl/mustache.js/) and [jQuery templates](http://api.jquery.com/jQuery.template/)
- * - "this" is always in context, no calls to $.proxy
- * - View's generate the same Node
+ * Marketing speak coming soon.
  * 
  * Class Creation
  * --------------
  * 
- * ### $.view*(Function constructor \[,Object instance_methods\]) -> Class*<br/>$.view*(Object parent_class, Function constructor \[,Object instance_methods\]) -> Class*
- * Creates a new View class. Takes two arguments, a constructor function that must return a DOM element or HTML string,
+ * Use $.view to create a new View class. $.view takes two arguments, a constructor function that must return a DOM element or HTML string,
  * and an optional hash of instance methods.
  * 
  *     MyView = $.view(function(){
  *       return this.div();
  *     },{
- *       handleClick: function(){}
+ *       methodName: function(){}
  *     });
  * 
  * The element returned by the constructor is available via the **element** method. Passing a View
@@ -94,7 +95,6 @@
  * 
  * Builder
  * -------
- * ### instance.tag*(\[String text\] \[,Element\] \[,Object attributes\]) -> Element*
  * 
  * All HTML tag names are available as methods inside of View classes. Each view method takes a variable number of arguments which can be passed in any order and returns a DOM element. Possible arguments are:
  *
@@ -193,13 +193,6 @@
  *     );
  *     $(this.listItemOne).click(this.clickHandler);
  * 
- * Using Templates
- * ---------------
- * 
- * ###Mustache
- * 
- * ###jQuery Templates
- * 
  * Events
  * ------
  * Each View class has the same event method names as jQuery: **bind**, **unbind**, **one**, **trigger**.
@@ -257,6 +250,37 @@
     throw 'jQuery View requires jQuery 1.4.3 or later.';
   }
   
+  /*
+   * Class
+   * -----
+   * ### $.view*(Function constructor \[,Object methods\]) -> Class*<br/>$.view*(Class parent, Function(Element) \[,Object methods\]) -> Class*
+   * 
+   * Create a new View class:
+   * 
+   *     MyView = $.view(function(){
+   *       return this.div();
+   *     },{
+   *       methodName: function(){}
+   *     });
+   * 
+   * Or subclass an existing View class:
+   * 
+   *     MyViewTwo = $.view(MyView,function(element){
+   *       $(element).addClass('special');
+   *     },{
+   *       childMethod: function(){}
+   *     });
+   * 
+   * ### new Class*(\[Object attributes\]) -> instance*
+   * Creates a new instance of a View class.
+   * 
+   *     var instance = new MyView({
+   *       key: 'value'
+   *     });
+   *     instance.get('key') == 'value';
+   *     $(instance).appendTo(document.body);
+   *
+   */
   $.view = function view(structure,methods){
     var parent_class;
     if(is_view_class(structure)){
@@ -315,12 +339,14 @@
     extend(klass.prototype,methods || {});
     return klass;
   };
-  /*
-   * Class Methods
-   * -------------
-   */ 
   $.view.classMethods = {
     /* ### Class.instance*() -> instance*
+     * Get an instance of the View class. **instance** will create a new
+     * instance the first time it is invoked, and will return the same
+     * instance on subsequent calls.
+     * 
+     *     var instance = MyView.instance();
+     *     instance == MyView.instance();
      */ 
     instance: function instance(instance){
       if(typeof(instance) == 'undefined'){
@@ -332,8 +358,6 @@
       }
       return this._instance;
     },
-    /* ### Class.bind*(String event_name, Function handler \[,Object context\]) -> Function*
-     */ 
     bind: function bind(event_name,observer,context){
       var arguments_array = array_from(arguments);
       if(typeof(arguments_array[2]) == 'undefined'){
@@ -348,8 +372,6 @@
       }
       return observer;
     },
-    /* ### Class.unbind*(\[String event_name\] \[,Function handler\]) -> null*
-     */
     unbind: function unbind(event_name,observer){
       if(!(event_name in this._observers)){
         this._observers[event_name] = [];
@@ -363,8 +385,6 @@
         this._observers = {};
       }
     },
-    /* ### Class.one*(String event_name, Function handler \[,Object context\]) -> Function*
-     */ 
     one: function one(event_name,outer_observer,context){
       var arguments_array = array_from(arguments);
       if(typeof(arguments_array[2]) == 'undefined'){
@@ -382,8 +402,6 @@
       this._observers[event_name].push(inner_observer);
       return inner_observer;
     },
-    /* ### Class.trigger*(String event_name) -> Array or false*
-     */
     trigger: function trigger(event_name){
       if(!this._observers || !this._observers[event_name] || (this._observers[event_name] && this._observers[event_name].length == 0)){
         return [];
@@ -403,8 +421,6 @@
       }
       return collected_return_values;
     },
-    /* ### Class.ready*(Function handler \[,Object context\]) -> Function*
-     */
     ready: function ready(){
       var args = array_from(arguments);
       args.unshift('ready');
@@ -413,17 +429,8 @@
   };
   
   /* 
-   * Instance Methods
-   * ----------------
-   * 
-   * ### new Class*(\[Object attributes\]) -> instance*
-   * Creates a new instance of a View class.
-   * 
-   *     var instance = new MyView({
-   *       key: 'value'
-   *     });
-   *     $(instance).appendTo(document.body);
-   * 
+   * Core
+   * ----
    */ 
   $.view.fn = {
     initialize: function initialize(attributes){
@@ -442,13 +449,19 @@
       this.trigger('initialized');
     },
     /* ### instance.element*() -> Element*<br/>instance.element*(Element element) -> Element*
-     * Set or get the outermost element in the view. The element should only be set
-     * from within the view constructor.
+     * Get the outermost element of the view, which is returned by the constructor.
      * 
-     *     var instance = new MyView(function(){
-     *       return this.div();
-     *     });
+     *     var instance = new MyView();
      *     instance.element().tagName == 'DIV'
+     * 
+     * You can explicitly set the element in the constructor using this method instead of
+     * reutrning an Element from the constructor.
+     * 
+     *     MyView = $.view(function(){
+     *       this.element(this.div());
+     *       $(this.element()).addClass('my_div');
+     *     });
+     * 
      */ 
     element: function element(element){
       if(typeof(element) == 'undefined'){
@@ -473,6 +486,10 @@
       }
     },
     /* ### instance.attributes*() -> Object*<br/>instance.attributes*(Object attributes) -> null*
+     * Get a vanilla hash of attributes in the view.
+     * 
+     *     var instance = new MyView({key:'value'});
+     *     instance.attributes() == {key:'value'};
      */
     attributes: function attributes(attributes,supress_observers){
       if(typeof(attributes) != 'undefined'){
@@ -489,11 +506,25 @@
       }
     },
     /* ### instance.get*(String key) -> mixed*
+     * Get an attribute from the view.
+     * 
+     *     var instance = new MyView({key:'value'});
+     *     instance.get('key') == 'value';
      */ 
     get: function get(key){
       return this._attributes[key];
     },
     /* ### instance.set*(String key,mixed value) -> mixed*
+     * Set an attribute in the view. This will trigger the **changed**
+     * event.
+     * 
+     *     var instance = new MyView();
+     *     instance.bind('changed',function(changed_attributes){
+     *       for(var key in changed_attributes){
+     *       
+     *       }
+     *     });
+     *     instance.set('key','value');
      */ 
     set: function set(key,value,supress_observers){
       this._attributes[key] = value;
@@ -504,19 +535,85 @@
       }
       return value;
     },
-    /* ### instance.bind*(String event_name, Function handler \[,Object context\]) -> Function*
+    /* 
+     * ### instance.tag*(\[String text\] \[,Element\] \[,Object attributes\]) -> Element*
+     * **tag** refers to any HTML tag name and is used to create DOM elements. Tag takes
+     * an arbitrary number of arguments in any order which can be:
+     * 
+     * - string or number
+     * - HTML string
+     * - hash of HTML attributes
+     * - DOM Element
+     * - jQuery Object
+     * - View Class
+     * - View instance
+     * - Function to be called
+     * - Array of any of the above
+     * 
+     * Sample usage:
+     * 
+     *     this.ul({className:'my_list'},
+     *       this.li('Item One'),
+     *       this.li('Item Two'),
+     *       $(this.li('Item Three')).click(),
+     *       '<li>Item Four</li>'
+     *     )
+     * 
+     * Events
+     * ------
+     * ### instance.bind*(String event_name, Function handler \[,Object context\]) -> Function*
+     * Register a handler for an event on a given instance. "this" will refer to the
+     * view instance unless a **context** argument was passed.
+     * 
+     *     instance.bind('event_name',function(a,b,c){
+     *       
+     *     });
+     * 
+     * You can register an event handler on all instances of a class
+     * by calling **bind** on the class. The handler will receive the instance that
+     * triggered the event as the first argument, followed by any other arguments passed
+     * by **trigger**.
+     * 
+     *     MyView.bind('event_name',function(instance,a,b,c){
+     *       
+     *     });
      */ 
     bind: $.view.classMethods.bind,
     /* ### instance.unbind*(\[String event_name\] \[,Function handler\]) -> null*
+     * unbind an event handler registered on a given instance.
+     * 
+     *     instance.unbind('event_name',handler);
+     *
+     * Any event handlers that were registered on the class can be unbound
+     * by calling Class.unbind:
+     * 
+     *     MyView.unbind('event_name',handler);
      */ 
     unbind: $.view.classMethods.unbind,
-    /* ### instance.ready*(Function handler \[,Object context\]) -> Function*
-     */
-    ready: $.view.classMethods.ready,
     /* ### instance.one*(String event_name, Function handler \[,Object context\]) -> Function*
+     * This method is identical to **bind**, except that the handler is unbound after
+     * its first invocation.
+     * 
+     *     instance.one('event_name',function(){
+     *       //only called once
+     *     });
      */ 
     one: $.view.classMethods.one,
     /* ### instance.trigger*(String event_name \[,mixed arg\]) -> Array or false*
+     * Triggers the given event, passing an arbitrary number of arguments to the
+     * handlers. Returns an array of responses, or false if
+     * a handler stopped the event by returning false.
+     * 
+     *     instance.trigger('event_name',a,b,c);
+     * 
+     * **instance.trigger** will notify all handlers bound by **instance.bind**
+     * and **Class.bind**. Calling **Class.trigger** will only notify handlers
+     * bound by **Class.bind**.
+     * 
+     *     instance.bind('event_name',handler); //not called by Class.trigger
+     *     Class.bind('event_name',handler); //called by Class.trigger
+     *     Class.trigger('event_name');
+     *     
      */ 
     trigger: function trigger(event_name){
       if(
@@ -550,11 +647,28 @@
       }
       return collected_return_values;
     },
+    /* ### instance.ready*(Function handler \[,Object context\]) -> Function*
+     * Identical to calling **instance.bind('ready',handler)** The **ready**
+     * event is triggered when the view's outermost element is attached to the DOM.
+     * "this" will always refer to the view instance unless a **context**
+     * argument was passed.
+     * 
+     *     instance.ready(function(){
+     *       $('input:first',this).focus();
+     *     });
+     * 
+     * Calling **ready** on the class will observe the **ready** event of all instances.
+     * 
+     *     MyView.ready(function(instance){
+     *       $('input:first',instance).focus();
+     *     });
+     */
+    ready: $.view.classMethods.ready,
     /* ### instance.emit*(event_name \[,mixed arg\]) -> Function*
      * Creates a callback that will trigger event_name with the supplied arguments.
      * 
      *     this.bind('event_name',function(a,b,c){});
-     *     $(this.a({href:'#'},'My Link')).click(this.emit('event_name',a,b,c))
+     *     $(link).click(this.emit('event_name',a,b,c));
      */ 
     emit: function emit(){
       var args = array_from(arguments);
@@ -563,7 +677,10 @@
       },this);
     },
     /*
-     * ### instance.map*(mixed,Function iterator) -> Array*
+     * Helpers
+     * -------
+     * 
+     * ### instance.map*(Array, Function(item,index)) -> Array*<br/>instance.map*(Object, Function(key,value)) -> Array*
      * Similar to Array#map or Ruby's Array#collect. Works on objects or Arrays.
      * If an object is passed the iterator will be called with (key,value), if
      * an Array is passed the iterator will be called with (value,index). Inside
@@ -571,7 +688,7 @@
      * 
      *     var NavigationView = $.view(function(){
      *       return this.ul(this.map({
-     *         'Page Title: 'http://page.com/'
+     *         'Page Title': 'http://page.com/'
      *       },function(title,url){
      *         return this.li(
      *           this.a({href:url},title)
@@ -617,12 +734,20 @@
          //will call this.delegate() when this.element(element) is called
        }
      },
-     /* ### instance.toString*() -> String*
+     /* Templates
+      * ---------
+      * 
+      * ### instance.toString*() -> String*
+      * 
+      *     MyView = $.view(function(){
+      *       return this.div();
+      *     });
+      *     new MyView().toString() == '<div></div>';
       */ 
      toString: function toString(){
        return jquery_available ? this.element().innerHTML : this.element();
      },
-     /* ### instance.mustache*(String template \[,Object partials\] \[,Function line_iterator\]) -> String*
+     /* ### instance.mustache*(String template \[,Object partials\]) -> String*
       * Render a [Mustache template](https://github.com/janl/mustache.js/) with the view's attributes.
       * 
       *     MyView = $.view(function(){
@@ -1005,21 +1130,14 @@
   };
 })('jQuery' in this ? jQuery : this);
 
-/* Node Support
- * ------------
- * 
- * 
- * Examples
- * --------
- *  - [PhotoFolder](http://photofolder.org/)
- * 
+/*
  * Change Log
  * ----------
+ * **1.1.0** - *Jan 10, 2011*  
+ * Added support for Mustache and jQuery Template.
+ * 
  * **1.0.0** - *Jan 4, 2011*  
  * Initial release.
  * 
- * ---
- * 
  * Copyright 2011 [Syntacticx](http://syntacticx.com/). Released under the [MIT or GPL License](http://jquery.org/license).  
- * Style inspired by [Backbone.js](http://documentcloud.github.com/backbone/)
  */
