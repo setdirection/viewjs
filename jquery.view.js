@@ -739,20 +739,17 @@
      *     });
      */
     map: function map(object,callback){
-      var responses = [];
-      var response;
+      var response = [];
       if(is_array(object)){
         for(var i = 0; i < object.length; ++i){
-          response = callback.apply(this,[object[i],i]);
-          responses.push(response);
+          response.push(callback.apply(this,[object[i],i]));
         }
       }else{
         for(var key in object){
-          response = callback.apply(this,[key,object[key]]);
-          responses.push(response);
+          response.push(callback.apply(this,[key,object[key]]));
         }
       }
-      return responses;
+      return response;
     },
     /* ### instance.delegate*(String selector, String event_name, Function callback \[,Object context\]) -> null*
      * Equivelent to calling [jQuery's delegate](http://api.jquery.com/delegate/) method, but can
@@ -1555,7 +1552,9 @@
  * Change Log
  * ----------
  * **1.1.0** - *Jan 10, 2011*  
- * Added support for Mustache and jQuery Template.
+ * Added support for Mustache and jQuery Template. **changed** event
+ * is now **change** and will receive keys that were unset in a call
+ * to **attributes**.
  * 
  * **1.0.0** - *Jan 4, 2011*  
  * Initial release.
