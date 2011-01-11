@@ -332,3 +332,51 @@ asyncTest("ready event fires only once element attached to DOM",function(){
     start();
   },55);
 });
+
+StringMustacheView = $.view('<b>{{key}}</b>');
+StringReturningMustacheView = $.view(function(){
+  return '<b>{{key}}</b>';
+});
+ComplexMustacheView = $.view(function(){
+  return this.ul(
+    this.li('{{a}}'),
+    '<li>{{b}}</li>',
+    this.map(['c','d'],function(key){
+      return '<li>{{' + key + '}}</li>';
+    })
+  );
+});
+
+test("Mustache support",function(){
+  equal(new StringMustacheView({key:'value'}).element().innerHTML,'value');
+  equal(new StringReturningMustacheView({key:'value'}).element().innerHTML,'value');
+  var attributes = {
+    a: 'one',
+    b: 'two',
+    c: 'three',
+    d: 'four'
+  };
+  var instance = new ComplexMustacheView(attributes);
+  var items = $('li',instance);
+  equal(items[0].innerHTML,attributes.a);
+  equal(items[1].innerHTML,attributes.b);
+  equal(items[2].innerHTML,attributes.c);
+  equal(items[3].innerHTML,attributes.d);
+});
+
+EscapingView = $.view(function(){
+  this.set('key','value');
+  return this.ul(
+    this.li('{{key}}'),
+    this.li(this.escape("{{key}}")),
+    this.li(this.escape('<b>Test</b>'))
+  );
+});
+
+test("HTML and templating escaping",function(){
+  var instance = new EscapingView();
+  var items = $('li',instance);
+  equal(items[0].innerHTML,'value');
+  equal(items[1].innerHTML,'{{key}}');
+  equal(items[2].innerHTML,'&lt;b&gt;test&lt;/b&gt;');
+});

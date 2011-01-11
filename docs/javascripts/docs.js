@@ -10,13 +10,13 @@ $(function(){
     if(hash == '' || !hash){
       hash = 'api';
     }
-    if(hash == 'features'){
-      $('#nav a[href="#features"]').addClass('active');
+    if(hash == 'intro'){
+      $('#nav a[href="#intro"]').addClass('active');
       content_to_hide.hide();
       $('#api_toc').hide();
       $('#jquery_view').nextUntil('#class_creation').show();
-    }else if(hash == 'tutorial'){
-      $('#nav a[href="#tutorial"]').addClass('active');
+    }else if(hash == 'guide'){
+      $('#nav a[href="#guide"]').addClass('active');
       content_to_hide.hide();
       $('#api_toc').hide();
       $('#class_creation').nextUntil('#class').add('#class_creation').show();

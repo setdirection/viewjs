@@ -17,12 +17,34 @@
 
 <p>Markup as JavaScript <strong><a href='https://github.com/syntacticx/viewjs/zipball/master'>Development</a> | <a href='https://github.com/syntacticx/viewjs/raw/master/jquery.view.min.js'>Production (4KB)</a></strong></p>
 <ul id='nav'>
-  <li><a href='#features'>Features</a></li>
-  <li><a href='#tutorial'>Tutorial</a></li>
+  <li><a href='#intro'>Intro</a></li>
+  <li><a href='#guide'>Guide</a></li>
   <li><a href='#api'>API</a></li>
   <li><a href='#changelog'>Change Log</a></li>
 </ul><br class='clear' />
-<p>Marketing speak coming soon.</p>
+<p>jQuery View provides a class and inheritance system for templates which can be constructed with a mix of pure JavaScript, HTML strings, Mustache/jQuery templates and jQuery objects:</p>
+
+<pre><code>ListView = $.view(function(){
+  return this.ul(
+    this.li(&#39;Item One&#39;),
+    $(this.li(&#39;Item Two&#39;)).click(this.handleClick),
+    &quot;&lt;li&gt;{{key}}&lt;/li&gt;&quot;
+  );
+},{
+  handleClick: function(event){}
+});</code></pre>
+
+<p>Subclass views:</p>
+
+<pre><code>SpecialListView = $.view(ListView,function(element){
+  $(element).addClass(&#39;special&#39;);
+});</code></pre>
+
+<p>Use Views as arguments to jQuery:</p>
+
+<pre><code>var instance = new ListView({key:&#39;Item Three&#39;});
+$(&#39;li:first&#39;,instance).addClass(&#39;first&#39;);
+$(instance).appendTo(&#39;body&#39;);</code></pre>
 
 <h2 id='class_creation'>Class Creation</h2>
 
@@ -262,7 +284,7 @@ instance.element().tagName == &#39;DIV&#39;</code></pre>
 
 <h3 id='instanceattributes__objectinstanceattributesobject_attributes__null'>instance.attributes<em>() -&gt; Object</em><br />instance.attributes<em>(Object attributes) -&gt; null</em></h3>
 
-<p>Get a vanilla hash of attributes in the view.</p>
+<p>Get a hash of attributes in the view.</p>
 
 <pre><code>var instance = new MyView({key:&#39;value&#39;});
 instance.attributes() == {key:&#39;value&#39;};</code></pre>
