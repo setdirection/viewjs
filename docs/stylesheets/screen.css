@@ -5,7 +5,7 @@ html {
 
 body {
   margin:0;
-  padding:0;
+  padding:0 0 15px 0;
   font-family: 'Helvetica Neue', 'Lucida Grande', Arial;
   background-color:#000;
   background-image:url("../background.jpg");
@@ -29,17 +29,21 @@ h1 {
   margin: 105px 0px 0px 0px;
   color:#fff;
   line-height:14px;
-  font-size:12px;
+  font-size:13px;
 }
 
 #main p.intro strong {
   font-weight:bold;
-  padding-left:15px;
+  padding-left:25px;
   color:#aaa;
 }
 
 #main p.intro strong a {
   color:#aaa;
+}
+
+#main p.intro strong a:hover {
+  color:#fff;
 }
 
 h2,
@@ -106,7 +110,7 @@ br.clear {
 }
 
 #nav li a {
-  padding-top:15px;
+  padding-top:17px;
   display:block;
   float:left;
   padding-right:15px;
@@ -135,6 +139,10 @@ br.clear {
   width:16%;
   padding:0;
   vertical-align:top;
+}
+
+#api_toc td h2 {
+  padding-top:17px;
 }
 
 #api_toc td h3 {
@@ -207,5 +215,5 @@ pre {
   -webkit-border-radius:5px;
   -moz-border-radius:5px;
   margin: 20px 10px 0 10px;
-  padding: 20px 25px;
+  padding: 18px 25px 20px 25px;
 }

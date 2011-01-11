@@ -15,12 +15,12 @@
       <div id="main">
         <h1 id='jquery_view'>jQuery View</h1>
 
-<p>Markup as JavaScript <strong><a href='https://github.com/syntacticx/viewjs/zipball/master'>Development</a> | <a href='https://github.com/syntacticx/viewjs/raw/master/jquery.view.min.js'>Production (4KB)</a></strong></p>
+<p>Markup as JavaScript <strong><a href='https://github.com/syntacticx/viewjs/zipball/master'>Development</a> | <a href='https://github.com/syntacticx/viewjs/raw/master/jquery.view.min.js'>Production (6KB)</a></strong></p>
 <ul id='nav'>
   <li><a href='#intro'>Intro</a></li>
   <li><a href='#guide'>Guide</a></li>
   <li><a href='#api'>API</a></li>
-  <li><a href='#changelog'>Change Log</a></li>
+  <li><a href='#resources'>Resources</a></li>
 </ul><br class='clear' />
 <p>jQuery View provides a class and inheritance system for templates which can be constructed with a mix of pure JavaScript, HTML strings, Mustache/jQuery templates and jQuery objects:</p>
 
@@ -34,17 +34,13 @@
   handleClick: function(event){}
 });</code></pre>
 
-<p>Subclass views:</p>
-
-<pre><code>SpecialListView = $.view(ListView,function(element){
-  $(element).addClass(&#39;special&#39;);
-});</code></pre>
-
-<p>Use Views as arguments to jQuery:</p>
+<p>View instances can be used as arguments to jQuery:</p>
 
 <pre><code>var instance = new ListView({key:&#39;Item Three&#39;});
 $(&#39;li:first&#39;,instance).addClass(&#39;first&#39;);
 $(instance).appendTo(&#39;body&#39;);</code></pre>
+
+<p>Works well with <a href='http://routesjs.com/'>jQuery Routes</a>.</p>
 
 <h2 id='class_creation'>Class Creation</h2>
 
@@ -121,6 +117,15 @@ instance.attributes();</code></pre>
   &#39;&lt;textarea name=&quot;body&quot;&gt;&lt;/textarea&gt;&#39;
 );</code></pre>
 
+<p>Mustache or jQuery templates will be rendered with the view&#8217;s attributes and methods:</p>
+
+<pre><code>MyView = $.view(function(){
+  this.set(&#39;key&#39;,&#39;value&#39;);
+  this.ul(
+    &#39;&lt;li&gt;{{key}}&lt;/li&gt;&#39;
+  );
+});</code></pre>
+
 <p>jQuery objects can be used. Any instance methods defined by the class will automatically be proxied, so &#8220;this&#8221; will always refer to the view instance if passed to an event handler.</p>
 
 <pre><code>MyView = $.view(function(){
@@ -137,13 +142,28 @@ instance.attributes();</code></pre>
   }
 });</code></pre>
 
-<p>An array of strings, object attributes or DOM elements can be used.</p>
+<p>Methods will be called:</p>
+
+<pre><code>this.ul(this.generateListItems);</code></pre>
+
+<p>View classes and view instances:</p>
+
+<pre><code>this.ul(
+  this.li(&#39;Item Two&#39;),
+  ListItemView, //will be initialized with no attributes
+  new ListItemView({name:&#39;Item Three&#39;})
+);</code></pre>
+
+<p>An array (which will be flattened) of any of the above can be used as well:</p>
 
 <pre><code>this.ul(
   this.li(&#39;Item One&#39;),
   [
     this.li(&#39;Item Two&#39;),
-    this.li(&#39;Item Three&#39;)
+    this.li(&#39;Item Three&#39;),
+    [
+      this.li(&#39;Item Four&#39;)
+    ]
   ]
 );</code></pre>
 
@@ -161,18 +181,6 @@ this.ul(
   },function(key,value){
     return this.li(this.a({href:value},key));
   })
-);</code></pre>
-
-<p>Methods that are used will be called:</p>
-
-<pre><code>this.ul(this.generateListItems);</code></pre>
-
-<p>View classes and view instances can also be used:</p>
-
-<pre><code>this.ul(
-  this.li(&#39;Item Two&#39;),
-  ListItemView, //will be initialized with no attributes
-  new ListItemView({name:&#39;Item Three&#39;})
 );</code></pre>
 
 <p>Builder methods are also available in the <strong>$.view</strong> object if builder methods are needed outside of view classes:</p>
@@ -384,8 +392,8 @@ instance.set(&#39;key&#39;,&#39;value&#39;);</code></pre>
 <p><strong>instance.trigger</strong> will notify all handlers bound by <strong>instance.bind</strong> and <strong>Class.bind</strong>. Calling <strong>Class.trigger</strong> will only notify handlers bound by <strong>Class.bind</strong>.</p>
 
 <pre><code>instance.bind(&#39;event_name&#39;,handler); //not called by Class.trigger
-Class.bind(&#39;event_name&#39;,handler); //called by Class.trigger
-Class.trigger(&#39;event_name&#39;);</code></pre>
+MyView.bind(&#39;event_name&#39;,handler); //called by Class.trigger
+MyView.trigger(&#39;event_name&#39;);</code></pre>
 
 <h3 id='instancereadyfunction_handler_object_context__function'>instance.ready<em>(Function handler [,Object context]) -&gt; Function</em></h3>
 
@@ -438,39 +446,48 @@ $(link).click(this.emit(&#39;event_name&#39;,a,b,c));</code></pre>
   handleClick: function(){}
 });</code></pre>
 
+<h3 id='instanceescapestring_unescaped__string'>instance.escape<em>(String unescaped) -&gt; String</em></h3>
+
+<p>Escape user input or prevent HTML or template strings from being interpreted.</p>
+
+<pre><code>this.p(this.escape(&#39;Will not be processed {{key}}&#39;));
+this.p(this.escape(&#39;&lt;b&gt;Will appear as text.&lt;/b&gt;&#39;));</code></pre>
+
 <h2 id='templates'>Templates</h2>
 
-<h3 id='instancetostring__string'>instance.toString<em>() -&gt; String</em></h3>
+<h3 id='instancerenderstring_template_object_attributes__string'>instance.render<em>(String template [,Object attributes]) -&gt; String</em></h3>
+
+<p>Render a string with the current template engine.</p>
+
+<pre><code>this.set(&#39;key&#39;,&#39;value&#39;);
+this.render(&#39;&lt;li&gt;{{key}}&lt;/li&gt;&#39;);</code></pre>
+
+<h3 id='instanceengine__stringinstanceenginestring_engine__null'>instance.engine<em>() -&gt; String</em><br />instance.engine<em>(String engine) -&gt; null</em></h3>
+
+<p>Get or set the current template engine. Supported engines are &#8220;mustache&#8221; and &#8220;jquery.tmpl&#8221;.</p>
 
 <pre><code>MyView = $.view(function(){
-  return this.div();
+  this.engine(&#39;mustache&#39;);
 });
-new MyView().toString() == &#39;&lt;div&gt;&lt;/div&gt;&#39;;</code></pre>
-
-<h3 id='instancemustachestring_template_object_partials__string'>instance.mustache<em>(String template [,Object partials]) -&gt; String</em></h3>
-
-<p>Render a <a href='https://github.com/janl/mustache.js/'>Mustache template</a> with the view&#8217;s attributes.</p>
-
-<pre><code>MyView = $.view(function(){
-  this.set(&#39;key&#39;,&#39;value&#39;);
-  return this.ul(
-    this.mustache(&#39;&lt;li&gt;{{value}}&lt;/li&gt;&#39;)
-  );
-});</code></pre>
-
-<h3 id='instancetmplstring_template_name_object_options__string'>instance.tmpl<em>(String template_name [,Object options]) -&gt; String</em></h3>
-
-<p>Render a named <a href='https://github.com/jquery/jquery-tmpl'>jQuery template</a> with the view&#8217;s attributes.</p>
-
-<pre><code>$.template(&#39;my_template&#39;,&#39;&lt;li&gt;${value}&lt;/li&gt;&#39;);
-MyView = $.view(function(){
-  this.set(&#39;key&#39;,&#39;value&#39;);
-  return this.ul(
-    this.tmpl(&#39;my_template&#39;)
-  );
-});</code></pre>
+MyView.instance().engine() == &#39;mustache&#39;;</code></pre>
 
 <h2 id='properties'>Properties</h2>
+
+<h3 id='viewdefaultengine__string'>$.view.defaultEngine <em>-&gt; String</em></h3>
+
+<p>Sets the default template engine. The template engine can be overridden per class with the <strong>engine</strong> method. Supported engines are &#8220;mustache&#8221; (the default) and &#8220;jquery.tmpl&#8221;.</p>
+
+<h3 id='viewclassmethods__object'>$.view.classMethods <em>-&gt; Object</em></h3>
+
+<p>Methods that are available to all view classes.</p>
+
+<pre><code>$.view.classMethods.myClassMethod = function(){};
+MyClass = $.view(function(){});
+MyClass.myClassMethod();</code></pre>
+
+<h3 id='viewlogging__boolean'>$.view.logging <em>-&gt; Boolean</em></h3>
+
+<p>Set this to true to have view classes output console.log messages.</p>
 
 <h3 id='viewfn__object'>$.view.fn <em>-&gt; Object</em></h3>
 
@@ -485,23 +502,19 @@ var instance = new MyClass({
 });
 instance.myMethod(); //returns &quot;value&quot;</code></pre>
 
-<h3 id='viewclassmethods__object'>$.view.classMethods <em>-&gt; Object</em></h3>
-
-<p>Methods that are available to all view classes.</p>
-
-<pre><code>$.view.classMethods.myClassMethod = function(){};
-MyClass = $.view(function(){});
-MyClass.myClassMethod();</code></pre>
-
-<h3 id='viewlogging__boolean'>$.view.logging <em>-&gt; Boolean</em></h3>
-
-<p>Set this to true to have view classes output console.log messages.</p>
+<h2 id='resources'>Resources</h2>
 
 <h2 id='change_log'>Change Log</h2>
 
 <p><strong>1.1.0</strong> - <em>Jan 10, 2011</em><br />Added support for Mustache and jQuery Template.</p>
 
 <p><strong>1.0.0</strong> - <em>Jan 4, 2011</em><br />Initial release.</p>
+
+<h2 id='thank_you'>Thank You</h2>
+
+<p>To <a href='http://www.youtube.com/watch?v=lwDDa9ctNFE'>_why</a> for <a href='http://markaby.github.com/'>Markaby</a> and the fine folks at <a href='http://documentcloud.org/'>DocumentCloud</a> for <a href='http://documentcloud.github.com/backbone/'>Backbone.js</a>.</p>
+
+<h2 id='license'>License</h2>
 
 <p>Copyright 2011 <a href='http://syntacticx.com/'>Syntacticx</a>. Released under the <a href='http://jquery.org/license'>MIT or GPL License</a>.</p>
       </div>
@@ -510,7 +523,7 @@ MyClass.myClassMethod();</code></pre>
           <tbody>
             <tr>
               <td>
-                <h2>Class</h2><h3>- <a href="#viewfunction_constructor_object_methods__classviewclass_parent_functionelement_object_methods__class">$.view</a></h3><h3>- <a href="#new_classobject_attributes__instance">new Class</a></h3><h3>- <a href="#classinstance__instance">instance</a></h3></td><td><h2>Core</h2><h3>- <a href="#instanceelement__elementinstanceelementelement_element__element">element</a></h3><h3>- <a href="#instanceattributes__objectinstanceattributesobject_attributes__null">attributes</a></h3><h3>- <a href="#instancegetstring_key__mixed">get</a></h3><h3>- <a href="#instancesetstring_keymixed_value__mixed">set</a></h3><h3>- <a href="#instancetagstring_text_element_object_attributes__element">tag</a></h3></td><td><h2>Events</h2><h3>- <a href="#instancebindstring_event_name_function_handler_object_context__function">bind</a></h3><h3>- <a href="#instanceunbindstring_event_name_function_handler__null">unbind</a></h3><h3>- <a href="#instanceonestring_event_name_function_handler_object_context__function">one</a></h3><h3>- <a href="#instancetriggerstring_event_name_mixed_arg__array_or_false">trigger</a></h3><h3>- <a href="#instancereadyfunction_handler_object_context__function">ready</a></h3><h3>- <a href="#instanceemitevent_name_mixed_arg__function">emit</a></h3></td><td><h2>Helpers</h2><h3>- <a href="#instancemaparray_functionitemindex__arrayinstancemapobject_functionkeyvalue__array">map</a></h3><h3>- <a href="#instancedelegatestring_selector_string_event_name_function_callback_object_context__null">delegate</a></h3></td><td><h2>Templates</h2><h3>- <a href="#instancetostring__string">toString</a></h3><h3>- <a href="#instancemustachestring_template_object_partials__string">mustache</a></h3><h3>- <a href="#instancetmplstring_template_name_object_options__string">tmpl</a></h3></td><td><h2>Properties</h2><h3>- <a href="#viewfn__object">fn </a></h3><h3>- <a href="#viewclassmethods__object">classMethods </a></h3><h3>- <a href="#viewlogging__boolean">logging </a></h3>
+                <h2>Class</h2><h3>- <a href="#viewfunction_constructor_object_methods__classviewclass_parent_functionelement_object_methods__class">$.view</a></h3><h3>- <a href="#new_classobject_attributes__instance">new Class</a></h3><h3>- <a href="#classinstance__instance">instance</a></h3></td><td><h2>Core</h2><h3>- <a href="#instanceelement__elementinstanceelementelement_element__element">element</a></h3><h3>- <a href="#instanceattributes__objectinstanceattributesobject_attributes__null">attributes</a></h3><h3>- <a href="#instancegetstring_key__mixed">get</a></h3><h3>- <a href="#instancesetstring_keymixed_value__mixed">set</a></h3><h3>- <a href="#instancetagstring_text_element_object_attributes__element">tag</a></h3></td><td><h2>Events</h2><h3>- <a href="#instancebindstring_event_name_function_handler_object_context__function">bind</a></h3><h3>- <a href="#instanceunbindstring_event_name_function_handler__null">unbind</a></h3><h3>- <a href="#instanceonestring_event_name_function_handler_object_context__function">one</a></h3><h3>- <a href="#instancetriggerstring_event_name_mixed_arg__array_or_false">trigger</a></h3><h3>- <a href="#instancereadyfunction_handler_object_context__function">ready</a></h3><h3>- <a href="#instanceemitevent_name_mixed_arg__function">emit</a></h3></td><td><h2>Helpers</h2><h3>- <a href="#instancemaparray_functionitemindex__arrayinstancemapobject_functionkeyvalue__array">map</a></h3><h3>- <a href="#instancedelegatestring_selector_string_event_name_function_callback_object_context__null">delegate</a></h3><h3>- <a href="#instanceescapestring_unescaped__string">escape</a></h3></td><td><h2>Templates</h2><h3>- <a href="#instancerenderstring_template_object_attributes__string">render</a></h3><h3>- <a href="#instanceengine__stringinstanceenginestring_engine__null">engine</a></h3></td><td><h2>Properties</h2><h3>- <a href="#viewdefaultengine__string">defaultEngine </a></h3><h3>- <a href="#viewclassmethods__object">classMethods </a></h3><h3>- <a href="#viewlogging__boolean">logging </a></h3><h3>- <a href="#viewfn__object">fn </a></h3>
               </td>
             </tr>
            </tbody>

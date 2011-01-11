@@ -29,7 +29,7 @@ task :docs do
       last_tag = false
       toc.each do |item|
         tag, id, content = item
-        ignore = true if content == 'Change Log'
+        ignore = true if content == 'Resources'
         ignore = false if tag == 'h2' && content == 'Class'
         if !ignore
           toc_html += '</td><td>' if last_tag == 'h3' && tag == 'h2'
@@ -100,7 +100,7 @@ task :docs do
   lines.each_with_index do |line,i|
     if line.match /^\s+?\/?\*\s/
       break if(line.match(/^\s+?\/?\*\s\-\-\-/))
-      readme_lines.push(line.gsub(/^\s+?\/?\*\s/,''))
+      readme_lines.push(line.gsub(/^\s+?\/?\*\s/,'')) if !line.match(/\</)
     end
   end
   readme_lines.pop

@@ -15,7 +15,7 @@
  *   <li><a href="#intro">Intro</a></li>
  *   <li><a href="#guide">Guide</a></li>
  *   <li><a href="#api">API</a></li>
- *   <li><a href="#changelog">Change Log</a></li>
+ *   <li><a href="#resources">Resources</a></li>
  * </ul>
  * <br class="clear"/>
  * 
@@ -36,6 +36,8 @@
  *     var instance = new ListView({key:'Item Three'});
  *     $('li:first',instance).addClass('first');
  *     $(instance).appendTo('body');
+ * 
+ * Works well with [jQuery Routes](http://routesjs.com/).
  * 
  * Class Creation
  * --------------
@@ -124,6 +126,15 @@
  *       '<textarea name="body"></textarea>'
  *     );
  * 
+ * Mustache or jQuery templates will be rendered with the view's attributes and methods:
+ * 
+ *     MyView = $.view(function(){
+ *       this.set('key','value');
+ *       this.ul(
+ *         '<li>{{key}}</li>'
+ *       );
+ *     });
+ * 
  * jQuery objects can be used. Any instance methods defined by the class will automatically be proxied, so "this" will always refer to the view instance if passed to an event handler.
  * 
  *     MyView = $.view(function(){
@@ -140,13 +151,28 @@
  *       }
  *     });
  * 
- * An array of strings, object attributes or DOM elements can be used.
+ * Methods will be called:
+ * 
+ *     this.ul(this.generateListItems);
+ * 
+ * View classes and view instances:
+ * 
+ *     this.ul(
+ *       this.li('Item Two'),
+ *       ListItemView, //will be initialized with no attributes
+ *       new ListItemView({name:'Item Three'})
+ *     );
+ * 
+ * An array (which will be flattened) of any of the above can be used as well:
  * 
  *     this.ul(
  *       this.li('Item One'),
  *       [
  *         this.li('Item Two'),
- *         this.li('Item Three')
+ *         this.li('Item Three'),
+ *         [
+ *           this.li('Item Four')
+ *         ]
  *       ]
  *     );
  * 
@@ -165,18 +191,6 @@
  *       },function(key,value){
  *         return this.li(this.a({href:value},key));
  *       })
- *     );
- * 
- * Methods that are used will be called:
- * 
- *     this.ul(this.generateListItems);
- * 
- * View classes and view instances can also be used:
- * 
- *     this.ul(
- *       this.li('Item Two'),
- *       ListItemView, //will be initialized with no attributes
- *       new ListItemView({name:'Item Three'})
  *     );
  * 
  * Builder methods are also available in the **$.view** object if builder
@@ -618,8 +632,8 @@
      * bound by **Class.bind**.
      * 
      *     instance.bind('event_name',handler); //not called by Class.trigger
-     *     Class.bind('event_name',handler); //called by Class.trigger
-     *     Class.trigger('event_name');
+     *     MyView.bind('event_name',handler); //called by Class.trigger
+     *     MyView.trigger('event_name');
      *     
      */ 
     trigger: function trigger(event_name){
@@ -770,7 +784,7 @@
     /* Templates
      * ---------
      * 
-     * ### instance.render*(String template [,Object attributes]) -> String*
+     * ### instance.render*(String template \[,Object attributes\]) -> String*
      * 
      * Render a string with the current template engine.
      * 
@@ -821,18 +835,12 @@
   /* Properties
    * ----------
    *   
-   * ### $.view.fn *-> Object*
-   * Methods that will be available to all instances of all view classes.
+   * ### $.view.defaultEngine *-> String*
    * 
-   *     $.view.fn.myMethod = function(){
-   *       return this.get('key');
-   *     };
-   *     MyClass = $.view(function(){});
-   *     var instance = new MyClass({
-   *       key: 'value'
-   *     });
-   *     instance.myMethod(); //returns "value"
-   *
+   * Sets the default template engine. The template engine can be overridden
+   * per class with the **engine** method. Supported engines are "mustache"
+   * (the default) and "jquery.tmpl".
+   * 
    * ### $.view.classMethods *-> Object*
    * 
    * Methods that are available to all view classes.
@@ -845,11 +853,18 @@
    *
    * Set this to true to have view classes output console.log messages.
    * 
-   * ### $.view.defaultEngine *-> String*
+   * ### $.view.fn *-> Object*
+   * Methods that will be available to all instances of all view classes.
    * 
-   * Sets the default template engine. The template engine can be overridden
-   * per class with the **engine** method. Supported engines are "mustache"
-   * (the default) and "jquery.tmpl".
+   *     $.view.fn.myMethod = function(){
+   *       return this.get('key');
+   *     };
+   *     MyClass = $.view(function(){});
+   *     var instance = new MyClass({
+   *       key: 'value'
+   *     });
+   *     instance.myMethod(); //returns "value"
+   * 
    */
   $.view.logging = false;
   $.view.defaultEngine = 'mustache';
@@ -1512,7 +1527,10 @@
   
 })('jQuery' in this ? jQuery : this);
 
-/*
+/* 
+ * Resources
+ * ---------
+ * 
  * Change Log
  * ----------
  * **1.1.0** - *Jan 10, 2011*  
@@ -1521,5 +1539,12 @@
  * **1.0.0** - *Jan 4, 2011*  
  * Initial release.
  * 
+ * Thank You
+ * ---------
+ * To [\_why](http://www.youtube.com/watch?v=lwDDa9ctNFE) for [Markaby](http://markaby.github.com/) and the fine folks at [DocumentCloud](http://documentcloud.org/)
+ * for [Backbone.js](http://documentcloud.github.com/backbone/).
+ * 
+ * License
+ * -------
  * Copyright 2011 [Syntacticx](http://syntacticx.com/). Released under the [MIT or GPL License](http://jquery.org/license).  
  */
