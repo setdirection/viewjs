@@ -229,9 +229,9 @@ $(this.listItemOne).click(this.clickHandler);</code></pre>
   );
 });</code></pre>
 
-<p>The <strong>changed</strong> event is triggered whenever attributes in the view have been changed.</p>
+<p>The <strong>change</strong> event is triggered whenever attributes in the view have been changed.</p>
 
-<pre><code>MyView.bind(&#39;changed&#39;,function(instance,changed_attributes){
+<pre><code>MyView.bind(&#39;change&#39;,function(instance,changed_attributes){
   for(var key in changed_attributes){
     
   }
@@ -290,12 +290,21 @@ instance.element().tagName == &#39;DIV&#39;</code></pre>
   $(this.element()).addClass(&#39;my_div&#39;);
 });</code></pre>
 
-<h3 id='instanceattributes__objectinstanceattributesobject_attributes__null'>instance.attributes<em>() -&gt; Object</em><br />instance.attributes<em>(Object attributes) -&gt; null</em></h3>
+<h3 id='instanceattributes__objectinstanceattributesobject_attributes_boolean_silent__false__object'>instance.attributes<em>() -&gt; Object</em><br />instance.attributes<em>(Object attributes [,Boolean silent = false]) -&gt; Object</em></h3>
 
 <p>Get a hash of attributes in the view.</p>
 
 <pre><code>var instance = new MyView({key:&#39;value&#39;});
 instance.attributes() == {key:&#39;value&#39;};</code></pre>
+
+<p>Or set all attributes in the view. Attributes that are present in the view but not in the passed object will be removed. Set <strong>silent</strong> to true to prevent the <strong>change</strong> event from being triggered.</p>
+
+<pre><code>instance.bind(&#39;change&#39;,function(changed_attributes){
+   for(var key in changed_attributes){
+     
+   }
+});
+instance.attributes({key:&#39;value&#39;});</code></pre>
 
 <h3 id='instancegetstring_key__mixed'>instance.get<em>(String key) -&gt; mixed</em></h3>
 
@@ -304,12 +313,12 @@ instance.attributes() == {key:&#39;value&#39;};</code></pre>
 <pre><code>var instance = new MyView({key:&#39;value&#39;});
 instance.get(&#39;key&#39;) == &#39;value&#39;;</code></pre>
 
-<h3 id='instancesetstring_keymixed_value__mixed'>instance.set<em>(String key,mixed value) -&gt; mixed</em></h3>
+<h3 id='instancesetstring_key_mixed_value_boolean_silent__false__mixed'>instance.set<em>(String key, mixed value [,Boolean silent = false]) -&gt; mixed</em></h3>
 
-<p>Set an attribute in the view. This will trigger the <strong>changed</strong> event.</p>
+<p>Set an attribute in the view. This will trigger the <strong>change</strong> event. Set <strong>silent</strong> to true to prevent the <strong>change</strong> event from firing.</p>
 
 <pre><code>var instance = new MyView();
-instance.bind(&#39;changed&#39;,function(changed_attributes){
+instance.bind(&#39;change&#39;,function(changed_attributes){
   for(var key in changed_attributes){
   
   }
@@ -523,7 +532,7 @@ instance.myMethod(); //returns &quot;value&quot;</code></pre>
           <tbody>
             <tr>
               <td>
-                <h2>Class</h2><h3>- <a href="#viewfunction_constructor_object_methods__classviewclass_parent_functionelement_object_methods__class">$.view</a></h3><h3>- <a href="#new_classobject_attributes__instance">new Class</a></h3><h3>- <a href="#classinstance__instance">instance</a></h3></td><td><h2>Core</h2><h3>- <a href="#instanceelement__elementinstanceelementelement_element__element">element</a></h3><h3>- <a href="#instanceattributes__objectinstanceattributesobject_attributes__null">attributes</a></h3><h3>- <a href="#instancegetstring_key__mixed">get</a></h3><h3>- <a href="#instancesetstring_keymixed_value__mixed">set</a></h3><h3>- <a href="#instancetagstring_text_element_object_attributes__element">tag</a></h3></td><td><h2>Events</h2><h3>- <a href="#instancebindstring_event_name_function_handler_object_context__function">bind</a></h3><h3>- <a href="#instanceunbindstring_event_name_function_handler__null">unbind</a></h3><h3>- <a href="#instanceonestring_event_name_function_handler_object_context__function">one</a></h3><h3>- <a href="#instancetriggerstring_event_name_mixed_arg__array_or_false">trigger</a></h3><h3>- <a href="#instancereadyfunction_handler_object_context__function">ready</a></h3><h3>- <a href="#instanceemitevent_name_mixed_arg__function">emit</a></h3></td><td><h2>Helpers</h2><h3>- <a href="#instancemaparray_functionitemindex__arrayinstancemapobject_functionkeyvalue__array">map</a></h3><h3>- <a href="#instancedelegatestring_selector_string_event_name_function_callback_object_context__null">delegate</a></h3><h3>- <a href="#instanceescapestring_unescaped__string">escape</a></h3></td><td><h2>Templates</h2><h3>- <a href="#instancerenderstring_template_object_attributes__string">render</a></h3><h3>- <a href="#instanceengine__stringinstanceenginestring_engine__null">engine</a></h3></td><td><h2>Properties</h2><h3>- <a href="#viewdefaultengine__string">defaultEngine </a></h3><h3>- <a href="#viewclassmethods__object">classMethods </a></h3><h3>- <a href="#viewlogging__boolean">logging </a></h3><h3>- <a href="#viewfn__object">fn </a></h3>
+                <h2>Class</h2><h3>- <a href="#viewfunction_constructor_object_methods__classviewclass_parent_functionelement_object_methods__class">$.view</a></h3><h3>- <a href="#new_classobject_attributes__instance">new Class</a></h3><h3>- <a href="#classinstance__instance">instance</a></h3></td><td><h2>Core</h2><h3>- <a href="#instanceelement__elementinstanceelementelement_element__element">element</a></h3><h3>- <a href="#instanceattributes__objectinstanceattributesobject_attributes_boolean_silent__false__object">attributes</a></h3><h3>- <a href="#instancegetstring_key__mixed">get</a></h3><h3>- <a href="#instancesetstring_key_mixed_value_boolean_silent__false__mixed">set</a></h3><h3>- <a href="#instancetagstring_text_element_object_attributes__element">tag</a></h3></td><td><h2>Events</h2><h3>- <a href="#instancebindstring_event_name_function_handler_object_context__function">bind</a></h3><h3>- <a href="#instanceunbindstring_event_name_function_handler__null">unbind</a></h3><h3>- <a href="#instanceonestring_event_name_function_handler_object_context__function">one</a></h3><h3>- <a href="#instancetriggerstring_event_name_mixed_arg__array_or_false">trigger</a></h3><h3>- <a href="#instancereadyfunction_handler_object_context__function">ready</a></h3><h3>- <a href="#instanceemitevent_name_mixed_arg__function">emit</a></h3></td><td><h2>Helpers</h2><h3>- <a href="#instancemaparray_functionitemindex__arrayinstancemapobject_functionkeyvalue__array">map</a></h3><h3>- <a href="#instancedelegatestring_selector_string_event_name_function_callback_object_context__null">delegate</a></h3><h3>- <a href="#instanceescapestring_unescaped__string">escape</a></h3></td><td><h2>Templates</h2><h3>- <a href="#instancerenderstring_template_object_attributes__string">render</a></h3><h3>- <a href="#instanceengine__stringinstanceenginestring_engine__null">engine</a></h3></td><td><h2>Properties</h2><h3>- <a href="#viewdefaultengine__string">defaultEngine </a></h3><h3>- <a href="#viewclassmethods__object">classMethods </a></h3><h3>- <a href="#viewlogging__boolean">logging </a></h3><h3>- <a href="#viewfn__object">fn </a></h3>
               </td>
             </tr>
            </tbody>

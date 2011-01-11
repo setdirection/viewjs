@@ -249,9 +249,9 @@
  *       );
  *     });
  * 
- * The **changed** event is triggered whenever attributes in the view have been changed.
+ * The **change** event is triggered whenever attributes in the view have been changed.
  * 
- *     MyView.bind('changed',function(instance,changed_attributes){
+ *     MyView.bind('change',function(instance,changed_attributes){
  *       for(var key in changed_attributes){
  *         
  *       }
@@ -505,20 +505,40 @@
         return this._element;
       }
     },
-    /* ### instance.attributes*() -> Object*<br/>instance.attributes*(Object attributes) -> null*
+    /* ### instance.attributes*() -> Object*<br/>instance.attributes*(Object attributes \[,Boolean silent = false\]) -> Object*
      * Get a hash of attributes in the view.
      * 
      *     var instance = new MyView({key:'value'});
      *     instance.attributes() == {key:'value'};
      * 
+     * Or set all attributes in the view. Attributes that are present in the
+     * view but not in the passed object will be removed. Set **silent** to
+     * true to prevent the **change** event from being triggered.
+     * 
+     *     instance.bind('change',function(changed_attributes){
+     *        for(var key in changed_attributes){
+     *          
+     *        }
+     *     });
+     *     instance.attributes({key:'value'});
+     * 
      */
     attributes: function attributes(attributes,supress_observers){
       if(typeof(attributes) != 'undefined'){
+        var keys_to_unset = {};
+        for(var key in this._attributes){
+          keys_to_unset[key] = true;
+        }
         for(var key in attributes){
+          delete keys_to_unset[key];
           this.set(key,attributes[key],true);
         }
+        for(var key in keys_to_unset){
+          this._changes[key] = null;
+          delete this._attributes[keys_to_unset[key]];
+        }
         if(typeof(supress_observers) == 'undefined'){
-          this.trigger('changed',this._changes,this);
+          this.trigger('change',this._changes,this);
         }
         this._changes = {};
         return this._attributes;
@@ -535,12 +555,13 @@
     get: function get(key){
       return this._attributes[key];
     },
-    /* ### instance.set*(String key,mixed value) -> mixed*
-     * Set an attribute in the view. This will trigger the **changed**
-     * event.
+    /* ### instance.set*(String key, mixed value \[,Boolean silent = false\]) -> mixed*
+     * Set an attribute in the view. This will trigger the **change**
+     * event. Set **silent** to true to prevent the **change** event
+     * from firing.
      * 
      *     var instance = new MyView();
-     *     instance.bind('changed',function(changed_attributes){
+     *     instance.bind('change',function(changed_attributes){
      *       for(var key in changed_attributes){
      *       
      *       }
@@ -551,7 +572,7 @@
       this._attributes[key] = value;
       this._changes[key] = value;
       if(typeof(supress_observers) == 'undefined'){
-        this.trigger('changed',this._changes);
+        this.trigger('change',this._changes);
         this._changes = {};
       }
       return value;

@@ -333,6 +333,24 @@ asyncTest("ready event fires only once element attached to DOM",function(){
   },55);
 });
 
+ChangedEventView = $.view(function(){
+  return "<div>test</div>"
+});
+test("changed event, with more \"one\" method testing",function(){
+  var instance = new ChangedEventView();
+  instance.one('change',function(attributes){
+    equal(attributes.key,'value');
+  });
+  instance.set('key','value');
+  instance.set('key','value2');
+  instance.one('change',function(attributes){
+    equal(attributes.key2,'value');
+    ok('key' in attributes);
+    equal(attributes.key,null);
+  });
+  instance.attributes({key2:'value'});
+});
+
 StringMustacheView = $.view('<b>{{key}}</b>');
 StringReturningMustacheView = $.view(function(){
   return '<b>{{key}}</b>';
