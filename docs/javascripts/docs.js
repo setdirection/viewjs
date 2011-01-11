@@ -11,7 +11,7 @@ $(function(){
   $.routes(function(hash){
     $('#nav a').removeClass('active');
     if(hash == '' || !hash){
-      hash = 'api';
+      hash = 'intro';
     }
     if(hash == 'intro'){
       $('#nav a[href="#intro"]').addClass('active');
