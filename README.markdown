@@ -10,6 +10,7 @@ jQuery View provides a class and inheritance system for templates which can be c
         $(this.li('Item Three')).click(this.handleClick) //inline jQuery
       );
     },{
+      //methods are auto proxied, "this" is always the view
       handleClick: function(event){}
     });
     //use views as arguments to jQuery
