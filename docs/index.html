@@ -26,18 +26,15 @@
 
 <pre><code>ListView = $.view(function(){
   return this.ul(
-    this.li(&#39;Item One&#39;),
-    $(this.li(&#39;Item Two&#39;)).click(this.handleClick),
-    &quot;&lt;li&gt;{{key}}&lt;/li&gt;&quot;
+    &quot;&lt;li&gt;Item One&lt;/li&gt;&quot;, //HTML strings
+    &quot;&lt;li&gt;{{key}}&lt;/li&gt;&quot;, //jQuery Templates
+    $(this.li(&#39;Item Two&#39;)).click(this.handleClick) //inline jQuery
   );
 },{
   handleClick: function(event){}
-});</code></pre>
-
-<p>View instances can be used as arguments to jQuery:</p>
-
-<pre><code>var instance = new ListView({key:&#39;Item Three&#39;});
-$(&#39;li:first&#39;,instance).addClass(&#39;first&#39;);
+});
+//use views as arguments to jQuery
+var instance = new ListView({key:&#39;Item Two&#39;});
 $(instance).appendTo(&#39;body&#39;);</code></pre>
 
 <p>Works well with <a href='http://routesjs.com/'>jQuery Routes</a>.</p>
@@ -542,7 +539,7 @@ instance.myMethod(); //returns &quot;value&quot;</code></pre>
     </div>
     <script type="text/javascript">
       var _gaq = _gaq || [];
-      _gaq.push(['_setAccount', 'UA-20387990-1']);
+      _gaq.push(['_setAccount', 'UA-20694546-1']);
       _gaq.push(['_trackPageview']);
 
       (function() {
