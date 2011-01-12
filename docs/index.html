@@ -27,7 +27,7 @@
 <pre><code>ListView = $.view(function(){
   return this.ul(
     &quot;&lt;li&gt;Item One&lt;/li&gt;&quot;, //HTML strings
-    &quot;&lt;li&gt;{{key}}&lt;/li&gt;&quot;, //jQuery Templates
+    &quot;&lt;li&gt;${key}&lt;/li&gt;&quot;, //jQuery Templates
     $(this.li(&#39;Item Three&#39;)).click(this.handleClick) //inline jQuery
   );
 },{

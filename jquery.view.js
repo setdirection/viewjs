@@ -24,7 +24,7 @@
  *     ListView = $.view(function(){
  *       return this.ul(
  *         "<li>Item One</li>", //HTML strings
- *         "<li>{{key}}</li>", //jQuery Templates
+ *         "<li>${key}</li>", //jQuery Templates
  *         $(this.li('Item Three')).click(this.handleClick) //inline jQuery
  *       );
  *     },{
