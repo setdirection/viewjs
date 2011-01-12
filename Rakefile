@@ -78,7 +78,7 @@ task :docs do
     </div>
     <script type="text/javascript">
       var _gaq = _gaq || [];
-      _gaq.push(['_setAccount', 'UA-20387990-1']);
+      _gaq.push(['_setAccount', 'UA-20694546-1']);
       _gaq.push(['_trackPageview']);
 
       (function() {
