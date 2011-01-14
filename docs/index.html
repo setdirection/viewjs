@@ -120,7 +120,7 @@ instance.attributes();</code></pre>
 <pre><code>MyView = $.view(function(){
   this.set(&#39;key&#39;,&#39;value&#39;);
   this.ul(
-    &#39;&lt;li&gt;{{key}}&lt;/li&gt;&#39;
+    &#39;&lt;li&gt;${key}&lt;/li&gt;&#39;
   );
 });</code></pre>
 
@@ -455,7 +455,7 @@ $(link).click(this.emit(&#39;event_name&#39;,a,b,c));</code></pre>
 
 <h3 id='instanceescapestring_unescaped__string'>instance.escape<em>(String unescaped) -&gt; String</em></h3>
 
-<p>Escape user input or prevent HTML or template strings from being interpreted.</p>
+<p>Prevent HTML or template strings from being interpreted.</p>
 
 <pre><code>this.p(this.escape(&#39;Will not be processed {{key}}&#39;));
 this.p(this.escape(&#39;&lt;b&gt;Will appear as text.&lt;/b&gt;&#39;));</code></pre>
@@ -469,20 +469,17 @@ this.p(this.escape(&#39;&lt;b&gt;Will appear as text.&lt;/b&gt;&#39;));</code></
 <pre><code>this.set(&#39;key&#39;,&#39;value&#39;);
 this.render(&#39;&lt;li&gt;{{key}}&lt;/li&gt;&#39;);</code></pre>
 
-<h3 id='instanceengine__stringinstanceenginestring_engine__null'>instance.engine<em>() -&gt; String</em><br />instance.engine<em>(String engine) -&gt; null</em></h3>
+<h3 id='classengine__stringclassenginestring_engine__null'>Class.engine<em>() -&gt; String</em><br />Class.engine<em>(String engine) -&gt; null</em></h3>
 
 <p>Get or set the current template engine. Supported engines are &#8220;mustache&#8221; and &#8220;jquery.tmpl&#8221;.</p>
 
 <pre><code>MyView = $.view(function(){
-  this.engine(&#39;mustache&#39;);
+  return &quot;&lt;p&gt;{{key}}&lt;/p&gt;&quot;;
 });
-MyView.instance().engine() == &#39;mustache&#39;;</code></pre>
+MyView.engine(&#39;mustache&#39;);
+MyView.engine() == &#39;mustache&#39;;</code></pre>
 
 <h2 id='properties'>Properties</h2>
-
-<h3 id='viewdefaultengine__string'>$.view.defaultEngine <em>-&gt; String</em></h3>
-
-<p>Sets the default template engine. The template engine can be overridden per class with the <strong>engine</strong> method. Supported engines are &#8220;mustache&#8221; (the default) and &#8220;jquery.tmpl&#8221;.</p>
 
 <h3 id='viewclassmethods__object'>$.view.classMethods <em>-&gt; Object</em></h3>
 
@@ -513,6 +510,8 @@ instance.myMethod(); //returns &quot;value&quot;</code></pre>
 
 <h2 id='change_log'>Change Log</h2>
 
+<p><strong>1.1.1</strong> - <em>Jan 12, 2011</em> Changed default engine to jQuery Template. Escape related tests now pass.</p>
+
 <p><strong>1.1.0</strong> - <em>Jan 10, 2011</em><br />Added support for Mustache and jQuery Template. <strong>changed</strong> event is now <strong>change</strong> and will receive keys that were unset in a call to <strong>attributes</strong>.</p>
 
 <p><strong>1.0.0</strong> - <em>Jan 4, 2011</em><br />Initial release.</p>
@@ -530,7 +529,7 @@ instance.myMethod(); //returns &quot;value&quot;</code></pre>
           <tbody>
             <tr>
               <td>
-                <h2>Class</h2><h3>- <a href="#viewfunction_constructor_object_methods__classviewclass_parent_functionelement_object_methods__class">$.view</a></h3><h3>- <a href="#new_classobject_attributes__instance">new Class</a></h3><h3>- <a href="#classinstance__instance">instance</a></h3></td><td><h2>Core</h2><h3>- <a href="#instanceelement__elementinstanceelementelement_element__element">element</a></h3><h3>- <a href="#instanceattributes__objectinstanceattributesobject_attributes_boolean_silent__false__object">attributes</a></h3><h3>- <a href="#instancegetstring_key__mixed">get</a></h3><h3>- <a href="#instancesetstring_key_mixed_value_boolean_silent__false__mixed">set</a></h3><h3>- <a href="#instancetagstring_text_element_object_attributes__element">tag</a></h3></td><td><h2>Events</h2><h3>- <a href="#instancebindstring_event_name_function_handler_object_context__function">bind</a></h3><h3>- <a href="#instanceunbindstring_event_name_function_handler__null">unbind</a></h3><h3>- <a href="#instanceonestring_event_name_function_handler_object_context__function">one</a></h3><h3>- <a href="#instancetriggerstring_event_name_mixed_arg__array_or_false">trigger</a></h3><h3>- <a href="#instancereadyfunction_handler_object_context__function">ready</a></h3><h3>- <a href="#instanceemitevent_name_mixed_arg__function">emit</a></h3></td><td><h2>Helpers</h2><h3>- <a href="#instancemaparray_functionitemindex__arrayinstancemapobject_functionkeyvalue__array">map</a></h3><h3>- <a href="#instancedelegatestring_selector_string_event_name_function_callback_object_context__null">delegate</a></h3><h3>- <a href="#instanceescapestring_unescaped__string">escape</a></h3></td><td><h2>Templates</h2><h3>- <a href="#instancerenderstring_template_object_attributes__string">render</a></h3><h3>- <a href="#instanceengine__stringinstanceenginestring_engine__null">engine</a></h3></td><td><h2>Properties</h2><h3>- <a href="#viewdefaultengine__string">defaultEngine </a></h3><h3>- <a href="#viewclassmethods__object">classMethods </a></h3><h3>- <a href="#viewlogging__boolean">logging </a></h3><h3>- <a href="#viewfn__object">fn </a></h3>
+                <h2>Class</h2><h3>- <a href="#viewfunction_constructor_object_methods__classviewclass_parent_functionelement_object_methods__class">$.view</a></h3><h3>- <a href="#new_classobject_attributes__instance">new Class</a></h3><h3>- <a href="#classinstance__instance">instance</a></h3></td><td><h2>Core</h2><h3>- <a href="#instanceelement__elementinstanceelementelement_element__element">element</a></h3><h3>- <a href="#instanceattributes__objectinstanceattributesobject_attributes_boolean_silent__false__object">attributes</a></h3><h3>- <a href="#instancegetstring_key__mixed">get</a></h3><h3>- <a href="#instancesetstring_key_mixed_value_boolean_silent__false__mixed">set</a></h3><h3>- <a href="#instancetagstring_text_element_object_attributes__element">tag</a></h3></td><td><h2>Events</h2><h3>- <a href="#instancebindstring_event_name_function_handler_object_context__function">bind</a></h3><h3>- <a href="#instanceunbindstring_event_name_function_handler__null">unbind</a></h3><h3>- <a href="#instanceonestring_event_name_function_handler_object_context__function">one</a></h3><h3>- <a href="#instancetriggerstring_event_name_mixed_arg__array_or_false">trigger</a></h3><h3>- <a href="#instancereadyfunction_handler_object_context__function">ready</a></h3><h3>- <a href="#instanceemitevent_name_mixed_arg__function">emit</a></h3></td><td><h2>Helpers</h2><h3>- <a href="#instancemaparray_functionitemindex__arrayinstancemapobject_functionkeyvalue__array">map</a></h3><h3>- <a href="#instancedelegatestring_selector_string_event_name_function_callback_object_context__null">delegate</a></h3><h3>- <a href="#instanceescapestring_unescaped__string">escape</a></h3></td><td><h2>Templates</h2><h3>- <a href="#instancerenderstring_template_object_attributes__string">render</a></h3><h3>- <a href="#classengine__stringclassenginestring_engine__null">engine</a></h3></td><td><h2>Properties</h2><h3>- <a href="#viewclassmethods__object">classMethods </a></h3><h3>- <a href="#viewlogging__boolean">logging </a></h3><h3>- <a href="#viewfn__object">fn </a></h3>
               </td>
             </tr>
            </tbody>

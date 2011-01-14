@@ -793,7 +793,7 @@
      * Prevent HTML or template strings
      * from being interpreted.
      * 
-     *     this.p(this.escape('Will not be processed {{key}}'));
+     *     this.p(this.escape('Will not be processed ${key}'));
      *     this.p(this.escape('<b>Will appear as text.</b>'));
      */ 
     escape: function escape(string){
@@ -807,7 +807,7 @@
      * Render a string with the current template engine.
      * 
      *     this.set('key','value');
-     *     this.render('<li>{{key}}</li>');
+     *     this.render('<li>${key}</li>');
      */
     render: function render(template,attributes){
       var engine = this.constructor.engine();
@@ -830,7 +830,7 @@
      * "jquery.tmpl".
      * 
      *     MyView = $.view(function(){
-     *       return "<p>{{key}}</p>";
+     *       return "<p>${key}</p>";
      *     });
      *     MyView.engine('mustache');
      *     MyView.engine() == 'mustache';
