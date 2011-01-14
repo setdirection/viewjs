@@ -446,3 +446,35 @@ test("HTML and templating escaping",function(){
   equal(items[1].innerHTML,'${key}');
   equal(items[2].innerHTML,'&lt;b&gt;Test&lt;/b&gt;');
 });
+
+(function(){
+  var ParentView = $.view(function(){
+    return this.div();
+  });
+  var ChildViewOne = $.view(ParentView,function(element){
+    $(element).addClass('one');
+  });
+  var ChildViewTwo = $.view(ParentView,function(element){
+    $(element).addClass('two');
+    return element;
+  });
+  var ChildViewThree = $.view(ChildViewTwo,function(element){
+    return this.div({className:'three'},element);
+  });
+  var ChildViewFour = $.view(ChildViewThree,function(element){
+    return this.div({className:'four'},element);
+  });
+  test("Child constructor may or may not return a DOM element",function(){
+    var one = new ChildViewOne();
+    var two = new ChildViewTwo();
+    var three = new ChildViewThree();
+    var four = new ChildViewFour();
+    equal(one.element().className,'one');
+    equal(two.element().className,'two');
+    equal(three.element().className,'three');
+    equal(three.element().firstChild.className,'two');
+    equal(four.element().className,'four');
+    equal(four.element().firstChild.className,'three');
+    equal(four.element().firstChild.firstChild.className,'two');
+  });
+})();

@@ -1,4 +1,4 @@
-// jQuery View v1.1.2
+// jQuery View v1.1.3
 // http://viewjs.com/
 // 
 // Copyright (c) 2011 Ryan Johnson
@@ -85,6 +85,17 @@
  *       });
  *     },{
  *       childMethod: function(){}
+ *     });
+ * 
+ * A subclass constructor **may optionally** return an element. In this case the subclass
+ * will return the parent's p tag wrapped in a div.
+ * 
+ *     ParagraphView = $.view(function(){
+ *       return this.p(this.get('text'));
+ *     });
+ * 
+ *     EnhancedParagraphView = $.view(ParagraphView,function(element){
+ *       return this.div({className:'enhanced'},element);
  *     });
  * 
  * ### Singletons
@@ -332,7 +343,9 @@
     if(parent_class){
       extend(klass.prototype,parent_class.prototype);
       klass.prototype._structure = wrap_function(parent_class.prototype._structure,function(proceed){
-        return structure.apply(this,[proxy(proceed,this)()]);
+        var parent_element = proxy(proceed,this)();
+        var child_element = structure.apply(this,[parent_element]);
+        return child_element || parent_element;
       });
       for(var i = 0; i < parent_class._methodsToProxy.length; ++i){
         klass._methodsToProxy.push(parent_class._methodsToProxy[i]);
@@ -860,6 +873,23 @@
    */
   $.view.logging = false;
   $.view.defaultEngine = 'jquery.tmpl';
+
+  var engine_checked = {};
+  function check_engine(engine){
+    if(engine_checked[engine]){
+      return;
+    }
+    if(engine != 'mustache' && engine != 'jquery.tmpl'){
+      throw 'jQuery View error: "' + engine + '" is not a supported template engine.';
+    }
+    if(engine == 'mustache' && !('Mustache' in context)){
+      throw 'jQuery View error: Mustache engine required to render template strings, download from http://wiki.github.com/janl/mustache.js/';
+    }
+    if(engine == 'jquery.tmpl' && !('tmpl' in $)){
+      throw 'jQuery View error: jQuery Template engine required to render template strings, download from https://github.com/jquery/jquery-tmpl';
+    }
+    engine_checked[engine] = true;
+  };
   
   function wrap_event_methods_for_child_class(child_class,parent_class){
     var methods = ['bind','unbind','one'];
@@ -1084,23 +1114,6 @@
   export_tag_methods($.view.fn);
   
   //private utility methods shared between $.view and builder
-  var engine_checked = {};
-  function check_engine(engine){
-    if(engine_checked[engine]){
-      return;
-    }
-    if(engine != 'mustache' && engine != 'jquery.tmpl'){
-      throw 'jQuery View error: "' + engine + '" is not a supported template engine.';
-    }
-    if(engine == 'mustache' && !('Mustache' in context)){
-      throw 'jQuery View error: Mustache engine required to render template strings, download from http://wiki.github.com/janl/mustache.js/';
-    }
-    if(engine == 'jquery.tmpl' && !('tmpl' in $)){
-      throw 'jQuery View error: jQuery Template engine required to render template strings, download from https://github.com/jquery/jquery-tmpl';
-    }
-    engine_checked[engine] = true;
-  };
-  
   function extend(destination,source){
     for(var property in source){
       destination[property] = source[property];
@@ -1216,6 +1229,10 @@
  * 
  * Change Log
  * ----------
+ * **1.1.3** - *Jan 14, 2011*
+ * Subclass constructors may now return an element, enabling
+ * the subclass to wrap the parent's element.
+ * 
  * **1.1.2** - *Jan 13, 2011*
  * More tests for jQuery Template. Fixed TextNode bug in builder.
  * 
