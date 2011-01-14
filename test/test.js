@@ -74,6 +74,20 @@ var HTMLStringConstructorView = $.view(function(){
 
 var HTMLView = $.view('<ul><li><span><b>test</b></span></li></ul>');
 
+var TextNodeView = $.view(function(){
+  return this.ul(
+    this.li('one'),
+    this.li(document.createTextNode('two'))
+  );
+});
+
+test("Node creation with text node",function(){
+  var instance = new TextNodeView();
+  var items = $('li',instance);
+  equal($(items[0]).html(),'one');
+  equal($(items[1]).html(),'two');
+});
+
 test("Node creation with mix and match of text and elements",function(){
   var arguments_instance = new ArgumentsTestView();
   equal(arguments_instance.element().firstChild.firstChild.nodeValue,'one');
@@ -351,10 +365,43 @@ test("changed event, with more \"one\" method testing",function(){
   instance.attributes({key2:'value'});
 });
 
+StringTemplateView = $.view('<b>${key}</b>');
+StringReturningTemplateView = $.view(function(){
+  return '<b>${key}</b>';
+});
+ComplexTemplateView = $.view(function(){
+  return this.ul(
+    this.li('${a}'),
+    '<li>${b}</li>',
+    this.map(['c','d'],function(key){
+      return '<li>${' + key + '}</li>';
+    })
+  );
+});
+
+test("Template support",function(){
+  equal(new StringTemplateView({key:'value'}).element().innerHTML,'value');
+  equal(new StringReturningTemplateView({key:'value'}).element().innerHTML,'value');
+  var attributes = {
+    a: 'one',
+    b: 'two',
+    c: 'three',
+    d: 'four'
+  };
+  var instance = new ComplexTemplateView(attributes);
+  var items = $('li',instance);
+  equal(items[0].innerHTML,attributes.a);
+  equal(items[1].innerHTML,attributes.b);
+  equal(items[2].innerHTML,attributes.c);
+  equal(items[3].innerHTML,attributes.d);
+});
+
 StringMustacheView = $.view('<b>{{key}}</b>');
+StringMustacheView.engine('mustache');
 StringReturningMustacheView = $.view(function(){
   return '<b>{{key}}</b>';
 });
+StringReturningMustacheView.engine('mustache');
 ComplexMustacheView = $.view(function(){
   return this.ul(
     this.li('{{a}}'),
@@ -364,8 +411,9 @@ ComplexMustacheView = $.view(function(){
     })
   );
 });
+ComplexMustacheView.engine('mustache');
 
-test("Mustache support",function(){
+test('Mustache support',function(){
   equal(new StringMustacheView({key:'value'}).element().innerHTML,'value');
   equal(new StringReturningMustacheView({key:'value'}).element().innerHTML,'value');
   var attributes = {
@@ -385,8 +433,8 @@ test("Mustache support",function(){
 EscapingView = $.view(function(){
   this.set('key','value');
   return this.ul(
-    this.li('{{key}}'),
-    this.li(this.escape("{{key}}")),
+    this.li('${key}'),
+    this.li(this.escape("${key}")),
     this.li(this.escape('<b>Test</b>'))
   );
 });
@@ -395,6 +443,6 @@ test("HTML and templating escaping",function(){
   var instance = new EscapingView();
   var items = $('li',instance);
   equal(items[0].innerHTML,'value');
-  equal(items[1].innerHTML,'{{key}}');
-  equal(items[2].innerHTML,'&lt;b&gt;test&lt;/b&gt;');
+  equal(items[1].innerHTML,'${key}');
+  equal(items[2].innerHTML,'&lt;b&gt;Test&lt;/b&gt;');
 });

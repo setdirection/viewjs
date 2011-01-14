@@ -129,7 +129,7 @@
  *     MyView = $.view(function(){
  *       this.set('key','value');
  *       this.ul(
- *         '<li>{{key}}</li>'
+ *         '<li>${key}</li>'
  *       );
  *     });
  * 
@@ -256,7 +256,7 @@
  *     });
  * 
  */ 
-;(function($){
+;(function($,context,undefined){
   
   var jquery_available = 'fn' in $ && 'jquery' in $.fn;
   
@@ -309,7 +309,6 @@
       };
     }
     var klass = function klass(attributes){
-      this.engine($.view.defaultEngine);
       this._delegates = [];
       this._observers = {};
       this._attributes = {};
@@ -364,7 +363,7 @@
      *     instance == MyView.instance();
      */ 
     instance: function instance(instance){
-      if(typeof(instance) == 'undefined'){
+      if(instance === undefined){
         if(!this._instance){
           this._instance = new this();
         }
@@ -375,11 +374,11 @@
     },
     bind: function bind(event_name,observer,context){
       var arguments_array = array_from(arguments);
-      if(typeof(arguments_array[2]) == 'undefined'){
+      if(arguments_array[2] === undefined){
         arguments_array[2] = this;
       }
       observer = proxy.apply($.view,[observer].concat(arguments_array.slice(2)));
-      if(typeof(event_name) === 'string' && typeof(observer) !== 'undefined'){
+      if(typeof(event_name) === 'string' && observer !== undefined){
         if(!(event_name in this._observers)){
           this._observers[event_name] = [];
         }
@@ -402,7 +401,7 @@
     },
     one: function one(event_name,outer_observer,context){
       var arguments_array = array_from(arguments);
-      if(typeof(arguments_array[2]) == 'undefined'){
+      if(arguments_array[2] === undefined){
         arguments_array[2] = this;
       }
       outer_observer = proxy.apply($.view,[outer_observer].concat(arguments_array.slice(2)));
@@ -440,6 +439,22 @@
       var args = array_from(arguments);
       args.unshift('ready');
       return this.bind.apply(this,args);
+    },
+    engine: function engine(engine){
+      if(engine === undefined){
+        return this._engine === undefined ? $.view.defaultEngine : this._engine;
+      }else{
+        if(engine != 'mustache' && engine != 'jquery.tmpl'){
+          throw 'jQuery View error: "' + engine + '" is not a supported template engine.';
+        }
+        if(engine == 'mustache' && !('Mustache' in context)){
+          throw 'jQuery View error: Mustache engine required, download from http://wiki.github.com/janl/mustache.js/';
+        }
+        if(engine == 'jquery.tmpl' && !('tmpl' in $)){
+          throw 'jQuery View error: jQuery Template engine required, download from https://github.com/jquery/jquery-tmpl';
+        }
+        this._engine = engine;
+      }
     }
   };
   
@@ -479,7 +494,7 @@
      * 
      */ 
     element: function element(element){
-      if(typeof(element) == 'undefined'){
+      if(element === undefined){
         return this._element;
       }else{
         if(is_template(this,element)){
@@ -522,7 +537,7 @@
      * 
      */
     attributes: function attributes(attributes,supress_observers){
-      if(typeof(attributes) != 'undefined'){
+      if(attributes !== undefined){
         var keys_to_unset = {};
         for(var key in this._attributes){
           keys_to_unset[key] = true;
@@ -535,7 +550,7 @@
           this._changes[key] = null;
           delete this._attributes[keys_to_unset[key]];
         }
-        if(typeof(supress_observers) == 'undefined'){
+        if(supress_observers === undefined){
           this.trigger('change',this._changes,this);
         }
         this._changes = {};
@@ -569,7 +584,7 @@
     set: function set(key,value,supress_observers){
       this._attributes[key] = value;
       this._changes[key] = value;
-      if(typeof(supress_observers) == 'undefined'){
+      if(supress_observers === undefined){
         this.trigger('change',this._changes);
         this._changes = {};
       }
@@ -775,27 +790,14 @@
       }
     },
     /* ### instance.escape*(String unescaped) -> String*
-     * Escape user input or prevent HTML or template strings
+     * Prevent HTML or template strings
      * from being interpreted.
      * 
      *     this.p(this.escape('Will not be processed {{key}}'));
      *     this.p(this.escape('<b>Will appear as text.</b>'));
      */ 
-    escape: function escape(s){
-      s = String(s === null ? "" : s);
-      s = s.replace(/&(?!\w+;)|["'<>\\]/g, function(s) {
-        switch(s) {
-          case "&": return "&amp;";
-          case "\\": return "\\\\";
-          case '"': return '&quot;';
-          case "'": return '&#39;';
-          case "<": return "&lt;";
-          case ">": return "&gt;";
-          default: return s;
-        }
-      });
-      //escape mustache
-      return s.replace(/\{\{/,'\\{\\{').replace(/\}\}/,'\\}\\}');
+    escape: function escape(string){
+      return document.createTextNode(string);
     },
     /* Templates
      * ---------
@@ -808,54 +810,36 @@
      *     this.render('<li>{{key}}</li>');
      */
     render: function render(template,attributes){
-      var engine = this.engine();
+      var engine = this.constructor.engine();
       var final_attributes = {};
       for(var key in this){
-        if(Object.prototype.hasOwnProperty.call(this,key)){
+        if(in_array(key,['_delegates','_observers','_attributes','_changes']) == -1){
           final_attributes[key] = this[key];
         }
       }
       extend(final_attributes,this.attributes());
       extend(final_attributes,attributes);
-      if(engine == 'mustache'){
+      if(engine == 'jquery.tmpl'){
+        return $.tmpl(template,final_attributes);
+      }else if(engine == 'mustache'){
         return Mustache.to_html(template,final_attributes);
-      }else if(engine == 'jquery.tmpl'){
-        return $(template).tmpl(final_attributes);
       }
-    },
-    /* ### instance.engine*() -> String*<br/>instance.engine*(String engine) -> null*
+    }
+    /* ### Class.engine*() -> String*<br/>Class.engine*(String engine) -> null*
      * Get or set the current template engine. Supported engines are "mustache" and
      * "jquery.tmpl".
      * 
      *     MyView = $.view(function(){
-     *       this.engine('mustache');
+     *       return "<p>{{key}}</p>";
      *     });
-     *     MyView.instance().engine() == 'mustache';
+     *     MyView.engine('mustache');
+     *     MyView.engine() == 'mustache';
      *     
      */  
-    engine: function engine(engine){
-      if(typeof(engine) == 'undefined'){
-        return this._engine;
-      }else{
-        if(engine != 'mustache' && engine != 'jquery.tmpl'){
-          throw engine + ' is not a supported template engine.';
-        }
-        if(engine == 'jquery.tmpl' && !('tmpl' in $)){
-          throw 'the jQuery Template engine requires the jQuery Templates plugin: https://github.com/jquery/jquery-tmpl';
-        }
-        this._engine = engine;
-      }
-    }
   };
   
   /* Properties
    * ----------
-   *   
-   * ### $.view.defaultEngine *-> String*
-   * 
-   * Sets the default template engine. The template engine can be overridden
-   * per class with the **engine** method. Supported engines are "mustache"
-   * (the default) and "jquery.tmpl".
    * 
    * ### $.view.classMethods *-> Object*
    * 
@@ -883,7 +867,7 @@
    * 
    */
   $.view.logging = false;
-  $.view.defaultEngine = 'mustache';
+  $.view.defaultEngine = 'jquery.tmpl';
   
   function wrap_event_methods_for_child_class(child_class,parent_class){
     var methods = ['bind','unbind','one'];
@@ -955,7 +939,7 @@
   
   //private builder methods
   function process_node_argument(view,elements,attributes,argument){
-    if(typeof(argument) === 'undefined' || argument === null || argument === false){
+    if(argument === undefined || argument === null || argument === false){
       return;
     }
     if(typeof(argument) === 'function' && !is_view_class(argument)){
@@ -976,12 +960,15 @@
       typeof(argument) !== 'number' &&
       !is_array(argument) &&
       !is_jquery_object(argument) &&
-      !(argument && argument.nodeType === 1)
+      !(argument && (argument.nodeType === 1 || argument.nodeType === 3))
     ){
       for(attribute_name in argument){
         attributes[attribute_name] = argument[attribute_name];
       }
       return;
+    }
+    if(is_template(view,argument)){
+      argument = view.render(argument);
     }
     if(is_jquery_object(argument)){
       argument = argument.toArray();
@@ -993,16 +980,13 @@
       }
       return;
     }
-    if(is_template(view,argument)){
-      argument = view.render(argument);
-    }
     if(is_html(argument)){
       var generated_elements = jquery_available ? $(argument) : [argument];
       for(var i = 0; i < generated_elements.length; ++i){
         elements.push(generated_elements[i]);
       }
       return;
-    }else if((argument && argument.nodeType === 1) || typeof(argument) === 'string' || typeof(argument) === 'number'){
+    }else if((argument && (argument.nodeType === 1 || argument.nodeType === 3)) || typeof(argument) === 'string' || typeof(argument) === 'number'){
       elements.push(argument);
       return;
     }
@@ -1017,7 +1001,7 @@
     }
     tag_name = tag_name.toLowerCase();
     if(jquery_available){
-      if(!!(document.attachEvent && !window.opera) && (attributes.name || (tag_name == 'input' && attributes.type))){
+      if(!!(document.attachEvent && !context.opera) && (attributes.name || (tag_name == 'input' && attributes.type))){
         //ie needs these attributes to be written in the string passed to createElement
         tag = '<' + tag_name;
         if(attributes.name){
@@ -1038,7 +1022,7 @@
       }
       $(element).attr(attributes);
       for(i = 0; i < elements.length; ++i){
-        if(elements[i] && elements[i].nodeType === 1){
+        if(elements[i] && (elements[i].nodeType === 1 || elements[i].nodeType === 3)){
           element.appendChild(elements[i]);
         }else{
           element.appendChild(document.createTextNode(String(elements[i])));
@@ -1132,17 +1116,17 @@
   };
   
   function is_template(view,string){
-    if(typeof(string) != 'string' || !view || !('engine' in view)){
+    if(typeof(string) != 'string' || !view || !('constructor' in view && 'engine' in view.constructor)){
       return false;
     }
-    var engine = view.engine();
+    var engine = view.constructor.engine();
     if(engine == 'mustache'){
       return string.match(/\{\{[^\}]+\}\}/);
     }else if(engine == 'jquery.tmpl'){
       return string.match(/\$\{[^\}]+\}/);
     }
   };
-  
+
   function is_array(array){
     return Object.prototype.toString.call(array) === '[object Array]';
   };
@@ -1184,7 +1168,7 @@
   
   //includes curry functionality if more than two arguments are passed
   function proxy(func,object){
-    if(typeof(object) == 'undefined'){
+    if(object === undefined){
       return func;
     }
     if(arguments.length < 3){
@@ -1215,333 +1199,7 @@
     return !!(ancestor.body);
   };
   
-  /*
-    mustache.js — Logic-less templates in JavaScript
-
-    See http://mustache.github.com/ for more info.
-  */
-
-  var Mustache = function() {
-    var Renderer = function() {};
-
-    Renderer.prototype = {
-      otag: "{{",
-      ctag: "}}",
-      pragmas: {},
-      buffer: [],
-      pragmas_implemented: {
-        "IMPLICIT-ITERATOR": true
-      },
-      context: {},
-
-      render: function(template, context, partials, in_recursion) {
-        // reset buffer & set context
-        if(!in_recursion) {
-          this.context = context;
-          this.buffer = []; // TODO: make this non-lazy
-        }
-
-        // fail fast
-        if(!this.includes("", template)) {
-          if(in_recursion) {
-            return template;
-          } else {
-            this.send(template);
-            return;
-          }
-        }
-
-        template = this.render_pragmas(template);
-        var html = this.render_section(template, context, partials);
-        if(in_recursion) {
-          return this.render_tags(html, context, partials, in_recursion);
-        }
-
-        this.render_tags(html, context, partials, in_recursion);
-      },
-
-      /*
-        Sends parsed lines
-      */
-      send: function(line) {
-        if(line != "") {
-          this.buffer.push(line);
-        }
-      },
-
-      /*
-        Looks for %PRAGMAS
-      */
-      render_pragmas: function(template) {
-        // no pragmas
-        if(!this.includes("%", template)) {
-          return template;
-        }
-
-        var that = this;
-        var regex = new RegExp(this.otag + "%([\\w-]+) ?([\\w]+=[\\w]+)?" +
-              this.ctag);
-        return template.replace(regex, function(match, pragma, options) {
-          if(!that.pragmas_implemented[pragma]) {
-            throw({message: 
-              "This implementation of mustache doesn't understand the '" +
-              pragma + "' pragma"});
-          }
-          that.pragmas[pragma] = {};
-          if(options) {
-            var opts = options.split("=");
-            that.pragmas[pragma][opts[0]] = opts[1];
-          }
-          return "";
-          // ignore unknown pragmas silently
-        });
-      },
-
-      /*
-        Tries to find a partial in the curent scope and render it
-      */
-      render_partial: function(name, context, partials) {
-        name = this.trim(name);
-        if(!partials || partials[name] === undefined) {
-          throw({message: "unknown_partial '" + name + "'"});
-        }
-        if(typeof(context[name]) != "object") {
-          return this.render(partials[name], context, partials, true);
-        }
-        return this.render(partials[name], context[name], partials, true);
-      },
-
-      /*
-        Renders inverted (^) and normal (#) sections
-      */
-      render_section: function(template, context, partials) {
-        if(!this.includes("#", template) && !this.includes("^", template)) {
-          return template;
-        }
-
-        var that = this;
-        // CSW - Added "+?" so it finds the tighest bound, not the widest
-        var regex = new RegExp(this.otag + "(\\^|\\#)\\s*(.+)\\s*" + this.ctag +
-                "\n*([\\s\\S]+?)" + this.otag + "\\/\\s*\\2\\s*" + this.ctag +
-                "\\s*", "mg");
-
-        // for each {{#foo}}{{/foo}} section do...
-        return template.replace(regex, function(match, type, name, content) {
-          var value = that.find(name, context);
-          if(type == "^") { // inverted section
-            if(!value || that.is_array(value) && value.length === 0) {
-              // false or empty list, render it
-              return that.render(content, context, partials, true);
-            } else {
-              return "";
-            }
-          } else if(type == "#") { // normal section
-            if(that.is_array(value)) { // Enumerable, Let's loop!
-              return that.map(value, function(row) {
-                return that.render(content, that.create_context(row),
-                  partials, true);
-              }).join("");
-            } else if(that.is_object(value)) { // Object, Use it as subcontext!
-              return that.render(content, that.create_context(value),
-                partials, true);
-            } else if(typeof value === "function") {
-              // higher order section
-              return value.call(context, content, function(text) {
-                return that.render(text, context, partials, true);
-              });
-            } else if(value) { // boolean section
-              return that.render(content, context, partials, true);
-            } else {
-              return "";
-            }
-          }
-        });
-      },
-
-      /*
-        Replace {{foo}} and friends with values from our view
-      */
-      render_tags: function(template, context, partials, in_recursion) {
-        // tit for tat
-        var that = this;
-
-        var new_regex = function() {
-          return new RegExp(that.otag + "(=|!|>|\\{|%)?([^\\/#\\^]+?)\\1?" +
-            that.ctag + "+", "g");
-        };
-
-        var regex = new_regex();
-        var tag_replace_callback = function(match, operator, name) {
-          switch(operator) {
-          case "!": // ignore comments
-            return "";
-          case "=": // set new delimiters, rebuild the replace regexp
-            that.set_delimiters(name);
-            regex = new_regex();
-            return "";
-          case ">": // render partial
-            return that.render_partial(name, context, partials);
-          case "{": // the triple mustache is unescaped
-            return that.find(name, context);
-          default: // escape the value
-            return that.escape(that.find(name, context));
-          }
-        };
-        var lines = template.split("\n");
-        for(var i = 0; i < lines.length; i++) {
-          lines[i] = lines[i].replace(regex, tag_replace_callback, this);
-          if(!in_recursion) {
-            this.send(lines[i]);
-          }
-        }
-
-        if(in_recursion) {
-          return lines.join("\n");
-        }
-      },
-
-      set_delimiters: function(delimiters) {
-        var dels = delimiters.split(" ");
-        this.otag = this.escape_regex(dels[0]);
-        this.ctag = this.escape_regex(dels[1]);
-      },
-
-      escape_regex: function(text) {
-        // thank you Simon Willison
-        if(!arguments.callee.sRE) {
-          var specials = [
-            '/', '.', '*', '+', '?', '|',
-            '(', ')', '[', ']', '{', '}', '\\'
-          ];
-          arguments.callee.sRE = new RegExp(
-            '(\\' + specials.join('|\\') + ')', 'g'
-          );
-        }
-        return text.replace(arguments.callee.sRE, '\\$1');
-      },
-
-      /*
-        find `name` in current `context`. That is find me a value
-        from the view object
-      */
-      find: function(name, context) {
-        name = this.trim(name);
-
-        // Checks whether a value is thruthy or false or 0
-        function is_kinda_truthy(bool) {
-          return bool === false || bool === 0 || bool;
-        }
-
-        var value;
-        if(is_kinda_truthy(context[name])) {
-          value = context[name];
-        } else if(is_kinda_truthy(this.context[name])) {
-          value = this.context[name];
-        }
-
-        if(typeof value === "function") {
-          return value.apply(context);
-        }
-        if(value !== undefined) {
-          return value;
-        }
-        // silently ignore unkown variables
-        return "";
-      },
-
-      // Utility methods
-
-      /* includes tag */
-      includes: function(needle, haystack) {
-        return haystack.indexOf(this.otag + needle) != -1;
-      },
-
-      /*
-        Does away with nasty characters
-      */
-      escape: function(s) {
-        s = String(s === null ? "" : s);
-        return s.replace(/&(?!\w+;)|["'<>\\]/g, function(s) {
-          switch(s) {
-          case "&": return "&amp;";
-          case "\\": return "\\\\";
-          case '"': return '&quot;';
-          case "'": return '&#39;';
-          case "<": return "&lt;";
-          case ">": return "&gt;";
-          default: return s;
-          }
-        });
-      },
-
-      // by @langalex, support for arrays of strings
-      create_context: function(_context) {
-        if(this.is_object(_context)) {
-          return _context;
-        } else {
-          var iterator = ".";
-          if(this.pragmas["IMPLICIT-ITERATOR"]) {
-            iterator = this.pragmas["IMPLICIT-ITERATOR"].iterator;
-          }
-          var ctx = {};
-          ctx[iterator] = _context;
-          return ctx;
-        }
-      },
-
-      is_object: function(a) {
-        return a && typeof a == "object";
-      },
-
-      is_array: function(a) {
-        return Object.prototype.toString.call(a) === '[object Array]';
-      },
-
-      /*
-        Gets rid of leading and trailing whitespace
-      */
-      trim: function(s) {
-        return s.replace(/^\s*|\s*$/g, "");
-      },
-
-      /*
-        Why, why, why? Because IE. Cry, cry cry.
-      */
-      map: function(array, fn) {
-        if (typeof array.map == "function") {
-          return array.map(fn);
-        } else {
-          var r = [];
-          var l = array.length;
-          for(var i = 0; i < l; i++) {
-            r.push(fn(array[i]));
-          }
-          return r;
-        }
-      }
-    };
-
-    return({
-      name: "mustache.js",
-      version: "0.3.1-dev",
-
-      /*
-        Turns a template and view into HTML
-      */
-      to_html: function(template, view, partials, send_fun) {
-        var renderer = new Renderer();
-        if(send_fun) {
-          renderer.send = send_fun;
-        }
-        renderer.render(template, view, partials);
-        if(!send_fun) {
-          return renderer.buffer.join("\n");
-        }
-      }
-    });
-  }();
-  
-})('jQuery' in this ? jQuery : this);
+})('jQuery' in this ? jQuery : this,this);
 
 /* 
  * Resources
@@ -1549,6 +1207,10 @@
  * 
  * Change Log
  * ----------
+ * **1.1.1** - *Jan 12, 2011*
+ * Changed default engine to jQuery Template. Escape related tests
+ * now pass.
+ * 
  * **1.1.0** - *Jan 10, 2011*  
  * Added support for Mustache and jQuery Template. **changed** event
  * is now **change** and will receive keys that were unset in a call

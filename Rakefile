@@ -10,10 +10,10 @@ task :build do
     puts "closure-compiler not found.\nInstall it by running 'gem install closure-compiler"
     exit
   end
-  source = File.read 'jquery.view.js'
-  header = source.match(HEADER)
+  source = File.read 'lib/jquery.tmpl.js'
+  source += File.read 'jquery.view.js'
   File.open('jquery.view.min.js', 'w+') do |file|
-    file.write header[1].squeeze(' ') + Closure::Compiler.new.compress(source)
+    file.write Closure::Compiler.new.compress(source)
   end
 end
 
