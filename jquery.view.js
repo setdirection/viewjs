@@ -444,15 +444,6 @@
       if(engine === undefined){
         return this._engine === undefined ? $.view.defaultEngine : this._engine;
       }else{
-        if(engine != 'mustache' && engine != 'jquery.tmpl'){
-          throw 'jQuery View error: "' + engine + '" is not a supported template engine.';
-        }
-        if(engine == 'mustache' && !('Mustache' in context)){
-          throw 'jQuery View error: Mustache engine required, download from http://wiki.github.com/janl/mustache.js/';
-        }
-        if(engine == 'jquery.tmpl' && !('tmpl' in $)){
-          throw 'jQuery View error: jQuery Template engine required, download from https://github.com/jquery/jquery-tmpl';
-        }
         this._engine = engine;
       }
     }
@@ -811,6 +802,7 @@
      */
     render: function render(template,attributes){
       var engine = this.constructor.engine();
+      check_engine(engine);
       var final_attributes = {};
       for(var key in this){
         if(in_array(key,['_delegates','_observers','_attributes','_changes']) == -1){
@@ -1092,6 +1084,23 @@
   export_tag_methods($.view.fn);
   
   //private utility methods shared between $.view and builder
+  var engine_checked = {};
+  function check_engine(engine){
+    if(engine_checked[engine]){
+      return;
+    }
+    if(engine != 'mustache' && engine != 'jquery.tmpl'){
+      throw 'jQuery View error: "' + engine + '" is not a supported template engine.';
+    }
+    if(engine == 'mustache' && !('Mustache' in context)){
+      throw 'jQuery View error: Mustache engine required to render template strings, download from http://wiki.github.com/janl/mustache.js/';
+    }
+    if(engine == 'jquery.tmpl' && !('tmpl' in $)){
+      throw 'jQuery View error: jQuery Template engine required to render template strings, download from https://github.com/jquery/jquery-tmpl';
+    }
+    engine_checked[engine] = true;
+  };
+  
   function extend(destination,source){
     for(var property in source){
       destination[property] = source[property];

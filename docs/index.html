@@ -474,7 +474,7 @@ this.render(&#39;&lt;li&gt;${key}&lt;/li&gt;&#39;);</code></pre>
 <p>Get or set the current template engine. Supported engines are &#8220;mustache&#8221; and &#8220;jquery.tmpl&#8221;.</p>
 
 <pre><code>MyView = $.view(function(){
-  return &quot;&lt;p&gt;${key}&lt;/p&gt;&quot;;
+  return &quot;&lt;p&gt;{{key}}&lt;/p&gt;&quot;;
 });
 MyView.engine(&#39;mustache&#39;);
 MyView.engine() == &#39;mustache&#39;;</code></pre>
