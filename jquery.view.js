@@ -1,4 +1,4 @@
-// jQuery View v1.0
+// jQuery View v1.1.2
 // http://viewjs.com/
 // 
 // Copyright (c) 2011 Ryan Johnson
@@ -1207,6 +1207,9 @@
  * 
  * Change Log
  * ----------
+ * **1.1.2** - *Jan 13, 2011*
+ * More tests for jQuery Template. Fixed TextNode bug in builder.
+ * 
  * **1.1.1** - *Jan 12, 2011*
  * Changed default engine to jQuery Template. Escape related tests
  * now pass.

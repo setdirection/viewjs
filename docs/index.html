@@ -457,7 +457,7 @@ $(link).click(this.emit(&#39;event_name&#39;,a,b,c));</code></pre>
 
 <p>Prevent HTML or template strings from being interpreted.</p>
 
-<pre><code>this.p(this.escape(&#39;Will not be processed {{key}}&#39;));
+<pre><code>this.p(this.escape(&#39;Will not be processed ${key}&#39;));
 this.p(this.escape(&#39;&lt;b&gt;Will appear as text.&lt;/b&gt;&#39;));</code></pre>
 
 <h2 id='templates'>Templates</h2>
@@ -467,14 +467,14 @@ this.p(this.escape(&#39;&lt;b&gt;Will appear as text.&lt;/b&gt;&#39;));</code></
 <p>Render a string with the current template engine.</p>
 
 <pre><code>this.set(&#39;key&#39;,&#39;value&#39;);
-this.render(&#39;&lt;li&gt;{{key}}&lt;/li&gt;&#39;);</code></pre>
+this.render(&#39;&lt;li&gt;${key}&lt;/li&gt;&#39;);</code></pre>
 
 <h3 id='classengine__stringclassenginestring_engine__null'>Class.engine<em>() -&gt; String</em><br />Class.engine<em>(String engine) -&gt; null</em></h3>
 
 <p>Get or set the current template engine. Supported engines are &#8220;mustache&#8221; and &#8220;jquery.tmpl&#8221;.</p>
 
 <pre><code>MyView = $.view(function(){
-  return &quot;&lt;p&gt;{{key}}&lt;/p&gt;&quot;;
+  return &quot;&lt;p&gt;${key}&lt;/p&gt;&quot;;
 });
 MyView.engine(&#39;mustache&#39;);
 MyView.engine() == &#39;mustache&#39;;</code></pre>
