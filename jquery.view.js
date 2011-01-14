@@ -830,7 +830,7 @@
      * "jquery.tmpl".
      * 
      *     MyView = $.view(function(){
-     *       return "<p>${key}</p>";
+     *       return "<p>{{key}}</p>";
      *     });
      *     MyView.engine('mustache');
      *     MyView.engine() == 'mustache';
