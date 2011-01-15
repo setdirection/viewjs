@@ -1,4 +1,4 @@
-// jQuery View v1.1.3
+// jQuery View v1.1.4
 // http://viewjs.com/
 // 
 // Copyright (c) 2011 Ryan Johnson
@@ -87,7 +87,7 @@
  *       childMethod: function(){}
  *     });
  * 
- * A subclass constructor **may optionally** return an element. In this case the subclass
+ * A subclass constructor may **optionally** return an element. In this case the subclass
  * will return the parent's p tag wrapped in a div.
  * 
  *     ParagraphView = $.view(function(){
@@ -135,7 +135,7 @@
  *       '<textarea name="body"></textarea>'
  *     );
  * 
- * Mustache or jQuery templates will be rendered with the view's attributes and methods:
+ * Templates will be rendered with the view's attributes and methods:
  * 
  *     MyView = $.view(function(){
  *       this.set('key','value');
@@ -307,6 +307,17 @@
    *
    */
   $.view = function view(structure,methods){
+    //template registration functionality
+    if(structure === 'engine'){
+      if(typeof(methods) === 'string'){
+        default_engine = methods;
+      }else{
+        engines[methods.name] = methods;
+        default_engine = methods.name;
+      }
+      return;
+    }
+    
     var parent_class;
     if(is_view_class(structure)){
       parent_class = structure;
@@ -455,7 +466,7 @@
     },
     engine: function engine(engine){
       if(engine === undefined){
-        return this._engine === undefined ? $.view.defaultEngine : this._engine;
+        return engines[this._engine === undefined ? default_engine : this._engine];
       }else{
         this._engine = engine;
       }
@@ -505,7 +516,7 @@
           element = this.render(element);
         }
         if(is_html(element)){
-          element = jquery_available ? $(element)[0] : element; 
+          element = elements_from_html_string(element)[0];
         }else if(is_jquery_object(element)){
           element = element[0];
         }
@@ -589,6 +600,7 @@
       this._attributes[key] = value;
       this._changes[key] = value;
       if(supress_observers === undefined){
+        this.trigger('change:' + key,value);
         this.trigger('change',this._changes);
         this._changes = {};
       }
@@ -731,15 +743,16 @@
      */ 
     emit: function emit(){
       var args = array_from(arguments);
-      return proxy(function emitter(){
-        return this.trigger.apply(this,args);
-      },this);
+      var context = this;
+      return function emitter(){
+        return context.trigger.apply(context,args);
+      };
     },
     /*
      * Helpers
      * -------
      * 
-     * ### instance.map*(Array, Function(item,index)) -> Array*<br/>instance.map*(Object, Function(key,value)) -> Array*
+     * ### instance.map*(Array, Function(item,index)) -> Array*<br/>instance.map*(Object, Function(key,value,index)) -> Array*
      * Similar to Array#map or Ruby's Array#collect. Works on objects or Arrays.
      * If an object is passed the iterator will be called with (key,value), if
      * an Array is passed the iterator will be called with (value,index). Inside
@@ -748,7 +761,7 @@
      *     var NavigationView = $.view(function(){
      *       return this.ul(this.map({
      *         'Page Title': 'http://page.com/'
-     *       },function(title,url){
+     *       },function(title,url,i){
      *         return this.li(
      *           this.a({href:url},title)
      *         );
@@ -762,11 +775,36 @@
           response.push(callback.apply(this,[object[i],i]));
         }
       }else{
+        var i = 0;
         for(var key in object){
-          response.push(callback.apply(this,[key,object[key]]));
+          response.push(callback.apply(this,[key,object[key],i]));
+          ++i;
         }
       }
       return response;
+    },
+    /* ### instance.callback*(String method, [mixed arg]) -> Function*
+     * Creates a callback function which will call the method with the supplied
+     * arguments.
+     * 
+     *     MyView = $.view(function(){
+     *       return this.ul(
+     *         this.map([1,2,3],function(i){
+     *           return this.li(
+     *             $(this.a({href:'#'})).click(this.callback('handleClick',i))
+     *           );
+     *         })
+     *       );
+     *     },{
+     *       handleClick: function(i){}
+     *     });
+     */ 
+    callback: function callback(method_name){
+      var args = array_from(arguments).slice(1);
+      var context = this;
+      return function generated_callback(){
+        return context[method_name].apply(context,args);
+      };
     },
     /* ### instance.delegate*(String selector, String event_name, Function callback \[,Object context\]) -> null*
      * Equivelent to calling [jQuery's delegate](http://api.jquery.com/delegate/) method, but can
@@ -814,8 +852,6 @@
      *     this.render('<li>${key}</li>');
      */
     render: function render(template,attributes){
-      var engine = this.constructor.engine();
-      check_engine(engine);
       var final_attributes = {};
       for(var key in this){
         if(in_array(key,['_delegates','_observers','_attributes','_changes']) == -1){
@@ -824,23 +860,36 @@
       }
       extend(final_attributes,this.attributes());
       extend(final_attributes,attributes);
-      if(engine == 'jquery.tmpl'){
-        return $.tmpl(template,final_attributes);
-      }else if(engine == 'mustache'){
-        return Mustache.to_html(template,final_attributes);
-      }
+      return this.constructor.engine().render(template,final_attributes);
     }
-    /* ### Class.engine*() -> String*<br/>Class.engine*(String engine) -> null*
-     * Get or set the current template engine. Supported engines are "mustache" and
-     * "jquery.tmpl".
+    /* ### Class.engine*() -> String*<br/>Class.engine*(String engine) -> null*<br/>$.view*('engine',Object engine) -> null*<br/>$.view*('engine',String engine) -> null*
+     * Get or set the current template engine per class.
      * 
      *     MyView = $.view(function(){
      *       return "<p>{{key}}</p>";
      *     });
      *     MyView.engine('mustache');
      *     MyView.engine() == 'mustache';
-     *     
-     */  
+     * 
+     * To register a new engine, call $.view with 'engine' and an object containing
+     * **name**, **detect** and **render**. The official jQuery Template plugin
+      * is the default engine, and ships with jQuery View as "jquery.tmpl".
+     * 
+     *     $.view('engine',{
+     *       name: 'mustache',
+     *       detect: function(string){
+     *         return string.match(/\{\{[^\}]+\}\}/);
+     *       },
+     *       render: function(string,attributes){
+     *         return Mustache.to_html(string,attributes);
+     *       }
+     *     });
+     * 
+     * Registering a new engine will set that engine as the default on all classes unless
+     * the class specifies it's engine with **Class.engine(engine)**. To change the default:
+     * 
+     *     $.view('engine','jquery.tmpl');
+     */
   };
   
   /* Properties
@@ -872,24 +921,18 @@
    * 
    */
   $.view.logging = false;
-  $.view.defaultEngine = 'jquery.tmpl';
-
-  var engine_checked = {};
-  function check_engine(engine){
-    if(engine_checked[engine]){
-      return;
+  
+  var engines = {};
+  var default_engine;
+  $.view('engine',{
+    name: 'jquery.tmpl',
+    detect: function(string){
+      return string.match(/\$\{[^\}]+\}/);
+    },
+    render: function(string,attributes){
+      return $.tmpl(string,attributes);
     }
-    if(engine != 'mustache' && engine != 'jquery.tmpl'){
-      throw 'jQuery View error: "' + engine + '" is not a supported template engine.';
-    }
-    if(engine == 'mustache' && !('Mustache' in context)){
-      throw 'jQuery View error: Mustache engine required to render template strings, download from http://wiki.github.com/janl/mustache.js/';
-    }
-    if(engine == 'jquery.tmpl' && !('tmpl' in $)){
-      throw 'jQuery View error: jQuery Template engine required to render template strings, download from https://github.com/jquery/jquery-tmpl';
-    }
-    engine_checked[engine] = true;
-  };
+  });
   
   function wrap_event_methods_for_child_class(child_class,parent_class){
     var methods = ['bind','unbind','one'];
@@ -1003,7 +1046,7 @@
       return;
     }
     if(is_html(argument)){
-      var generated_elements = jquery_available ? $(argument) : [argument];
+      var generated_elements = elements_from_html_string(argument);
       for(var i = 0; i < generated_elements.length; ++i){
         elements.push(generated_elements[i]);
       }
@@ -1066,6 +1109,16 @@
       }
     }
     return element;
+  };
+  
+  function elements_from_html_string(html){
+    if(jquery_available){
+      var div = create_element('div');
+      div.innerHTML = html;
+      return array_from(div.childNodes);
+    }else{
+      return [html];
+    }
   };
   
   function flatten_array(array){
@@ -1141,12 +1194,7 @@
     if(typeof(string) != 'string' || !view || !('constructor' in view && 'engine' in view.constructor)){
       return false;
     }
-    var engine = view.constructor.engine();
-    if(engine == 'mustache'){
-      return string.match(/\{\{[^\}]+\}\}/);
-    }else if(engine == 'jquery.tmpl'){
-      return string.match(/\$\{[^\}]+\}/);
-    }
+    return view.constructor.engine().detect(string);
   };
 
   function is_array(array){
@@ -1221,7 +1269,7 @@
     return !!(ancestor.body);
   };
   
-})('jQuery' in this ? jQuery : this,this);
+})('jQuery' in this ? jQuery : ('Zepto' in this ? Zepto : this),this);
 
 /* 
  * Resources
@@ -1231,7 +1279,10 @@
  * ----------
  * **1.1.3** - *Jan 14, 2011*
  * Subclass constructors may now return an element, enabling
- * the subclass to wrap the parent's element.
+ * the subclass to wrap the parent's element. Added callback
+ * method. Added support for Backbone style change events:
+ * "change:key". Added support for registration of new template
+ * engines, removed built in Mustache support.
  * 
  * **1.1.2** - *Jan 13, 2011*
  * More tests for jQuery Template. Fixed TextNode bug in builder.

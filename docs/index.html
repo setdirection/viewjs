@@ -83,6 +83,16 @@ instance.attributes();</code></pre>
   childMethod: function(){}
 });</code></pre>
 
+<p>A subclass constructor <strong>may optionally</strong> return an element. In this case the subclass will return the parent&#8217;s p tag wrapped in a div.</p>
+
+<pre><code>ParagraphView = $.view(function(){
+  return this.p(this.get(&#39;text&#39;));
+});
+
+EnhancedParagraphView = $.view(ParagraphView,function(element){
+  return this.div({className:&#39;enhanced&#39;},element);
+});</code></pre>
+
 <h3 id='singletons'>Singletons</h3>
 
 <p>View classes implement a variant of the <a href='http://en.wikipedia.org/wiki/Singleton_pattern'>Singleton pattern</a> with the <strong>instance</strong> method. This method will return the same instance of a view every time it is called, or will create it if <strong>instance</strong> is being called for the first time on that class.</p>
@@ -509,6 +519,8 @@ instance.myMethod(); //returns &quot;value&quot;</code></pre>
 <h2 id='resources'>Resources</h2>
 
 <h2 id='change_log'>Change Log</h2>
+
+<p><strong>1.1.3</strong> - <em>Jan 14, 2011</em> Subclass constructors may now return an element, enabling the subclass to wrap the parent&#8217;s element.</p>
 
 <p><strong>1.1.2</strong> - <em>Jan 13, 2011</em> More tests for jQuery Template. Fixed TextNode bug in builder.</p>
 

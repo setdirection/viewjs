@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript" src="../lib/jquery.js"></script>
+    <script type="text/javascript" src="../jquery.view.js"></script>
+    <style>
+      a {
+        color:#009;
+        text-decoration:none;
+      }
+      
+      a:hover {
+        text-decoration:underline;
+      }
+    
+      a.active,
+      a.active:hover {
+        color:#900;
+      }
+    </style>
+    <script>
+      $(function(){
+        var categories = {
+          1: 'Search Engines',
+          2: 'JavaScript Resources',
+          3: 'Photography Resources'
+        };
+        var links_indexed_by_category = {
+          1: {
+            'Google': 'http://google.com',
+            'Bing': 'http://bing.com/'
+          },
+          2: {
+            'DailyJS': 'http://dailyjs.com/',
+            'jQuery for Designers': 'http://jqueryfordesigners.com/'
+          },
+          3: {
+            'DP Review': 'http://dpreview.com/',
+            'Photo.net': 'http://photo.net/'
+          }
+        };
+        
+        LayoutView = $.view(function(){
+          this.categoryListView = new CategoryListView();
+          this.categoryListView.bind('activated',this.onCategoryChange);
+          this.categorySelectView = new CategorySelectView();
+          this.categorySelectView.bind('activated',this.onCategoryChange);
+          this.ready(function(){
+            this.categoryListView.activate(1);
+            this.categorySelectView.activate(1);
+          });
+          return this.div(
+            this.categorySelectView,
+            this.categoryListView,
+            this.linkListElement = this.div()
+          );
+        },{
+          onCategoryChange: function(id){
+            $(this.linkListElement).empty();
+            $(new LinkListView({
+              links: links_indexed_by_category[id]
+            })).appendTo(this.linkListElement);
+          }
+        });
+        
+        CategorySelectView = $.view(function(){
+          this.selectedIndexById = {};
+          return $(this.select(
+            this.map(categories,function(id,title,i){
+              this.selectedIndexById[id] = i;
+              return this.option({value:id},title);
+            })
+          )).change(this.onChange);
+        },{
+          onChange: function(){
+            this.activate(parseInt($(event.target).val()));
+          },
+          activate: function(id){
+            this.element().selectedIndex = this.selectedIndexById[id];
+            this.trigger('activated',id);
+          }
+        });
+        
+        CategoryListView = $.view(function(){
+          this.linksIndexedById = {};
+          return this.ul(
+            this.map(categories,function(id,title){
+              return this.li(
+                this.linksIndexedById[id] = $(this.a({href:'#'},title)).click(this.callback('activate',id))
+              );
+            })
+          );
+        },{
+          activate: function(id){
+            $('li a',this).removeClass('active');
+            this.linksIndexedById[id].addClass('active');
+            this.trigger('activated',id);
+          }
+        });
+        
+        LinkListView = $.view(function(){
+          return this.ul(
+            this.map(this.get('links'),function(title,url){
+              return this.li(
+                this.a({href:url},title)
+              );
+            })
+          );
+        });
+        
+        $(new LayoutView()).appendTo(document.body);
+      });
+    </script>
+  </head>
+  <body>
+  </body>
+</html>

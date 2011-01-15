@@ -63,7 +63,7 @@ var HTMLStringView = $.view(function(){
         this.li('<b>four</b>')
       ],
       '<li>five</li><li>six</li>',
-      $('<li>seven</li>'),
+      '<li>seven</li>',
       this.li(' <b>eight</b>')
     )
   );
@@ -396,39 +396,47 @@ test("Template support",function(){
   equal(items[3].innerHTML,attributes.d);
 });
 
-StringMustacheView = $.view('<b>{{key}}</b>');
-StringMustacheView.engine('mustache');
-StringReturningMustacheView = $.view(function(){
-  return '<b>{{key}}</b>';
-});
-StringReturningMustacheView.engine('mustache');
-ComplexMustacheView = $.view(function(){
-  return this.ul(
-    this.li('{{a}}'),
-    '<li>{{b}}</li>',
-    this.map(['c','d'],function(key){
-      return '<li>{{' + key + '}}</li>';
-    })
-  );
-});
-ComplexMustacheView.engine('mustache');
-
-test('Mustache support',function(){
-  equal(new StringMustacheView({key:'value'}).element().innerHTML,'value');
-  equal(new StringReturningMustacheView({key:'value'}).element().innerHTML,'value');
-  var attributes = {
-    a: 'one',
-    b: 'two',
-    c: 'three',
-    d: 'four'
-  };
-  var instance = new ComplexMustacheView(attributes);
-  var items = $('li',instance);
-  equal(items[0].innerHTML,attributes.a);
-  equal(items[1].innerHTML,attributes.b);
-  equal(items[2].innerHTML,attributes.c);
-  equal(items[3].innerHTML,attributes.d);
-});
+(function(){
+  var StringMustacheView = $.view('<b>{{key}}</b>');
+  var StringReturningMustacheView = $.view(function(){
+    return '<b>{{key}}</b>';
+  });
+  var ComplexMustacheView = $.view(function(){
+    return this.ul(
+      this.li('{{a}}'),
+      '<li>{{b}}</li>',
+      this.map(['c','d'],function(key){
+        return '<li>{{' + key + '}}</li>';
+      })
+    );
+  });
+  test('Mustache support',function(){
+    $.view('engine',{
+      name: 'mustache',
+      detect: function(string){
+        return string.match(/\{\{[^\}]+\}\}/);
+      },
+      render: function(string,attributes){
+        return Mustache.to_html(string,attributes);
+      }
+    });
+    equal(new StringMustacheView({key:'value'}).element().innerHTML,'value');
+    equal(new StringReturningMustacheView({key:'value'}).element().innerHTML,'value');
+    var attributes = {
+      a: 'one',
+      b: 'two',
+      c: 'three',
+      d: 'four'
+    };
+    var instance = new ComplexMustacheView(attributes);
+    var items = $('li',instance);
+    equal(items[0].innerHTML,attributes.a);
+    equal(items[1].innerHTML,attributes.b);
+    equal(items[2].innerHTML,attributes.c);
+    equal(items[3].innerHTML,attributes.d);
+    $.view('engine','jquery.tmpl');
+  });
+})();
 
 EscapingView = $.view(function(){
   this.set('key','value');
@@ -476,5 +484,45 @@ test("HTML and templating escaping",function(){
     equal(four.element().className,'four');
     equal(four.element().firstChild.className,'three');
     equal(four.element().firstChild.firstChild.className,'two');
+  });
+})();
+
+(function(){
+  var ChangeKeyEventView = $.view(function(){
+    this.wasChangedTo = false;
+    this.bind('change:id',function(value){
+      this.wasChangedTo = value;
+    });
+    this.set('id',true);
+    return this.div();
+  });
+  test("Test of change:key event",function(){
+    var instance = new ChangeKeyEventView();
+    equal(instance.wasChangedTo,true);
+  });
+})();
+
+(function(){
+  var CallbackView = $.view(function(){
+    this.callbackTest = this.callback('myCallback','test');
+    return this.div();
+  },{
+    myCallback: function(value){
+      this.value = value;
+    }
+  });
+  var EmitView = $.view(function(){
+    this.bind('event',function(value){
+      this.value = value;
+    });
+    this.emit('event','test')();
+    return this.div();
+  });
+  test("Test of callback and emit.",function(){
+    var instance = new CallbackView();
+    instance.callbackTest();
+    equal(instance.value,'test');
+    var instance = new EmitView();
+    equal(instance.value,'test');
   });
 })();
