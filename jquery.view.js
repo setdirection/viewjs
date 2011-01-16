@@ -608,6 +608,7 @@
           }
           this._delegates = [];
         }
+        this.$ = $(this._element);
         return this._element;
       }
     },
@@ -1058,6 +1059,12 @@
    *     });
    *     instance.myMethod(); //returns "value"
    * 
+   * ### instance.$ *-> Object*
+   * A jQuery object scoped to the view's element.
+   * 
+   *     this.$.addClass('active');
+   *     //identical to
+   *     $(this.element()).addClass('active');
    */
   $.view.logging = false;
   
