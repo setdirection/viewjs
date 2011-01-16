@@ -64,15 +64,15 @@ h2 {
 }
 
 ul {
-  list-style:none;
   padding:0 0 0 15px;
   margin:0;
+  color:#ccc;
 }
 
 li {
   padding:0;
   margin:0;
-  color:#fff;
+  color:#ccc;
 }
 
 a {

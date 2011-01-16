@@ -22,7 +22,7 @@
  * jQuery View provides a class and inheritance system for templates which can be constructed with a mix of pure JavaScript, HTML strings, jQuery templates and jQuery objects:
  * 
  *     ListView = $.view(function(){
- *       return this.ul(
+ *       return this.ul( //pure JavaScript
  *         "<li>Item One</li>", //HTML strings
  *         "<li>${key}</li>", //jQuery Templates
  *         $(this.li('Item Three')).click(this.handleClick) //inline jQuery
@@ -49,6 +49,14 @@
  *       methodName: function(){}
  *     });
  * 
+ * The constructor may also be specified as "initialize":
+ * 
+ *     MyView = $.view({
+ *       initialize: function(){
+ *         return this.div();
+ *       }
+ *     });
+ * 
  * The element returned by the constructor is available via the **element** method. Passing a View
  * instance to jQuery is the same as passing the View's element to jQuery.
  * 
@@ -60,6 +68,13 @@
  * as an event handler and "this" will still refer to the view instance.
  * 
  *     $('<a href="#">My Link</a>').click(this.handleClick);
+ * 
+ * A View class may optionally attach to an Element that is already
+ * on the page, in which case the constructor must always be called
+ * with an Element:
+ * 
+ *     MyView = $.view(function(element){});
+ *     new MyView($('#my_div'),{key:'value'});
  * 
  * ### Attributes
  * View classes take only one argument when creating a new instance: an optional hash of attributes.
@@ -73,6 +88,7 @@
  *     instance.attributes();
  * 
  * ### Subclasses
+ * 
  * Views can be subclassed by passing a View class as the first argument to **$.view**. The constructor
  * will receive the parent's element as the only argument. The constructor does not need to return
  * an element since the parent's constructor has already generated it. Any events bound to the parent
@@ -278,13 +294,22 @@
   /*
    * Class
    * -----
-   * ### $.view*(Function constructor \[,Object methods\]) -> Class*<br/>$.view*(Class parent, Function(Element) \[,Object methods\]) -> Class*
+   * ### $.view*(Object methods) -> Class*<br/>$.view*(Class parent, Object methods) ->Class*<br/>$.view*(Function constructor \[,Object methods\]) -> Class*<br/>$.view*(Class parent, Function(Element) \[,Object methods\]) -> Class*
    * 
    * Create a new View class:
    * 
    *     MyView = $.view(function(){
    *       return this.div();
    *     },{
+   *       methodName: function(){}
+   *     });
+   * 
+   * The constructor can also be specified via the "initialize" method:
+   * 
+   *     MyView = $.view({
+   *       initialize: function(){
+   *         return this.div();
+   *       },
    *       methodName: function(){}
    *     });
    * 
@@ -296,7 +321,14 @@
    *       childMethod: function(){}
    *     });
    * 
-   * ### new Class*(\[Object attributes\]) -> instance*
+   * A View class may optionally attach to an Element that is already
+   * on the page, in which case the constructor must always be called
+   * with an Element:
+   * 
+   *     MyView = $.view(function(element){});
+   *     new MyView($('#my_div'),{key:'value'});
+   *  
+   * ### new Class*(\[Object attributes\]) -> instance*<br/>new Class*(Element \[,Object attributes\]) -> instance*
    * Creates a new instance of a View class.
    * 
    *     var instance = new MyView({
@@ -304,7 +336,15 @@
    *     });
    *     instance.get('key') == 'value';
    *     $(instance).appendTo(document.body);
-   *
+   * 
+   * Views may optionally attach to an element that is already
+   * in the DOM, in which case they require an Element or jQuery
+   * object as the first argument, which the constructor will
+   * receive:
+   * 
+   *     MyView = $.view(function(element){});
+   *     new MyView($('#my_div'),{key:'value'});
+   * 
    */
   $.view = function view(structure,methods){
     //template registration functionality
@@ -317,12 +357,32 @@
       }
       return;
     }
-    
-    var parent_class;
+    //class construction, setup arguments for multiple constructor types
+    var parent_class = false;
     if(is_view_class(structure)){
       parent_class = structure;
-      structure = arguments[1];
-      methods = arguments[2];
+      if(arguments.length == 2 && typeof(arguments[1]) === 'object'){
+        methods = arguments[1];
+        if('initialize' in methods){
+          structure = methods.initialize;
+          delete methods.initialize;
+        }else{
+          structure = function(){};
+        }
+      }else{
+        structure = arguments[1];
+        methods = arguments[2];
+      }
+    }else{
+      if(methods === undefined && typeof(structure) === 'object'){
+        if(!('initialize' in structure)){
+          throw '"initialize" method must be specified to create a $.view class.';
+        }else{
+          methods = structure;
+          structure = methods.initialize;
+          delete methods.initialize;
+        }
+      }
     }
     if(typeof(structure) == 'string'){
       var html = String(structure);
@@ -331,15 +391,37 @@
       };
     }
     var klass = function klass(attributes){
+      this._element = null;
       this._delegates = [];
       this._observers = {};
       this._attributes = {};
       this._changes = {};
+      //allow element() to be set via constructor
+      if(is_jquery_object(attributes)){
+        attributes = attributes[0];
+      }
+      if(attributes && typeof(attributes) === 'object' && attributes.nodeType === 1){
+        this.element(attributes);
+        attributes = arguments[1] || {};
+      }
       //proxy all user specified methods
       for(var i = 0; i < this.constructor._methodsToProxy.length; ++i){
         this[this.constructor._methodsToProxy[i]] = proxy(this[this.constructor._methodsToProxy[i]],this);
       }
-      this.initialize.apply(this,arguments);
+      this.length = 0;
+      if($.view.logging){
+        console.log('jQuery.View: initialized ',this,' with attributes:',attributes);
+      }
+      this.attributes(attributes || {});
+      var response = this.initialize(this.element());
+      if(response && !this._element){
+        this.element(response);
+      }
+      if(jquery_available && (!this._element || !this._element.nodeType || this._element.nodeType !== 1)){
+        throw 'The view constructor must return either a DOM element or jQuery object, or call this.element() with a DOM element. View constructor returned:' + typeof(this._element);
+      }
+      //call to initialize
+      this.trigger('initialized');
       if(klass._observers && 'ready' in klass._observers){
         trigger_or_delay_ready_event_on_instance(this);
       }
@@ -353,9 +435,9 @@
     extend(klass,$.view.classMethods);
     if(parent_class){
       extend(klass.prototype,parent_class.prototype);
-      klass.prototype._structure = wrap_function(parent_class.prototype._structure,function(proceed){
-        var parent_element = proxy(proceed,this)();
-        var child_element = structure.apply(this,[parent_element]);
+      klass.prototype.initialize = wrap_function(parent_class.prototype.initialize,function(proceed){
+        var parent_element = proxy(proceed,this)() || this.element();
+        var child_element = structure.apply(this,[parent_element]) || this.element();
         return child_element || parent_element;
       });
       for(var i = 0; i < parent_class._methodsToProxy.length; ++i){
@@ -363,7 +445,7 @@
       }
     }else{
       extend(klass.prototype,$.view.fn);
-      klass.prototype._structure = structure;
+      klass.prototype.initialize = structure;
     }
     klass.prototype.bind = wrap_function(klass.prototype.bind,observe_wrapper_for_ready_event_on_instance);
     if(parent_class){
@@ -397,18 +479,26 @@
       return this._instance;
     },
     bind: function bind(event_name,observer,context){
-      var arguments_array = array_from(arguments);
-      if(arguments_array[2] === undefined){
-        arguments_array[2] = this;
-      }
-      observer = proxy.apply($.view,[observer].concat(arguments_array.slice(2)));
-      if(typeof(event_name) === 'string' && observer !== undefined){
-        if(!(event_name in this._observers)){
-          this._observers[event_name] = [];
+      if(typeof(event_name) === 'object'){
+        var response = {};
+        for(var _event_name in event_name){
+          response[_event_name] = this.bind(_event_name,event_name[_event_name]);
         }
-        this._observers[event_name].push(observer);
+        return response;
+      }else{
+        var arguments_array = array_from(arguments);
+        if(arguments_array[2] === undefined){
+          arguments_array[2] = this;
+        }
+        observer = proxy.apply($.view,[observer].concat(arguments_array.slice(2)));
+        if(typeof(event_name) === 'string' && observer !== undefined){
+          if(!(event_name in this._observers)){
+            this._observers[event_name] = [];
+          }
+          this._observers[event_name].push(observer);
+        }
+        return observer;
       }
-      return observer;
     },
     unbind: function unbind(event_name,observer){
       if(!(event_name in this._observers)){
@@ -478,21 +568,6 @@
    * ----
    */ 
   $.view.fn = {
-    initialize: function initialize(attributes){
-      this.length = 0;
-      if($.view.logging){
-        console.log('jQuery.View: initialized ',this,' with attributes:',attributes);
-      }
-      this.attributes(attributes || {});
-      var response = this._structure();
-      if(response && !this._element){
-        this.element(response);
-      }
-      if(jquery_available && (!this._element || !this._element.nodeType || this._element.nodeType !== 1)){
-        throw 'The view constructor must return either a DOM element or jQuery object, or call this.element() with a DOM element. View constructor returned:' + typeof(this._element);
-      }
-      this.trigger('initialized');
-    },
     /* ### instance.element*() -> Element*<br/>instance.element*(Element element) -> Element*
      * Get the outermost element of the view, which is returned by the constructor.
      * 
@@ -512,6 +587,9 @@
       if(element === undefined){
         return this._element;
       }else{
+        if(typeof(element) === 'function'){
+          element = element.apply(this,[]);
+        }
         if(is_template(this,element)){
           element = this.render(element);
         }
@@ -574,16 +652,35 @@
         return this._attributes;
       }
     },
-    /* ### instance.get*(String key) -> mixed*
+    /* ### instance.get*(String key) -> mixed*<br/>instance.get*(Array keys) -> Array*<br/>instance.get*(String key \[,String key...\]) -> Array*<br/>
      * Get an attribute from the view.
      * 
      *     var instance = new MyView({key:'value'});
      *     instance.get('key') == 'value';
+     * 
+     * Or get an array of attributes:
+     * 
+     *     instance.get('a','b');
+     *     instance.get(['a','b']);
      */ 
     get: function get(key){
-      return this._attributes[key];
+      if(arguments.length > 1 || is_array(key)){
+        var response = [];
+        var args_array;
+        if(is_array(key)){
+          args_array = key;
+        }else{
+          args_array = array_from(arguments);
+        }
+        for(var i = 0; i < args_array.length; ++i){
+          response.push(this.get(args_array[i]));
+        }
+        return response;
+      }else if(typeof(key) === 'string' || typeof(key) == 'number'){
+        return this._attributes[key];
+      }
     },
-    /* ### instance.set*(String key, mixed value \[,Boolean silent = false\]) -> mixed*
+    /* ### instance.set*(String key, mixed value \[,Boolean silent = false\]) -> mixed*<br/>instance.set*(Object attributes \[,Boolean silent = false\]) -> Object*
      * Set an attribute in the view. This will trigger the **change**
      * event. Set **silent** to true to prevent the **change** event
      * from firing.
@@ -595,24 +692,39 @@
      *       }
      *     });
      *     instance.set('key','value');
+     * 
+     * An object can also be passed to set multiple values:
+     * 
+     *     instance.set({
+     *       key: 'value'
+     *     });
      */ 
     set: function set(key,value,supress_observers){
-      this._attributes[key] = value;
-      this._changes[key] = value;
-      if(supress_observers === undefined){
-        this.trigger('change:' + key,value);
-        this.trigger('change',this._changes);
-        this._changes = {};
+      if(typeof(key) === 'object'){
+        var response = {};
+        for(var _key in key){
+          response[_key] = this.set(_key,key[_key],value);
+        }
+        return response;
+      }else{
+        this._attributes[key] = value;
+        this._changes[key] = value;
+        if(supress_observers === undefined){
+          this.trigger('change:' + key,value);
+          this.trigger('change',this._changes);
+          this._changes = {};
+        }
+        return value;
       }
-      return value;
     },
     /* 
-     * ### instance.tag*(\[String text\] \[,Element\] \[,Object attributes\]) -> Element*
+     * ### instance.tag*(\[String text\] \[,Element\] \[,Object attributes\]...) -> Element*
      * **tag** refers to any HTML tag name and is used to create DOM elements. Tag takes
      * an arbitrary number of arguments in any order which can be:
      * 
      * - string or number
      * - HTML string
+     * - Template string
      * - hash of HTML attributes
      * - DOM Element
      * - jQuery Object
@@ -632,7 +744,7 @@
      * 
      * Events
      * ------
-     * ### instance.bind*(String event_name, Function handler \[,Object context\]) -> Function*
+     * ### instance.bind*(Object events) -> Object*<br/>instance.bind*(String event_name, Function handler \[,Object context\]) -> Function*
      * Register a handler for an event on a given instance. "this" will refer to the
      * view instance unless a **context** argument was passed.
      * 
@@ -647,6 +759,12 @@
      * 
      *     MyView.bind('event_name',function(instance,a,b,c){
      *       
+     *     });
+     * 
+     * Multiple handlers can be registered at once by passing a hash:
+     * 
+     *     instance.bind({
+     *       event_name: function(a,b,c){}
      *     });
      */ 
     bind: $.view.classMethods.bind,
@@ -670,7 +788,7 @@
      *     });
      */ 
     one: $.view.classMethods.one,
-    /* ### instance.trigger*(String event_name \[,mixed arg\]) -> Array or false*
+    /* ### instance.trigger*(String event_name \[,mixed arg...\]) -> Array or false*
      * Triggers the given event, passing an arbitrary number of arguments to the
      * handlers. Returns an array of responses, or false if
      * a handler stopped the event by returning false.
@@ -735,7 +853,7 @@
      *     });
      */
     ready: $.view.classMethods.ready,
-    /* ### instance.emit*(event_name \[,mixed arg\]) -> Function*
+    /* ### instance.emit*(event_name \[,mixed arg...\]) -> Function*
      * Creates a callback that will trigger event_name with the supplied arguments.
      * 
      *     this.bind('event_name',function(a,b,c){});
@@ -752,7 +870,7 @@
      * Helpers
      * -------
      * 
-     * ### instance.map*(Array, Function(item,index)) -> Array*<br/>instance.map*(Object, Function(key,value,index)) -> Array*
+     * ### instance.map*(Array, Function(item,index)) -> Array*<br/>instance.map*(Object, Function(key,value,index)) -> Array*<br/>instance.map*(String key_of_array, Function(item,index)) -> Array*<br/>instance.map*(String key_of_object, Function(key,value,index)) -> Array*
      * Similar to Array#map or Ruby's Array#collect. Works on objects or Arrays.
      * If an object is passed the iterator will be called with (key,value), if
      * an Array is passed the iterator will be called with (value,index). Inside
@@ -767,9 +885,25 @@
      *         );
      *       }));
      *     });
+     * 
+     * Passing a string key is the same as passing this.get(key) to **map**:
+     * 
+     *     this.map('links',function(link){});
+     *     //equivalent to:
+     *     this.map(this.get('links'),function(link){});
+     * 
+     * A hash of keys and callbacks can also be passed:
+     * 
+     *     this.map({
+     *       an_array: function(item,index){},
+     *       an_object: function(key,value,index){}
+     *     })
      */
-    map: function map(object,callback){
-      var response = [];
+    map: function map(object,callback,response){
+      response = response || [];
+      if(typeof(object) === 'string'){
+        object = this.get(object);
+      }
       if(is_array(object)){
         for(var i = 0; i < object.length; ++i){
           response.push(callback.apply(this,[object[i],i]));
@@ -777,13 +911,17 @@
       }else{
         var i = 0;
         for(var key in object){
-          response.push(callback.apply(this,[key,object[key],i]));
+          if(typeof(object[key]) === 'function'){
+            this.map(this.get(key),object[key],response);
+          }else{
+            response.push(callback.apply(this,[key,object[key],i]));
+          }
           ++i;
         }
       }
       return response;
     },
-    /* ### instance.callback*(String method, [mixed arg]) -> Function*
+    /* ### instance.callback*(String method, \[mixed arg...\]) -> Function*
      * Creates a callback function which will call the method with the supplied
      * arguments.
      * 
@@ -862,7 +1000,7 @@
       extend(final_attributes,attributes);
       return this.constructor.engine().render(template,final_attributes);
     }
-    /* ### Class.engine*() -> String*<br/>Class.engine*(String engine) -> null*<br/>$.view*('engine',Object engine) -> null*<br/>$.view*('engine',String engine) -> null*
+    /* ### Class.engine*() -> String*<br/>Class.engine*(String engine) -> null*<br/>$.view('engine'*,Object engine) -> null*<br/>$.view('engine'*,String engine) -> null*
      * Get or set the current template engine per class.
      * 
      *     MyView = $.view(function(){
@@ -873,7 +1011,8 @@
      * 
      * To register a new engine, call $.view with 'engine' and an object containing
      * **name**, **detect** and **render**. The official jQuery Template plugin
-      * is the default engine, and ships with jQuery View as "jquery.tmpl".
+     * is the default engine, and ships with jQuery View as "jquery.tmpl". The
+     * following code would register Mustache as a valid engine:
      * 
      *     $.view('engine',{
      *       name: 'mustache',
@@ -1179,11 +1318,11 @@
   };
   
   function is_view_class(object){
-    return object && object.prototype && object.prototype._structure && object.prototype.element;
+    return object && object.prototype && object.prototype.initialize && object.prototype.element;
   };
   
   function is_jquery_object(object){
-    return typeof(object) == 'object' && ('jquery' in object) && ('length' in object);
+    return object && typeof(object) == 'object' && ('jquery' in object) && ('length' in object);
   };
   
   function is_html(string){
@@ -1274,30 +1413,6 @@
 /* 
  * Resources
  * ---------
- * 
- * Change Log
- * ----------
- * **1.1.3** - *Jan 14, 2011*
- * Subclass constructors may now return an element, enabling
- * the subclass to wrap the parent's element. Added callback
- * method. Added support for Backbone style change events:
- * "change:key". Added support for registration of new template
- * engines, removed built in Mustache support.
- * 
- * **1.1.2** - *Jan 13, 2011*
- * More tests for jQuery Template. Fixed TextNode bug in builder.
- * 
- * **1.1.1** - *Jan 12, 2011*
- * Changed default engine to jQuery Template. Escape related tests
- * now pass.
- * 
- * **1.1.0** - *Jan 10, 2011*  
- * Added support for Mustache and jQuery Template. **changed** event
- * is now **change** and will receive keys that were unset in a call
- * to **attributes**.
- * 
- * **1.0.0** - *Jan 4, 2011*  
- * Initial release.
  * 
  * Thank You
  * ---------

@@ -49,7 +49,7 @@ task :docs do
 <!DOCTYPE html>
 <html>
   <head>
-    <title>jQuery View</title>
+    <title>jQuery View: Markup as JavaScript</title>
     <link type="text/css" rel="stylesheet" href="stylesheets/syntax.css"/>
     <link type="text/css" rel="stylesheet" href="stylesheets/screen.css"/>
     <script type="text/javascript" src="javascripts/jquery.js"></script>

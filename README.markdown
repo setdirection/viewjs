@@ -6,7 +6,7 @@ Markup as JavaScript **[Development](https://github.com/syntacticx/viewjs/zipbal
 jQuery View provides a class and inheritance system for templates which can be constructed with a mix of pure JavaScript, HTML strings, jQuery templates and jQuery objects:
 
     ListView = $.view(function(){
-      return this.ul(
+      return this.ul( //pure JavaScript
         $(this.li('Item Three')).click(this.handleClick) //inline jQuery
       );
     },{

@@ -98,6 +98,10 @@
           }
         });
         
+        LinkListView = $.view ->
+          @ul @map 'links',(title,url) ->
+            @li @a(href:url,title)
+        
         LinkListView = $.view(function(){
           return this.ul(
             this.map(this.get('links'),function(title,url){

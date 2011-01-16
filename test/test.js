@@ -164,6 +164,23 @@ test("User specified view methods are proxied",function(){
   equal(test_value,'test');
 });
 
+test("Element can alreay be on page",function(){
+  var PreExistingElementView = $.view(function(element){
+    $(element).addClass(this.get('key'));
+  });
+  $('<p id="test"></p>').appendTo(document.body);
+  new PreExistingElementView($('#test'),{key:'test'});
+  equal($('#test')[0].className,'test');
+  $("#test").remove();
+  $('<p id="test"></p>').appendTo(document.body);
+  new PreExistingElementView($('#test')[0],{key:'test'});
+  equal($('#test')[0].className,'test');
+  $("#test").remove();
+  raises(function(){
+    new PreExistingElementView(null,{key:'test'});
+  });
+});
+
 var trigger_count = 0;
 var ParentView = $.view(function(){
   return this.span();
@@ -194,8 +211,10 @@ test('ready event cascades to child class',function(){
   //observing "ready" immediately after inserting will syncrhonusly trigger other observers that had been delayed
   child_instance = new ChildView();
   document.body.appendChild(child_instance.element());
-  child_instance.bind('ready',function(){
-    ++trigger_count;
+  child_instance.bind({
+    ready: function(){
+      ++trigger_count;
+    }
   });
   equal(trigger_count,5);
 });
@@ -456,6 +475,16 @@ test("HTML and templating escaping",function(){
 });
 
 (function(){
+  test("Ensure class has initialize/structure",function(){
+    raises(function(){
+      $.view({
+        test: function(){}
+      });
+    });
+  });
+})();
+
+(function(){
   var ParentView = $.view(function(){
     return this.div();
   });
@@ -484,6 +513,80 @@ test("HTML and templating escaping",function(){
     equal(four.element().className,'four');
     equal(four.element().firstChild.className,'three');
     equal(four.element().firstChild.firstChild.className,'two');
+  });
+})();
+
+(function(){
+  var ConstructorReturningMethod = $.view(function(){
+    return this.div;
+  });
+  var ConstructorSettingElementWithMethod = $.view(function(){
+    this.element(this.div);
+  });
+  test("Constructor can return method",function(){
+    equal(new ConstructorReturningMethod().element().tagName.toLowerCase(),'div');
+    equal(new ConstructorSettingElementWithMethod().element().tagName.toLowerCase(),'div');
+  });
+})();
+
+(function(){
+  var ParentView = $.view({
+    initialize: function(){
+      this.element(this.div());
+    }
+  });
+  var ChildViewOne = $.view(ParentView,{
+    initialize: function(element){
+      $(element).addClass('one');
+    }
+  });
+  var ChildViewTwo = $.view(ParentView,{
+    initialize: function(element){
+      this.element($(element).addClass('two'));
+    }
+  });
+  var ChildViewThree = $.view(ChildViewTwo,{
+    initialize: function(element){
+      this.element(this.div({className:'three'},element));
+    }
+  });
+  var ChildViewFour = $.view(ChildViewThree,{
+    initialize: function(element){
+      this.element(this.div({className:'four'},element));
+    }
+  });
+  test("Child constructors (via initialize) cascade with call to element(element) instead of returning",function(){
+    var one = new ChildViewOne();
+    var two = new ChildViewTwo();
+    var three = new ChildViewThree();
+    var four = new ChildViewFour();
+    equal(one.element().className,'one');
+    equal(two.element().className,'two');
+    equal(three.element().className,'three');
+    equal(three.element().firstChild.className,'two');
+    equal(four.element().className,'four');
+    equal(four.element().firstChild.className,'three');
+    equal(four.element().firstChild.firstChild.className,'two');
+  });
+})();
+
+(function(){
+  var ParentView = $.view({
+    initialize: function(){
+      return this.div();
+    },
+    myMethod: function(){
+      return 'parent';
+    }
+  });
+  var ChildView = $.view(ParentView,{
+    myMethod: function(){
+      return 'child';
+    }
+  });
+  test("Subclass with no constructor",function(){
+    equal(new ParentView().myMethod(),'parent');
+    equal(new ChildView().myMethod(),'child');
   });
 })();
 
@@ -524,5 +627,47 @@ test("HTML and templating escaping",function(){
     equal(instance.value,'test');
     var instance = new EmitView();
     equal(instance.value,'test');
+  });
+})();
+
+(function(){
+  var GetterSetterView = $.view($.view.div);
+  test("get with array, and set with object",function(){
+    var instance = new GetterSetterView();
+    var response = instance.set({
+      a: 'one',
+      b: 'two'
+    });
+    equal(response.a,'one');
+    equal(response.b,'two');
+    var response = instance.get('a','b');
+    equal(response[0],'one');
+    equal(response[1],'two');
+    var response = instance.get(['a','b']);
+    equal(response[0],'one');
+    equal(response[1],'two');
+  });
+})();
+
+(function(){
+  var NestedMapView = $.view(function(){
+    this.i = 0;
+    this.set('a',[1,2,3]);
+    this.set('b',{a:4});
+    return this.ul(this.map({
+      a: function(number,index){
+        this.i = index;
+        return this.li(number);
+      },
+      b: function(key,value,index){
+        this.i = index;
+        return this.li(value);
+      }
+    }));
+  });
+  test("Map from hash of callbacks",function(){
+    var instance = new NestedMapView();
+    var items = $('li',instance);
+    equal(items.length,4);
   });
 })();
