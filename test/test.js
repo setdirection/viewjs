@@ -671,3 +671,39 @@ test("HTML and templating escaping",function(){
     equal(items.length,4);
   });
 })();
+
+(function(){
+  test("Test of instance's $",function(){
+    var ScopedJQueryView = $.view(function(){
+      this.element(this.div(this.span()));
+      this.$.addClass('active');
+      this.$('span').addClass('span_active');
+    });
+    var instance = new ScopedJQueryView();
+    equal(instance.element().className,'active');
+    equal(instance.element().firstChild.className,'span_active');
+  });
+})();
+
+(function(){
+  test("element() can directly receieve a string or template",function(){
+    StringElementView = $.view(function(){
+      this.element("<p>${key}</p>");
+    });
+    var instance = new StringElementView({key:'value'});
+    equal(instance.element().innerHTML,'value');
+  });
+  
+  test("View can have a template property",function(){
+    TemplatePropertyView = $.view({
+      template: "<p>${key}</p>",
+      initialize: function(element){
+        this.$.addClass('one');
+        $(element).addClass('two');
+      }
+    });
+    var instance = new TemplatePropertyView({key:'value'});
+    equal(instance.element().className,'one two');
+    equal(instance.element().innerHTML,'value');
+  });
+})();

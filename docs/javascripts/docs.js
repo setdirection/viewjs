@@ -5,7 +5,7 @@ $(function(){
   $('pre').addClass('highlighted');
   $('code').addClass('javascript');
   dp.sh.HighlightAll('javascript',false,false,false,true,false);
-  var first_api_method = 'viewfunction_constructor_object_methods__classviewclass_parent_functionelement_object_methods__class';
+  var first_api_method = 'viewobject_methods__classviewclass_parent_object_methods_classviewfunction_constructor_object_methods__classviewclass_parent_functionelement_object_methods__class';
   $('#' + first_api_method).nextUntil('h2,h3').add('#' + first_api_method).clone().show().appendTo('#api_example');
   $('#api_example').html($('#api_example').html().replace(/-&gt;/g,'<b>&rarr;</b>'))
   $.routes(function(hash){
@@ -27,11 +27,11 @@ $(function(){
       $('#nav a[href="#api"]').addClass('active');
       content_to_hide.hide();
       $('#api_toc').show();
-    }else if(hash == 'resources'){
-      $('#nav a[href="#resources"]').addClass('active');
+    }else if(hash == 'examples'){
+      $('#nav a[href="#examples"]').addClass('active');
       content_to_hide.hide();
       $('#api_toc').hide();
-      $('#resources').nextUntil('#api_toc').show();
+      $('#examples').nextUntil('#api_toc').show();
     }else{
       $('#nav a[href="#api"]').addClass('active');
       $('#api_example').empty();

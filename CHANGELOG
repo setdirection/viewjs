@@ -1,5 +1,9 @@
 Change Log
 ----------
+1.1.4 - Jan 15, 2011
+- Added this.$
+- Added optional "template" property.
+
 1.1.3 - Jan 14, 2011
 - Subclass constructors may now return an element, enabling the subclass to wrap the parent's element.
 - Added callback method.

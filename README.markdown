@@ -16,5 +16,3 @@ jQuery View provides a class and inheritance system for templates which can be c
     //use views as arguments to jQuery
     var instance = new ListView({key:'Item Two'});
     $(instance).appendTo('body');
-
-Works well with [jQuery Routes](http://routesjs.com/).

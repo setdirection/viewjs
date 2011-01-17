@@ -20,7 +20,7 @@
   <li><a href='#intro'>Intro</a></li>
   <li><a href='#guide'>Guide</a></li>
   <li><a href='#api'>API</a></li>
-  <li><a href='#resources'>Resources</a></li>
+  <li><a href='#examples'>Examples</a></li>
 </ul><br class='clear' />
 <p>jQuery View provides a class and inheritance system for templates which can be constructed with a mix of pure JavaScript, HTML strings, jQuery templates and jQuery objects:</p>
 
@@ -38,7 +38,15 @@
 var instance = new ListView({key:&#39;Item Two&#39;});
 $(instance).appendTo(&#39;body&#39;);</code></pre>
 
-<p>Works well with <a href='http://routesjs.com/'>jQuery Routes</a>.</p>
+<h2 id='works_well_with'>Works Well With</h2>
+
+<ul>
+<li><a href='http://routesjs.com/'>jQuery Routes</a></li>
+
+<li><a href='http://documentcloud.github.com/backbone/'>Backbone.js</a> for models and collections</li>
+</ul>
+
+<p>Copyright 2011 <a href='http://syntacticx.com/'>Syntacticx</a>. Released under the <a href='http://jquery.org/license'>MIT or GPL License</a>.<br />Thanks to <a href='http://www.youtube.com/watch?v=lwDDa9ctNFE'>_why</a> for <a href='http://markaby.github.com/'>Markaby</a>.</p>
 
 <h2 id='class_creation'>Class Creation</h2>
 
@@ -550,7 +558,27 @@ this.map(this.get(&#39;links&#39;),function(link){});</code></pre>
 <pre><code>this.p(this.escape(&#39;Will not be processed ${key}&#39;));
 this.p(this.escape(&#39;&lt;b&gt;Will appear as text.&lt;/b&gt;&#39;));</code></pre>
 
+<h3 id='instance__object__function'>instance.$ <em>-&gt; Object | Function</em></h3>
+
+<p>A hybrid jQuery object for the current view&#8217;s element that also acts as a selector function scoped to the current view&#8217;s element.</p>
+
+<pre><code>//adds &quot;active&quot; class to view&#39;s element
+this.$.addClass(&#39;active&#39;);
+//selects all spans inside the view&#39;s element
+this.$(&#39;span&#39;);</code></pre>
+
 <h2 id='templates'>Templates</h2>
+
+<h3 id='instancetemplate__string'>instance.template <em>-&gt; String</em></h3>
+
+<p>Specify a string template in this property if you want it to be available via the <strong>element</strong> method before the constructor is called. Also convenient when using CoffeeScript&#8217;s multiline strings.</p>
+
+<pre><code>MyView = $.view({
+  template: &quot;&lt;p&gt;&lt;/p&gt;&quot;,
+  initialize: function(element){
+    $(element).addClass(&#39;best_paragraph_ever&#39;);
+  }
+});</code></pre>
 
 <h3 id='instancerenderstring_template_object_attributes__string'>instance.render<em>(String template [,Object attributes]) -&gt; String</em></h3>
 
@@ -612,22 +640,20 @@ var instance = new MyClass({
 });
 instance.myMethod(); //returns &quot;value&quot;</code></pre>
 
-<h2 id='resources'>Resources</h2>
+<h2 id='examples'>Examples</h2>
 
-<h2 id='thank_you'>Thank You</h2>
+<ul>
+<li><strong><a href='http://viewjs.com/examples/todos/index.html'>Local Todos</a></strong> (<a href='http://viewjs.com/examples/todos/todos.html'>Annotated Source</a>)</li>
 
-<p>To <a href='http://www.youtube.com/watch?v=lwDDa9ctNFE'>_why</a> for <a href='http://markaby.github.com/'>Markaby</a> and the fine folks at <a href='http://documentcloud.org/'>DocumentCloud</a> for <a href='http://documentcloud.github.com/backbone/'>Backbone.js</a>.</p>
-
-<h2 id='license'>License</h2>
-
-<p>Copyright 2011 <a href='http://syntacticx.com/'>Syntacticx</a>. Released under the <a href='http://jquery.org/license'>MIT or GPL License</a>.</p>
+<li><strong><a href='http://syntacticx.com/photos/'>PhotoFolder</a></strong> (<a href='http://photofolder.org/'>Annotated Source</a>)</li>
+</ul>
       </div>
       <div id="api_toc">
         <table>
           <tbody>
             <tr>
               <td>
-                <h2>Class</h2><h3>- <a href="#viewobject_methods__classviewclass_parent_object_methods_classviewfunction_constructor_object_methods__classviewclass_parent_functionelement_object_methods__class">$.view</a></h3><h3>- <a href="#new_classobject_attributes__instancenew_classelement_object_attributes__instance">new Class</a></h3><h3>- <a href="#classinstance__instance">instance</a></h3></td><td><h2>Core</h2><h3>- <a href="#instanceelement__elementinstanceelementelement_element__element">element</a></h3><h3>- <a href="#instanceattributes__objectinstanceattributesobject_attributes_boolean_silent__false__object">attributes</a></h3><h3>- <a href="#instancegetstring_key__mixedinstancegetarray_keys__arrayinstancegetstring_key_string_key__array">get</a></h3><h3>- <a href="#instancesetstring_key_mixed_value_boolean_silent__false__mixedinstancesetobject_attributes_boolean_silent__false__object">set</a></h3><h3>- <a href="#instancetagstring_text_element_object_attributes__element">tag</a></h3></td><td><h2>Events</h2><h3>- <a href="#instancebindobject_events__objectinstancebindstring_event_name_function_handler_object_context__function">bind</a></h3><h3>- <a href="#instanceunbindstring_event_name_function_handler__null">unbind</a></h3><h3>- <a href="#instanceonestring_event_name_function_handler_object_context__function">one</a></h3><h3>- <a href="#instancetriggerstring_event_name_mixed_arg__array_or_false">trigger</a></h3><h3>- <a href="#instancereadyfunction_handler_object_context__function">ready</a></h3><h3>- <a href="#instanceemitevent_name_mixed_arg__function">emit</a></h3></td><td><h2>Helpers</h2><h3>- <a href="#instancemaparray_functionitemindex__arrayinstancemapobject_functionkeyvalueindex__arrayinstancemapstring_key_of_array_functionitemindex__arrayinstancemapstring_key_of_object_functionkeyvalueindex__array">map</a></h3><h3>- <a href="#instancecallbackstring_method_mixed_arg__function">callback</a></h3><h3>- <a href="#instancedelegatestring_selector_string_event_name_function_callback_object_context__null">delegate</a></h3><h3>- <a href="#instanceescapestring_unescaped__string">escape</a></h3></td><td><h2>Templates</h2><h3>- <a href="#instancerenderstring_template_object_attributes__string">render</a></h3><h3>- <a href="#classengine__stringclassenginestring_engine__nullviewengineobject_engine__nullviewenginestring_engine__null">engine</a></h3></td><td><h2>Properties</h2><h3>- <a href="#viewclassmethods__object">classMethods </a></h3><h3>- <a href="#viewlogging__boolean">logging </a></h3><h3>- <a href="#viewfn__object">fn </a></h3>
+                <h2>Class</h2><h3>- <a href="#viewobject_methods__classviewclass_parent_object_methods_classviewfunction_constructor_object_methods__classviewclass_parent_functionelement_object_methods__class">$.view</a></h3><h3>- <a href="#new_classobject_attributes__instancenew_classelement_object_attributes__instance">new Class</a></h3><h3>- <a href="#classinstance__instance">instance</a></h3></td><td><h2>Core</h2><h3>- <a href="#instanceelement__elementinstanceelementelement_element__element">element</a></h3><h3>- <a href="#instanceattributes__objectinstanceattributesobject_attributes_boolean_silent__false__object">attributes</a></h3><h3>- <a href="#instancegetstring_key__mixedinstancegetarray_keys__arrayinstancegetstring_key_string_key__array">get</a></h3><h3>- <a href="#instancesetstring_key_mixed_value_boolean_silent__false__mixedinstancesetobject_attributes_boolean_silent__false__object">set</a></h3><h3>- <a href="#instancetagstring_text_element_object_attributes__element">tag</a></h3></td><td><h2>Events</h2><h3>- <a href="#instancebindobject_events__objectinstancebindstring_event_name_function_handler_object_context__function">bind</a></h3><h3>- <a href="#instanceunbindstring_event_name_function_handler__null">unbind</a></h3><h3>- <a href="#instanceonestring_event_name_function_handler_object_context__function">one</a></h3><h3>- <a href="#instancetriggerstring_event_name_mixed_arg__array_or_false">trigger</a></h3><h3>- <a href="#instancereadyfunction_handler_object_context__function">ready</a></h3><h3>- <a href="#instanceemitevent_name_mixed_arg__function">emit</a></h3></td><td><h2>Helpers</h2><h3>- <a href="#instancemaparray_functionitemindex__arrayinstancemapobject_functionkeyvalueindex__arrayinstancemapstring_key_of_array_functionitemindex__arrayinstancemapstring_key_of_object_functionkeyvalueindex__array">map</a></h3><h3>- <a href="#instancecallbackstring_method_mixed_arg__function">callback</a></h3><h3>- <a href="#instancedelegatestring_selector_string_event_name_function_callback_object_context__null">delegate</a></h3><h3>- <a href="#instanceescapestring_unescaped__string">escape</a></h3><h3>- <a href="#instance__object__function">$ </a></h3></td><td><h2>Templates</h2><h3>- <a href="#instancetemplate__string">template </a></h3><h3>- <a href="#instancerenderstring_template_object_attributes__string">render</a></h3><h3>- <a href="#classengine__stringclassenginestring_engine__nullviewengineobject_engine__nullviewenginestring_engine__null">engine</a></h3></td><td><h2>Properties</h2><h3>- <a href="#viewclassmethods__object">classMethods </a></h3><h3>- <a href="#viewlogging__boolean">logging </a></h3><h3>- <a href="#viewfn__object">fn </a></h3></td><td><h2>Examples</h2>
               </td>
             </tr>
            </tbody>

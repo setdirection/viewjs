@@ -15,7 +15,7 @@
  *   <li><a href="#intro">Intro</a></li>
  *   <li><a href="#guide">Guide</a></li>
  *   <li><a href="#api">API</a></li>
- *   <li><a href="#resources">Resources</a></li>
+ *   <li><a href="#examples">Examples</a></li>
  * </ul>
  * <br class="clear"/>
  * 
@@ -35,7 +35,13 @@
  *     var instance = new ListView({key:'Item Two'});
  *     $(instance).appendTo('body');
  * 
- * Works well with [jQuery Routes](http://routesjs.com/).
+ * Works Well With
+ * ---------------
+ * - [jQuery Routes](http://routesjs.com/)
+ * - [Backbone.js](http://documentcloud.github.com/backbone/) for models and collections
+ * 
+ * Copyright 2011 [Syntacticx](http://syntacticx.com/). Released under the [MIT or GPL License](http://jquery.org/license).  
+ * Thanks to [\_why](http://www.youtube.com/watch?v=lwDDa9ctNFE) for [Markaby](http://markaby.github.com/). 
  * 
  * Class Creation
  * --------------
@@ -404,6 +410,11 @@
         this.element(attributes);
         attributes = arguments[1] || {};
       }
+      this.attributes(attributes || {});
+      //allow a template property to be specified
+      if(this.template){
+        this.element(this.template);
+      }
       //proxy all user specified methods
       for(var i = 0; i < this.constructor._methodsToProxy.length; ++i){
         this[this.constructor._methodsToProxy[i]] = proxy(this[this.constructor._methodsToProxy[i]],this);
@@ -412,7 +423,6 @@
       if($.view.logging){
         console.log('jQuery.View: initialized ',this,' with attributes:',attributes);
       }
-      this.attributes(attributes || {});
       var response = this.initialize(this.element());
       if(response && !this._element){
         this.element(response);
@@ -608,7 +618,9 @@
           }
           this._delegates = [];
         }
-        this.$ = $(this._element);
+        if(jquery_available){
+          this.$ = generate_selector_delegate(this);
+        }
         return this._element;
       }
     },
@@ -980,11 +992,33 @@
     escape: function escape(string){
       return document.createTextNode(string);
     },
-    /* Templates
+    /*
+     * ### instance.$ *-> Object | Function*
+     * A hybrid jQuery object for the current view's element that also acts
+     * as a selector function scoped to the current view's element.
+     * 
+     *     //adds "active" class to view's element
+     *     this.$.addClass('active');
+     *     //selects all spans inside the view's element
+     *     this.$('span');
+     *
+     * Templates
      * ---------
      * 
-     * ### instance.render*(String template \[,Object attributes\]) -> String*
+     * ### instance.template *-> String*
+     * Specify a string template in this property if you want it
+     * to be available via the **element** method before the constructor
+     * is called. Also convenient when using CoffeeScript's multiline
+     * strings.
+     *     
+     *     MyView = $.view({
+     *       template: "<p></p>",
+     *       initialize: function(element){
+     *         $(element).addClass('best_paragraph_ever');
+     *       }
+     *     });
      * 
+     * ### instance.render*(String template \[,Object attributes\]) -> String*
      * Render a string with the current template engine.
      * 
      *     this.set('key','value');
@@ -1034,7 +1068,6 @@
   
   /* Properties
    * ----------
-   * 
    * ### $.view.classMethods *-> Object*
    * 
    * Methods that are available to all view classes.
@@ -1058,13 +1091,6 @@
    *       key: 'value'
    *     });
    *     instance.myMethod(); //returns "value"
-   * 
-   * ### instance.$ *-> Object*
-   * A jQuery object scoped to the view's element.
-   * 
-   *     this.$.addClass('active');
-   *     //identical to
-   *     $(this.element()).addClass('active');
    */
   $.view.logging = false;
   
@@ -1079,6 +1105,12 @@
       return $.tmpl(string,attributes);
     }
   });
+  
+  function generate_selector_delegate(view){
+    return extend(function generated_selector_delegate(selector){
+      return $(selector,view._element);
+    },$(view._element));
+  };
   
   function wrap_event_methods_for_child_class(child_class,parent_class){
     var methods = ['bind','unbind','one'];
@@ -1418,15 +1450,9 @@
 })('jQuery' in this ? jQuery : ('Zepto' in this ? Zepto : this),this);
 
 /* 
- * Resources
- * ---------
+ * Examples
+ * --------
  * 
- * Thank You
- * ---------
- * To [\_why](http://www.youtube.com/watch?v=lwDDa9ctNFE) for [Markaby](http://markaby.github.com/) and the fine folks at [DocumentCloud](http://documentcloud.org/)
- * for [Backbone.js](http://documentcloud.github.com/backbone/).
- * 
- * License
- * -------
- * Copyright 2011 [Syntacticx](http://syntacticx.com/). Released under the [MIT or GPL License](http://jquery.org/license).  
+ * - **[Local Todos](http://viewjs.com/examples/todos/index.html)** ([Annotated Source](http://viewjs.com/examples/todos/todos.html))
+ * - **[PhotoFolder](http://syntacticx.com/photos/)** ([Annotated Source](http://photofolder.org/))
  */
