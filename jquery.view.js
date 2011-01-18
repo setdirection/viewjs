@@ -724,9 +724,9 @@
      * A hybrid jQuery object for the current view's element that also acts
      * as a selector function scoped to the current view's element.
      * 
-     *     //adds "active" class to view's element
+     *     //adds "active" class to outermost view element
      *     this.$.addClass('active');
-     *     //selects all spans inside the views element
+     *     //selects all spans inside the view
      *     this.$('span');
      *
      * Templates
