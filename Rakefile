@@ -29,7 +29,7 @@ task :docs do
       last_tag = false
       toc.each do |item|
         tag, id, content = item
-        ignore = true if content == 'Resources'
+        ignore = true if content == 'Examples'
         ignore = false if tag == 'h2' && content == 'Class'
         if !ignore
           toc_html += '</td><td>' if last_tag == 'h3' && tag == 'h2'
@@ -45,6 +45,8 @@ task :docs do
       toc_html
     },
     :html => Proc.new{|title,body,toc|
+      intro = Maruku.new(File.read('README.markdown'),:unsafe_features => false).to_html
+      examples = Maruku.new(File.read('examples.markdown'),:unsafe_features => false).to_html
       <<-EOS
 <!DOCTYPE html>
 <html>
@@ -61,7 +63,9 @@ task :docs do
   <body>
     <div id="content">
       <div id="main">
+        #{intro}
         #{body}
+        #{examples}
       </div>
       <div id="api_toc">
         <table>
@@ -93,18 +97,4 @@ task :docs do
       EOS
     }
   )
-  #write README
-  source = File.read('jquery.view.js')
-  readme_lines = []
-  lines = source.split("\n")
-  lines.each_with_index do |line,i|
-    if line.match /^\s+?\/?\*\s/
-      break if(line.match(/^\s+?\/?\*\s\-\-\-/))
-      readme_lines.push(line.gsub(/^\s+?\/?\*\s/,'')) if !line.match(/\</)
-    end
-  end
-  readme_lines.pop
-  File.open("README.markdown",'w+') do |file|
-    file.write readme_lines.join("\n")
-  end
 end

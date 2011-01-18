@@ -696,7 +696,7 @@ test("HTML and templating escaping",function(){
   
   test("View can have a template property",function(){
     TemplatePropertyView = $.view({
-      template: "<p>${key}</p>",
+      template: "<p id=\"test\">${key}</p>",
       initialize: function(element){
         this.$.addClass('one');
         $(element).addClass('two');
@@ -705,5 +705,10 @@ test("HTML and templating escaping",function(){
     var instance = new TemplatePropertyView({key:'value'});
     equal(instance.element().className,'one two');
     equal(instance.element().innerHTML,'value');
+    equal(instance.element().id,'test');
+    $(instance).appendTo(document.body);
+    equal($('#test').html(),'value');
+    $('#test').remove();
+    equal($('#test').length,0);
   });
 })();

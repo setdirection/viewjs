@@ -1,5 +1,9 @@
 Change Log
 ----------
+1.1.5 - Jan 17, 2011
+- Added checks to ensure ready event does not cause an infinite interval
+- Allowed function to be passed to "callback" which now always returns false
+
 1.1.4 - Jan 15, 2011
 - Added this.$
 - Added optional "template" property.

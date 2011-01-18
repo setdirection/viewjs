@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html;charset=utf-8">
+  <title>todos.coffee</title>
+  <style>
+		/*--------------------- Layout and Typography ----------------------------*/
+		body {
+		  font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, FreeSerif, serif;
+		  font-size: 15px;
+		  line-height: 22px;
+		  color: #252519;
+		  margin: 0; padding: 0;
+		}
+		a {
+		  color: #261a3b;
+		}
+		  a:visited {
+		    color: #261a3b;
+		  }
+		p {
+		  margin: 0 0 15px 0;
+		}
+		h1, h2, h3, h4, h5, h6 {
+		  margin: 0px 0 15px 0;
+		}
+		  h1 {
+		    margin-top: 40px;
+		  }
+		#container {
+		  position: relative;
+		}
+		#background {
+		  position: fixed;
+		  top: 0; left: 525px; right: 0; bottom: 0;
+		  background: #f5f5ff;
+		  border-left: 1px solid #e5e5ee;
+		  z-index: -1;
+		}
+		#jump_to, #jump_page {
+		  background: white;
+		  -webkit-box-shadow: 0 0 25px #777; -moz-box-shadow: 0 0 25px #777;
+		  -webkit-border-bottom-left-radius: 5px; -moz-border-radius-bottomleft: 5px;
+		  font: 10px Arial;
+		  text-transform: uppercase;
+		  cursor: pointer;
+		  text-align: right;
+		}
+		#jump_to, #jump_wrapper {
+		  position: fixed;
+		  right: 0; top: 0;
+		  padding: 5px 10px;
+		}
+		  #jump_wrapper {
+		    padding: 0;
+		    display: none;
+		  }
+		    #jump_to:hover #jump_wrapper {
+		      display: block;
+		    }
+		    #jump_page {
+		      padding: 5px 0 3px;
+		      margin: 0 0 25px 25px;
+		    }
+		      #jump_page .source {
+		        display: block;
+		        padding: 5px 10px;
+		        text-decoration: none;
+		        border-top: 1px solid #eee;
+		      }
+		        #jump_page .source:hover {
+		          background: #f5f5ff;
+		        }
+		        #jump_page .source:first-child {
+		        }
+		table td {
+		  border: 0;
+		  outline: 0;
+		}
+		  td.docs, th.docs {
+		    max-width: 450px;
+		    min-width: 450px;
+		    min-height: 5px;
+		    padding: 10px 25px 1px 50px;
+		    overflow-x: hidden;
+		    vertical-align: top;
+		    text-align: left;
+		  }
+		    .docs pre {
+		      margin: 15px 0 15px;
+		      padding-left: 15px;
+		    }
+		    .docs p tt, .docs p code {
+		      background: #f8f8ff;
+		      border: 1px solid #dedede;
+		      font-size: 12px;
+		      padding: 0 0.2em;
+		    }
+		    .pilwrap {
+		      position: relative;
+		    }
+		      .pilcrow {
+		        font: 12px Arial;
+		        text-decoration: none;
+		        color: #454545;
+		        position: absolute;
+		        top: 3px; left: -20px;
+		        padding: 1px 2px;
+		        opacity: 0;
+		        -webkit-transition: opacity 0.2s linear;
+		      }
+		        td.docs:hover .pilcrow {
+		          opacity: 1;
+		        }
+		  td.code, th.code {
+		    padding: 14px 15px 16px 25px;
+		    width: 100%;
+		    vertical-align: top;
+		    background: #f5f5ff;
+		    border-left: 1px solid #e5e5ee;
+		  }
+		    pre, tt, code {
+		      font-size: 12px; line-height: 18px;
+		      font-family: Monaco, Consolas, "Lucida Console", monospace;
+		      margin: 0; padding: 0;
+		    }
+
+
+		/*---------------------- Syntax Highlighting -----------------------------*/
+		td.linenos { background-color: #f0f0f0; padding-right: 10px; }
+		span.lineno { background-color: #f0f0f0; padding: 0 5px 0 5px; }
+		body .hll { background-color: #ffffcc }
+		body .c { color: #408080; font-style: italic }  /* Comment */
+		body .err { border: 1px solid #FF0000 }         /* Error */
+		body .k { color: #954121 }                      /* Keyword */
+		body .o { color: #666666 }                      /* Operator */
+		body .cm { color: #408080; font-style: italic } /* Comment.Multiline */
+		body .cp { color: #BC7A00 }                     /* Comment.Preproc */
+		body .c1 { color: #408080; font-style: italic } /* Comment.Single */
+		body .cs { color: #408080; font-style: italic } /* Comment.Special */
+		body .gd { color: #A00000 }                     /* Generic.Deleted */
+		body .ge { font-style: italic }                 /* Generic.Emph */
+		body .gr { color: #FF0000 }                     /* Generic.Error */
+		body .gh { color: #000080; font-weight: bold }  /* Generic.Heading */
+		body .gi { color: #00A000 }                     /* Generic.Inserted */
+		body .go { color: #808080 }                     /* Generic.Output */
+		body .gp { color: #000080; font-weight: bold }  /* Generic.Prompt */
+		body .gs { font-weight: bold }                  /* Generic.Strong */
+		body .gu { color: #800080; font-weight: bold }  /* Generic.Subheading */
+		body .gt { color: #0040D0 }                     /* Generic.Traceback */
+		body .kc { color: #954121 }                     /* Keyword.Constant */
+		body .kd { color: #954121; font-weight: bold }  /* Keyword.Declaration */
+		body .kn { color: #954121; font-weight: bold }  /* Keyword.Namespace */
+		body .kp { color: #954121 }                     /* Keyword.Pseudo */
+		body .kr { color: #954121; font-weight: bold }  /* Keyword.Reserved */
+		body .kt { color: #B00040 }                     /* Keyword.Type */
+		body .m { color: #666666 }                      /* Literal.Number */
+		body .s { color: #219161 }                      /* Literal.String */
+		body .na { color: #7D9029 }                     /* Name.Attribute */
+		body .nb { color: #954121 }                     /* Name.Builtin */
+		body .nc { color: #0000FF; font-weight: bold }  /* Name.Class */
+		body .no { color: #880000 }                     /* Name.Constant */
+		body .nd { color: #AA22FF }                     /* Name.Decorator */
+		body .ni { color: #999999; font-weight: bold }  /* Name.Entity */
+		body .ne { color: #D2413A; font-weight: bold }  /* Name.Exception */
+		body .nf { color: #0000FF }                     /* Name.Function */
+		body .nl { color: #A0A000 }                     /* Name.Label */
+		body .nn { color: #0000FF; font-weight: bold }  /* Name.Namespace */
+		body .nt { color: #954121; font-weight: bold }  /* Name.Tag */
+		body .nv { color: #19469D }                     /* Name.Variable */
+		body .ow { color: #AA22FF; font-weight: bold }  /* Operator.Word */
+		body .w { color: #bbbbbb }                      /* Text.Whitespace */
+		body .mf { color: #666666 }                     /* Literal.Number.Float */
+		body .mh { color: #666666 }                     /* Literal.Number.Hex */
+		body .mi { color: #666666 }                     /* Literal.Number.Integer */
+		body .mo { color: #666666 }                     /* Literal.Number.Oct */
+		body .sb { color: #219161 }                     /* Literal.String.Backtick */
+		body .sc { color: #219161 }                     /* Literal.String.Char */
+		body .sd { color: #219161; font-style: italic } /* Literal.String.Doc */
+		body .s2 { color: #219161 }                     /* Literal.String.Double */
+		body .se { color: #BB6622; font-weight: bold }  /* Literal.String.Escape */
+		body .sh { color: #219161 }                     /* Literal.String.Heredoc */
+		body .si { color: #BB6688; font-weight: bold }  /* Literal.String.Interpol */
+		body .sx { color: #954121 }                     /* Literal.String.Other */
+		body .sr { color: #BB6688 }                     /* Literal.String.Regex */
+		body .s1 { color: #219161 }                     /* Literal.String.Single */
+		body .ss { color: #19469D }                     /* Literal.String.Symbol */
+		body .bp { color: #954121 }                     /* Name.Builtin.Pseudo */
+		body .vc { color: #19469D }                     /* Name.Variable.Class */
+		body .vg { color: #19469D }                     /* Name.Variable.Global */
+		body .vi { color: #19469D }                     /* Name.Variable.Instance */
+		body .il { color: #666666 }                     /* Literal.Number.Integer.Long */
+		
+    .octothorpe {
+	    display:none;
+    }
+
+    body .err {
+	    border:none;
+    }
+  </style>
+</head>
+<body>
+<div id='container'>
+  <div id="background"></div>
+  <table cellspacing=0 cellpadding=0>
+  <thead>
+    <tr>
+      <th class=docs><h1>todos.coffee</h1></th>
+      <th class=code></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr id='section-1'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-1">#</a>
+        </div>
+        <p> Port of an example Backbone application contributed by
+ <a href="http://jgn.me/">Jérôme Gravel-Niquet</a> to CoffeeScript
+ and jQuery View.</p>
+
+<p> This demo uses a simple
+ <a href="backbone-localstorage.html">LocalStorage adapter</a>
+ to persist Backbone models within your browser.</p>
+
+<p> Load the application once the DOM is ready, using <code>jQuery.ready</code>:</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre><span class="err">$</span> <span class="o">-&gt;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-2'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-2">#</a>
+        </div>
+        <p> Todo Model</p>
+
+<hr />
+      </td>
+      <td class=code>
+        <div class='highlight'><pre></pre></div>
+      </td>
+    </tr>
+    <tr id='section-3'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-3">#</a>
+        </div>
+        <p> Our basic <strong>Todo</strong> model has <code>content</code>, <code>order</code>, and <code>done</code> attributes.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="no">Todo</span> <span class="o">=</span> <span class="no">Backbone</span><span class="o">.</span><span class="n">Model</span><span class="o">.</span><span class="n">extend</span>
+  </pre></div>
+      </td>
+    </tr>
+    <tr id='section-4'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-4">#</a>
+        </div>
+        <p> If you don&rsquo;t provide a todo, one will be provided for you.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="no">EMPTY</span><span class="p">:</span> <span class="s1">&#39;empty todo...&#39;</span>
+    </pre></div>
+      </td>
+    </tr>
+    <tr id='section-5'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-5">#</a>
+        </div>
+        <p> Ensure that each todo created has <code>content</code>.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="kp">initialize</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="vi">@set</span><span class="p">(</span><span class="n">content</span><span class="p">:</span> <span class="vi">@EMPTY</span><span class="p">)</span> <span class="k">if</span> <span class="o">!</span><span class="vi">@get</span><span class="p">(</span><span class="s1">&#39;content&#39;</span><span class="p">)</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-6'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-6">#</a>
+        </div>
+        <p> Toggle the <code>done</code> state of this todo item.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">toggle</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="vi">@save</span><span class="p">(</span><span class="n">done</span><span class="p">:</span> <span class="o">!</span><span class="vi">@get</span> <span class="s1">&#39;done&#39;</span><span class="p">)</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-7'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-7">#</a>
+        </div>
+        <p> Remove this Todo from <em>localStorage</em> and delete its view.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">clear</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="vi">@destroy</span><span class="p">()</span>
+      <span class="vi">@view</span><span class="o">.</span><span class="n">remove</span><span class="p">()</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-8'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-8">#</a>
+        </div>
+        <p> Todo Collection</p>
+
+<hr />
+      </td>
+      <td class=code>
+        <div class='highlight'><pre></pre></div>
+      </td>
+    </tr>
+    <tr id='section-9'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-9">#</a>
+        </div>
+        <p> The collection of todos is backed by <em>localStorage</em> instead of a remote
+ server.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="no">TodoList</span> <span class="o">=</span> <span class="no">Backbone</span><span class="o">.</span><span class="n">Collection</span><span class="o">.</span><span class="n">extend</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-10'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-10">#</a>
+        </div>
+        <p> Reference to this collection&rsquo;s model.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">model</span><span class="p">:</span> <span class="no">Todo</span>
+    </pre></div>
+      </td>
+    </tr>
+    <tr id='section-11'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-11">#</a>
+        </div>
+        <p> Save all of the todo items under the <code>"todos"</code> namespace.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">localStorage</span><span class="p">:</span> <span class="kp">new</span> <span class="no">Store</span> <span class="s2">&quot;todos&quot;</span>
+    </pre></div>
+      </td>
+    </tr>
+    <tr id='section-12'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-12">#</a>
+        </div>
+        <p> Filter down the list of all todo items that are finished.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">done</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="vi">@filter</span> <span class="p">(</span><span class="n">todo</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">todo</span><span class="o">.</span><span class="n">get</span> <span class="s1">&#39;done&#39;</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-13'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-13">#</a>
+        </div>
+        <p> Filter down the list to only todo items that are still not finished.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">remaining</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="vi">@without</span><span class="o">.</span><span class="n">apply</span> <span class="err">@</span><span class="p">,</span> <span class="vi">@done</span><span class="p">()</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-14'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-14">#</a>
+        </div>
+        <p> We keep the Todos in sequential order, despite being saved by unordered
+ GUID in the database. This generates the next order number for new items.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">nextOrder</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="k">return</span> <span class="mi">1</span> <span class="k">if</span> <span class="o">!</span><span class="vi">@length</span>
+      <span class="vi">@last</span><span class="p">()</span><span class="o">.</span><span class="n">get</span> <span class="s1">&#39;order&#39;</span> <span class="o">+</span> <span class="mi">1</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-15'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-15">#</a>
+        </div>
+        <p> Todos are sorted by their original insertion order.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">comparator</span><span class="p">:</span> <span class="p">(</span><span class="n">todo</span><span class="p">)</span> <span class="o">-&gt;</span>
+      <span class="n">todo</span><span class="o">.</span><span class="n">get</span> <span class="s1">&#39;order&#39;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-16'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-16">#</a>
+        </div>
+        <p> Create our global collection of <strong>Todos</strong>.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="no">Todos</span> <span class="o">=</span> <span class="kp">new</span> <span class="no">TodoList</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-17'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-17">#</a>
+        </div>
+        <p> Todo Item View</p>
+
+<hr />
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="no">TodoView</span> <span class="o">=</span> <span class="vg">$.</span><span class="n">view</span>
+    <span class="kp">initialize</span><span class="p">:</span> <span class="o">-&gt;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-18'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-18">#</a>
+        </div>
+        <p> The TodoView listens for changes to its model, re-rendering. Since there&rsquo;s
+ a one-to-one correspondence between a <strong>Todo</strong> and a <strong>TodoView</strong> in this
+ app, we set a direct reference on the model for convenience.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>      <span class="vi">@model</span> <span class="o">=</span> <span class="vi">@get</span> <span class="s1">&#39;model&#39;</span>
+      <span class="vi">@model</span><span class="o">.</span><span class="n">view</span> <span class="o">=</span> <span class="err">@</span>
+      <span class="vi">@model</span><span class="o">.</span><span class="n">bind</span> <span class="s1">&#39;change&#39;</span><span class="p">,</span> <span class="vi">@render</span>
+      <span class="vi">@ready</span> <span class="vi">@render</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-19'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-19">#</a>
+        </div>
+        <p> Build and return the DOM element for the Todo item, storing references to
+ elements that are needed later</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>      <span class="vi">@li</span><span class="p">(</span>
+        <span class="vi">@todoElement</span> <span class="o">=</span> <span class="vi">@div</span><span class="p">(</span><span class="n">className</span><span class="p">:</span> <span class="s1">&#39;todo&#39;</span><span class="p">,</span>
+          <span class="vi">@div</span><span class="p">(</span><span class="n">className</span><span class="p">:</span> <span class="s1">&#39;display&#39;</span><span class="p">,</span>
+            <span class="err">$</span><span class="p">(</span><span class="vi">@input</span> <span class="n">className</span><span class="p">:</span> <span class="s1">&#39;check&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="s1">&#39;checkbox&#39;</span><span class="p">,</span> <span class="n">checked</span><span class="p">:</span> <span class="vi">@model</span><span class="o">.</span><span class="n">get</span> <span class="s1">&#39;done&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">click</span> <span class="vi">@toggleDone</span>
+            <span class="vi">@contentElement</span> <span class="o">=</span> <span class="err">$</span><span class="p">(</span><span class="vi">@div</span> <span class="n">className</span><span class="p">:</span> <span class="s1">&#39;todo-content&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">dblclick</span> <span class="vi">@edit</span>
+            <span class="err">$</span><span class="p">(</span><span class="vi">@div</span> <span class="n">className</span><span class="p">:</span> <span class="s1">&#39;todo-destroy&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">click</span> <span class="vi">@clear</span>
+          <span class="p">)</span>
+          <span class="vi">@div</span><span class="p">(</span><span class="n">className</span><span class="p">:</span> <span class="s1">&#39;edit&#39;</span><span class="p">,</span>
+            <span class="vi">@inputElement</span> <span class="o">=</span> <span class="err">$</span><span class="p">(</span><span class="vi">@input</span> <span class="n">className</span><span class="p">:</span> <span class="s1">&#39;todo-input&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="s1">&#39;text&#39;</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span>
+              <span class="n">keypress</span><span class="p">:</span> <span class="vi">@updateOnEnter</span>
+              <span class="n">blur</span><span class="p">:</span> <span class="vi">@close</span>
+            <span class="p">)</span>
+          <span class="p">)</span>
+        <span class="p">)</span>
+      <span class="p">)</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-20'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-20">#</a>
+        </div>
+        <p>Toggle the <code>"done"</code> state of the model.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">toggleDone</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="vi">@model</span><span class="o">.</span><span class="n">toggle</span><span class="p">()</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-21'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-21">#</a>
+        </div>
+        <p> Switch this view into <code>"editing"</code> mode, displaying the input field.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">edit</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="err">@</span><span class="vg">$.</span><span class="n">addClass</span> <span class="s1">&#39;editing&#39;</span>
+      <span class="vi">@inputElement</span><span class="o">.</span><span class="n">focus</span><span class="p">()</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-22'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-22">#</a>
+        </div>
+        <p>Remove the item, destroy the model.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">clear</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="vi">@model</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-23'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-23">#</a>
+        </div>
+        <p> If you hit <code>enter</code>, we&rsquo;re through editing the item.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">updateOnEnter</span><span class="p">:</span> <span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">-&gt;</span>
+      <span class="vi">@close</span><span class="p">()</span> <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">keyCode</span> <span class="o">==</span> <span class="mi">13</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-24'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-24">#</a>
+        </div>
+        <p> Close the <code>"editing"</code> mode, saving changes to the todo.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">close</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="vi">@model</span><span class="o">.</span><span class="n">save</span> <span class="n">content</span><span class="p">:</span> <span class="vi">@inputElement</span><span class="o">.</span><span class="n">val</span><span class="p">()</span>
+      <span class="err">@</span><span class="vg">$.</span><span class="n">removeClass</span> <span class="s1">&#39;editing&#39;</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-25'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-25">#</a>
+        </div>
+        <p> Remove this view from the DOM.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">remove</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="err">@</span><span class="vg">$.</span><span class="n">remove</span><span class="p">()</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-26'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-26">#</a>
+        </div>
+        <p> To avoid XSS (not that it would be harmful in this particular app),
+ we use <code>jQuery.text</code> to set the contents of the todo item.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">render</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="n">content</span> <span class="o">=</span> <span class="vi">@model</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;content&#39;</span><span class="p">)</span>
+      <span class="vi">@contentElement</span><span class="o">.</span><span class="n">text</span> <span class="n">content</span>
+      <span class="vi">@inputElement</span><span class="o">.</span><span class="n">val</span> <span class="n">content</span>
+      <span class="err">$</span><span class="p">(</span><span class="vi">@todoElement</span><span class="p">)</span><span class="o">[</span><span class="k">if</span> <span class="vi">@model</span><span class="o">.</span><span class="n">get</span> <span class="s1">&#39;done&#39;</span> <span class="k">then</span> <span class="s1">&#39;addClass&#39;</span> <span class="k">else</span> <span class="s1">&#39;removeClass&#39;</span><span class="o">]</span><span class="p">(</span><span class="s1">&#39;done&#39;</span><span class="p">)</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-27'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-27">#</a>
+        </div>
+        <p> The Application</p>
+
+<hr />
+      </td>
+      <td class=code>
+        <div class='highlight'><pre></pre></div>
+      </td>
+    </tr>
+    <tr id='section-28'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-28">#</a>
+        </div>
+        <p> Our overall <strong>AppView</strong> is the top-level piece of UI.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>  <span class="no">AppView</span> <span class="o">=</span> <span class="vg">$.</span><span class="n">view</span>
+    <span class="n">template</span><span class="p">:</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    &lt;div id=&quot;</span><span class="n">todoapp</span><span class="s2">&quot;&gt;</span>
+<span class="s2">      &lt;div class=&quot;</span><span class="n">title</span><span class="s2">&quot;&gt;</span>
+<span class="s2">        &lt;h1&gt;Todos&lt;/h1&gt;</span>
+<span class="s2">      &lt;/div&gt;</span>
+<span class="s2">      &lt;div class=&quot;</span><span class="n">content</span><span class="s2">&quot;&gt;</span>
+<span class="s2">        &lt;div id=&quot;</span><span class="n">create</span><span class="o">-</span><span class="n">todo</span><span class="s2">&quot;&gt;</span>
+<span class="s2">          &lt;input id=&quot;</span><span class="kp">new</span><span class="o">-</span><span class="n">todo</span><span class="s2">&quot; placeholder=&quot;</span><span class="no">What</span> <span class="n">needs</span> <span class="n">to</span> <span class="n">be</span> <span class="n">done?</span><span class="s2">&quot; type=&quot;</span><span class="n">text</span><span class="s2">&quot; /&gt;</span>
+<span class="s2">          &lt;span class=&quot;</span><span class="n">ui</span><span class="o">-</span><span class="n">tooltip</span><span class="o">-</span><span class="n">top</span><span class="s2">&quot; style=&quot;</span><span class="nb">display</span><span class="ss">:none</span><span class="p">;</span><span class="s2">&quot;&gt;Press Enter to save this task&lt;/span&gt;</span>
+<span class="s2">        &lt;/div&gt;</span>
+<span class="s2">        &lt;div id=&quot;</span><span class="n">todos</span><span class="s2">&quot;&gt;</span>
+<span class="s2">          &lt;ul id=&quot;</span><span class="n">todo</span><span class="o">-</span><span class="n">list</span><span class="s2">&quot;&gt;&lt;/ul&gt;</span>
+<span class="s2">        &lt;/div&gt;</span>
+<span class="s2">        &lt;div id=&quot;</span><span class="n">todo</span><span class="o">-</span><span class="n">stats</span><span class="s2">&quot;&gt;&lt;/div&gt;</span>
+<span class="s2">      &lt;/div&gt;</span>
+<span class="s2">    &lt;/div&gt;</span>
+<span class="s2">    &quot;&quot;&quot;</span>
+    
+    <span class="kp">initialize</span><span class="p">:</span> <span class="o">-&gt;</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-29'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-29">#</a>
+        </div>
+        <p> Attach event handlers and store references</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>      <span class="vi">@inputElement</span> <span class="o">=</span> <span class="err">@$</span><span class="p">(</span><span class="s2">&quot;#new-todo&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span>
+        <span class="n">keypress</span><span class="p">:</span> <span class="vi">@createOnEnter</span>
+        <span class="n">keyup</span><span class="p">:</span> <span class="vi">@showTooltip</span>
+      <span class="p">)</span>
+      <span class="vi">@statsElement</span> <span class="o">=</span> <span class="err">@$</span> <span class="s1">&#39;#todo-stats&#39;</span>
+      <span class="vi">@listElement</span> <span class="o">=</span> <span class="err">@$</span> <span class="s1">&#39;#todo-list&#39;</span>
+      <span class="vi">@tooltipElement</span> <span class="o">=</span> <span class="err">@$</span> <span class="s1">&#39;.ui-tooltip-top&#39;</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-30'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-30">#</a>
+        </div>
+        <p> At initialization we bind to the relevant events on the <code>Todos</code>
+ collection, when items are added or changed. Kick things off by
+ loading any preexisting todos that might be saved in <em>localStorage</em>.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>      <span class="no">Todos</span><span class="o">.</span><span class="n">bind</span> <span class="s1">&#39;add&#39;</span><span class="p">,</span> <span class="vi">@addOne</span>
+      <span class="no">Todos</span><span class="o">.</span><span class="n">bind</span> <span class="s1">&#39;refresh&#39;</span><span class="p">,</span> <span class="vi">@addAll</span>
+      <span class="no">Todos</span><span class="o">.</span><span class="n">bind</span> <span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="vi">@render</span>
+      <span class="no">Todos</span><span class="o">.</span><span class="n">fetch</span><span class="p">()</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-31'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-31">#</a>
+        </div>
+        <p> Re-rendering the App just means refreshing the statistics &mdash; the rest
+ of the app doesn&rsquo;t change.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">render</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="vi">@total</span> <span class="o">=</span> <span class="no">Todos</span><span class="o">.</span><span class="n">length</span>
+      <span class="vi">@done</span> <span class="o">=</span> <span class="no">Todos</span><span class="o">.</span><span class="n">done</span><span class="p">()</span><span class="o">.</span><span class="n">length</span>
+      <span class="vi">@remaining</span> <span class="o">=</span> <span class="no">Todos</span><span class="o">.</span><span class="n">remaining</span><span class="p">()</span><span class="o">.</span><span class="n">length</span>
+      <span class="vi">@statsElement</span><span class="o">.</span><span class="n">empty</span><span class="p">()</span>
+      <span class="k">if</span> <span class="vi">@total</span>
+        <span class="vi">@statsElement</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+          <span class="vi">@span</span><span class="p">(</span><span class="n">className</span><span class="p">:</span> <span class="s1">&#39;todo-count&#39;</span><span class="p">,</span>
+            <span class="vi">@span</span> <span class="vi">@remaining</span><span class="p">,</span> <span class="n">className</span><span class="p">:</span> <span class="s1">&#39;number&#39;</span>
+            <span class="vi">@span</span> <span class="p">(</span><span class="k">if</span> <span class="vi">@remaining</span> <span class="n">is</span> <span class="mi">1</span> <span class="k">then</span> <span class="s1">&#39; item &#39;</span> <span class="k">else</span> <span class="s1">&#39; items &#39;</span><span class="p">),</span> <span class="n">className</span><span class="p">:</span> <span class="s1">&#39;word&#39;</span>
+            <span class="s1">&#39;left.&#39;</span>
+          <span class="p">)</span>
+        <span class="p">)</span>
+      <span class="k">if</span> <span class="vi">@done</span>
+        <span class="vi">@statsElement</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+          <span class="err">$</span><span class="p">(</span><span class="vi">@span</span><span class="p">(</span><span class="n">className</span><span class="p">:</span> <span class="s1">&#39;todo-clear&#39;</span><span class="p">,</span>
+            <span class="vi">@a</span><span class="p">(</span><span class="n">href</span><span class="ss">:&#39;#&#39;</span><span class="p">,</span>
+              <span class="s1">&#39;Clear &#39;</span>
+              <span class="vi">@span</span> <span class="vi">@done</span><span class="p">,</span> <span class="n">className</span><span class="p">:</span> <span class="s1">&#39;number-done&#39;</span>
+              <span class="s1">&#39; completed &#39;</span>
+              <span class="vi">@span</span> <span class="p">(</span><span class="k">if</span> <span class="vi">@done</span> <span class="n">is</span> <span class="mi">1</span> <span class="k">then</span> <span class="s1">&#39;item&#39;</span> <span class="k">else</span> <span class="s1">&#39;items&#39;</span><span class="p">),</span> <span class="n">className</span><span class="p">:</span> <span class="s1">&#39;word-done&#39;</span>
+            <span class="p">)</span>
+          <span class="p">))</span><span class="o">.</span><span class="n">click</span> <span class="vi">@clearCompleted</span>
+        <span class="p">)</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-32'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-32">#</a>
+        </div>
+        <p> Add a single todo item to the list by creating a view for it, and
+ appending its element to the <code>&lt;ul&gt;</code>.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">addOne</span><span class="p">:</span> <span class="p">(</span><span class="n">todo</span><span class="p">)</span> <span class="o">-&gt;</span>
+      <span class="vi">@listElement</span><span class="o">.</span><span class="n">append</span> <span class="kp">new</span> <span class="no">TodoView</span> <span class="n">model</span><span class="p">:</span> <span class="n">todo</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-33'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-33">#</a>
+        </div>
+        <p> Add all items in the <strong>Todos</strong> collection at once.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">addAll</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="no">Todos</span><span class="o">.</span><span class="n">each</span> <span class="vi">@addOne</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-34'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-34">#</a>
+        </div>
+        <p> Generate the attributes for a new Todo item.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">newAttributes</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="n">content</span><span class="p">:</span> <span class="vi">@inputElement</span><span class="o">.</span><span class="n">val</span><span class="p">()</span>
+      <span class="n">order</span><span class="p">:</span> <span class="no">Todos</span><span class="o">.</span><span class="n">nextOrder</span><span class="p">()</span>
+      <span class="n">done</span><span class="p">:</span> <span class="kp">false</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-35'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-35">#</a>
+        </div>
+        <p> If you hit return in the main input field, create new <strong>Todo</strong> model,
+ persisting it to <em>localStorage</em>.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">createOnEnter</span><span class="p">:</span> <span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">-&gt;</span>
+      <span class="k">return</span> <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">keyCode</span> <span class="n">isnt</span> <span class="mi">13</span>
+      <span class="no">Todos</span><span class="o">.</span><span class="n">create</span> <span class="vi">@newAttributes</span><span class="p">()</span>
+      <span class="vi">@inputElement</span><span class="o">.</span><span class="n">val</span> <span class="s1">&#39;&#39;</span>
+      </pre></div>
+      </td>
+    </tr>
+    <tr id='section-36'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-36">#</a>
+        </div>
+        <p> Clear all done todo items, destroying their models.</p>
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">clearCompleted</span><span class="p">:</span> <span class="o">-&gt;</span>
+      <span class="vi">@map</span> <span class="no">Todos</span><span class="o">.</span><span class="n">done</span><span class="p">(),</span> <span class="p">(</span><span class="n">todo</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">todo</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+      <span class="kp">false</span></pre></div>
+      </td>
+    </tr>
+    <tr id='section-37'>
+      <td class=docs>
+        <div class="octowrap">
+          <a class="octothorpe" href="#section-37">#</a>
+        </div>
+        <p> Lazily show the tooltip that tells you to press <code>enter</code> to save
+ a new todo item, after one second.</p>
+
+      </td>
+      <td class=code>
+        <div class='highlight'><pre>    <span class="n">showTooltip</span><span class="p">:</span> <span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="o">-&gt;</span>
+      <span class="n">value</span> <span class="o">=</span> <span class="vi">@inputElement</span><span class="o">.</span><span class="n">val</span><span class="p">()</span>
+      <span class="vi">@tooltipElement</span><span class="o">.</span><span class="n">fadeOut</span><span class="p">()</span>
+      <span class="n">clearTimeout</span><span class="p">(</span><span class="vi">@tooltipTimeout</span><span class="p">)</span> <span class="k">if</span> <span class="vi">@tooltipTimeout</span>
+      <span class="k">return</span> <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="s1">&#39;&#39;</span> <span class="o">||</span> <span class="n">value</span> <span class="n">is</span> <span class="vi">@inputElement</span><span class="o">.</span><span class="n">attr</span> <span class="s1">&#39;placeholder&#39;</span>
+      <span class="vi">@tooltipTimeout</span> <span class="o">=</span> <span class="n">setTimeout</span> <span class="o">=&gt;</span>
+        <span class="vi">@tooltipElement</span><span class="o">.</span><span class="n">show</span><span class="p">()</span><span class="o">.</span><span class="n">fadeIn</span><span class="p">()</span>
+      <span class="p">,</span><span class="mi">1000</span>
+
+  <span class="err">$</span><span class="p">(</span><span class="kp">new</span> <span class="no">AppView</span><span class="p">()</span><span class="o">.</span><span class="n">element</span><span class="p">())</span><span class="o">.</span><span class="n">appendTo</span><span class="p">(</span><span class="s1">&#39;#app&#39;</span><span class="p">);</span></pre></div>
+      </td>
+    </tr>
+  </table>
+</div>
+<script type="text/javascript">
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-20694546-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })();
+
+</script>
+
+</body>
+</html>
