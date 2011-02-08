@@ -410,7 +410,7 @@
         return this._attributes[key];
       }
     },
-    /* ### instance.set*(String key, mixed value \[,Boolean silent = false\]) -> mixed*<br/>instance.set*(Object attributes \[,Boolean silent = false\]) -> Object*
+    /* ### instance.set*(Object attributes \[,Boolean silent = false\]) -> Object*
      * Set an attribute in the view. This will trigger the **change**
      * event. Set **silent** to true to prevent the **change** event
      * from firing.
@@ -419,17 +419,11 @@
      *     instance.bind('change',function(changed_attributes){
      *       for(var key in changed_attributes){}
      *     });
-     *     instance.set('key','value');
+     *     instance.set({key:'value'});
      * 
      * You can bind events to individual keys as well:
      * 
      *     instance.bind('change:key',function(value){});
-     * 
-     * An object can also be passed to set multiple values:
-     * 
-     *     instance.set({
-     *       key: 'value'
-     *     });
      */ 
     set: function set(key,value,supress_observers){
       if(typeof(key) === 'object'){
@@ -823,7 +817,7 @@
   
   var engines = {};
   var default_engine;
-  
+    
   //register default engine
   $.view('engine',{
     name: 'jquery.tmpl',
@@ -1180,5 +1174,12 @@
     }
     return !!(ancestor.body);
   };
+  
+  //express support
+  if(typeof(module) !== "undefined"){
+    module.exports.render = function render(str,options){
+      return new $.view(new Function(str),options).element();
+    };
+  }
   
 })('jQuery' in this ? jQuery : ('Zepto' in this ? Zepto : this),this);

@@ -591,6 +591,32 @@ test("HTML and templating escaping",function(){
 })();
 
 (function(){
+  test("Multiple subclass element setup via return and element()",function(){
+    var ViewA = $.view(function(){
+      return this.div({className: "a"});
+    });
+    var ViewB = $.view(ViewA,function(element){
+      this.element(this.div({className: "b"},element));
+    });
+    var ViewC = $.view(ViewB,function(element){});
+    var instance = new ViewC();
+    equal(instance.element().className,'b');
+    equal(instance.element().firstChild.className,'a');
+    var ViewA = $.view(function(){
+      return this.div({className: "a"});
+    });
+    var ViewB = $.view(ViewA,function(element){
+      this.element(this.div({className: "b"}, element));
+      return this.element();
+    });
+    var ViewC = $.view(ViewB,function(element){});
+    var instance = new ViewC();
+    equal(instance.element().className,'b');
+    equal(instance.element().firstChild.className,'a');
+  });
+})();
+
+(function(){
   var ChangeKeyEventView = $.view(function(){
     this.wasChangedTo = false;
     this.bind('change:id',function(value){
