@@ -411,7 +411,7 @@
       }
     },
     /* ### instance.set*(Object attributes \[,Boolean silent = false\]) -> Object*
-     * Set an attribute in the view. This will trigger the **change**
+     * Set attributes in the view. This will trigger the **change**
      * event. Set **silent** to true to prevent the **change** event
      * from firing.
      * 
@@ -427,11 +427,21 @@
      */ 
     set: function set(key,value,supress_observers){
       if(typeof(key) === 'object'){
-        var response = {};
-        for(var _key in key){
-          response[_key] = this.set(_key,key[_key],value);
+        var attributes = arguments[0];
+        supress_observers = arguments[1];
+        for(var key in attributes){
+          var value = attributes[key];
+          this._attributes[key] = value;
+          this._changes[key] = value;
         }
-        return response;
+        if(supress_observers === undefined){
+          this.trigger('change',this._changes);
+          for(var key in this._changes){
+            this.trigger('change:' + key,this._changes[key]);
+          }
+          this._changes = {};
+        }
+        return attributes;
       }else{
         this._attributes[key] = value;
         this._changes[key] = value;
