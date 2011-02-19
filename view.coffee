@@ -54,7 +54,32 @@ View.extend
     else if is_collection model
       @attributes = {}
       @collection = model
-      
+  
+  register: (extension,handler) ->
+    if extension is '$'
+      @extend
+        before:
+          $: (args,next) ->
+            $ = args[0]
+            if handler.detect $
+              callback = (selector) ->
+                if is_element selector
+                  @[0] = selector
+                  @length = 1
+                  extend callback, @[0]
+                else if typeof selector is 'string'
+                  handler.query selector, @[0]          
+              @$ = callback
+              @prototype.$ = callback if @prototoype
+            else
+              next()
+        after:
+          tag: (args,response,next) ->
+            next args, handler.extend response
+  
+  render: ->
+    @div()
+    
   #data
   get: (key) ->
     if @model
@@ -77,7 +102,9 @@ View.extend
             @_changed = true
             @trigger 'change:' + attribute, @, value, options
       @trigger 'change', @, options if not options.silent and @_changed
-      
+  
+  # events
+  
   bind: (event_name,callback) ->
     calls = @_callbacks or @_callbacks = {}
     list = @_callbacks[event_name] or @_callbacks[event_name] = []
@@ -106,8 +133,12 @@ View.extend
     if list = calls.all
       item.apply @, arguments for item in list
     @
-    
-# reflection
+
+  # DOM
+  $: ($) ->
+      
+  # reflection
+
   before: (methods) ->
     if arguments.length is 2
       methods = []
@@ -118,25 +149,12 @@ View.extend
         callback = ->
           args = array_from arguments
           next = ->
+            args = arguments if arguments.length > 0
             original.apply @, args
           method.apply @, [args,next]
         @[method_name] = callback
-        @prototype[method_name] = callback if @prototype
-      
-  after: (methods) ->
-    if arguments.length is 2
-      methods = []
-      methods[argument[0]] = argument[1]
-    for method_name, method of methods
-      do (method_name,method) ->
-        original = @[method_name]
-        callback = ->
-          args = array_from arguments
-          next = ->
-            original.apply @, args
-          method.apply @, [args,next]
-        @[method_name] = callback
-        @prototype[method_name] = callback if @prototype
+        @prototype[method_name] = callback if @prototype  
+  after: (methods) ->   #TODO implement
   
 extend_api = 
   publish: (path) -> #TODO
@@ -145,14 +163,15 @@ extend_api =
   collection: (collection) -> @_initialize collection
   on: (events) -> 
     for event_name, callback of events
-      if event_name is 'change' and typeof of callback is 'object'
+      if event_name is 'change' and typeof callback is 'object'
         for _event_name, _callback of events.change
           @bind 'change:' + _event_name, _callback
       else
         @bind event_name, callback
   render: -> #TODO
   delegate: -> #TODO
-  $: -> #TODO
+  $: ($) -> @$ $
+  register: (registers) -> @register registers
   before: (methods) -> @before methods
   after: (methods) -> @after methods
   logging: -> #TODO
@@ -164,10 +183,10 @@ View.method
   emit: View.trigger
 
 # Builder
-create_element = (tag_name) ->
+View.method tag: (tag_name) ->
   elements = []
   attributes = {}
-  for argument in arguments
+  for argument in array_from(arguments)[1..]
     process_node_argument @, elements, attributes, argument
   tag_name = tag_name.toLowerCase()
   if ie and (attributes.name or (tag_name is 'input' && attributes.type))
@@ -280,7 +299,7 @@ attribute_map =
 generate_builder_method = (tag_name) -> ->
   args = [tag_name];
   args.push argument for argument in arguments
-  create_element.apply @, args
+  @tag.apply @, args
       
 for tag in supported_html_tags
   View.method tag, generate_builder_method tag
@@ -325,8 +344,8 @@ proxy = (func,object) ->
       func.apply object, arguments
   else
     args = array_from arguments
-    args.shift();
-    args.shift();
+    args.shift()
+    args.shift()
     ->
       func.apply object, args.concat array_from arguments
 
@@ -359,3 +378,21 @@ escape_html = (string) ->
 
 exports = if module?.exports? then module.exports else window
 exports.View = View
+
+
+# jQuery Plugin
+View.register
+  $:
+    detect: (object) -> object is jQuery
+    query: (selector,context) -> jQuery selector, context
+    extend: (element) -> jQuery element
+
+
+# Prototype Plugin
+View.register
+  $:
+    detect: (object) -> object is Prototype
+    query: (selector,context) -> $$ selector, context
+    extend: (element) -> Element.extend element
+
+# express plugin
