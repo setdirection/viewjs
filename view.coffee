@@ -17,43 +17,31 @@ View.method = View.prototype.method = (method_name,callback) ->
   else
     @[method_name] = callback
     @prototype[method_name] = callback if @prototype
-
-extend_api =
-  publish: (path) -> #TODO
-  route: (route) -> #TODO
-  model: (model) -> #TODO
-    @_initialize model
-  collection: (collection) ->
-    @_initialize collection
-  on: (events) -> #TODO
-  render: -> #TODO
-  delegate: -> #TODO
-  $: -> #TODO
-  before: -> #TODO
-  after: -> #TODO
-  logging: -> #TODO
   
 View.method extend: ->
   for argument in arguments
-    for key, value of argument
-      if extend_api[key]
-        extend_api[key].apply @, [value]
-      else if typeof value is 'function'
-        @method key, value
-      else
-        @[key] = value
-        @prototype[key] = value if @prototype
-      
+    if typeof argument is 'function'
+      @bind 'ready', argument
+    else
+      for key, value of argument
+        if extend_api and extend_api[key]
+          extend_api[key].apply @, [value]
+        else if typeof value is 'function'
+          @method key, value
+        else
+          @[key] = value
+          @prototype[key] = value if @prototype
+
 View.extend
   clone: ->
-    klass = constructor()
     if @prototype
+      klass = constructor()
       for key of @prototype
         klass[key] = klass.prototype[key] = @prototype[key]
+      klass
     else
-      for key of @
-        klass[key] = @[key]
-    klass
+      extend {}, @
+    
   _initialize: (model) ->
     if model and not is_model model
       @attributes = {}
@@ -66,12 +54,14 @@ View.extend
     else if is_collection model
       @attributes = {}
       @collection = model
+      
   #data
   get: (key) ->
     if @model
       @model.apply.get @model, arguments
     else
       @attributes[key]
+      
   set: (attributes,options) ->
     if @model
       @model.apply.set @model, arguments
@@ -87,11 +77,13 @@ View.extend
             @_changed = true
             @trigger 'change:' + attribute, @, value, options
       @trigger 'change', @, options if not options.silent and @_changed
+      
   bind: (event_name,callback) ->
-    calls = @._callbacks or @._callbacks = {}
-    list = this._callbacks[event_name] or this._callbacks[event_name] = []
+    calls = @_callbacks or @_callbacks = {}
+    list = @_callbacks[event_name] or @_callbacks[event_name] = []
     list.push callback
     @
+    
   unbind: (event_name,callback) ->
     @_callbacks = {} if not event_name
     calls = @_callbacks
@@ -105,6 +97,7 @@ View.extend
           list.splice i, 1
           break
     @
+    
   trigger: (event_name) ->
     calls = @_callbacks
     return @ if not calls
@@ -113,6 +106,62 @@ View.extend
     if list = calls.all
       item.apply @, arguments for item in list
     @
+    
+# reflection
+  before: (methods) ->
+    if arguments.length is 2
+      methods = []
+      methods[argument[0]] = argument[1]
+    for method_name, method of methods
+      do (method_name,method) ->
+        original = @[method_name]
+        callback = ->
+          args = array_from arguments
+          next = ->
+            original.apply @, args
+          method.apply @, [args,next]
+        @[method_name] = callback
+        @prototype[method_name] = callback if @prototype
+      
+  after: (methods) ->
+    if arguments.length is 2
+      methods = []
+      methods[argument[0]] = argument[1]
+    for method_name, method of methods
+      do (method_name,method) ->
+        original = @[method_name]
+        callback = ->
+          args = array_from arguments
+          next = ->
+            original.apply @, args
+          method.apply @, [args,next]
+        @[method_name] = callback
+        @prototype[method_name] = callback if @prototype
+  
+extend_api = 
+  publish: (path) -> #TODO
+  route: (route) -> #TODO
+  model: (model) -> @_initialize model
+  collection: (collection) -> @_initialize collection
+  on: (events) -> 
+    for event_name, callback of events
+      if event_name is 'change' and typeof of callback is 'object'
+        for _event_name, _callback of events.change
+          @bind 'change:' + _event_name, _callback
+      else
+        @bind event_name, callback
+  render: -> #TODO
+  delegate: -> #TODO
+  $: -> #TODO
+  before: (methods) -> @before methods
+  after: (methods) -> @after methods
+  logging: -> #TODO
+
+# mirror nodejs event api
+View.method
+  on: View.bind
+  removeListener: View.unbind
+  emit: View.trigger
 
 # Builder
 create_element = (tag_name) ->
