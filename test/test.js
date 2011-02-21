@@ -6,44 +6,6 @@ var ArgumentsTestView = $.view(function(){
   );
 });
 
-var DeepView = $.view(function(){
-  return this.div(
-    this.table(
-      this.tbody(
-        this.tr(
-          this.td(
-            this.ul(
-              this.li(this.span(this.b('test'))),
-              this.li(),
-              [
-                this.li(),
-                [
-                  this.li(),
-                  this.li(),
-                  [
-                    this.li()
-                  ]
-                ]
-              ]
-            )
-          ),
-          this.td(
-            this.p(this.span('test'))
-          )
-        ),
-        this.tr(
-          this.td(
-            
-          ),
-          this.td(
-            
-          )
-        )
-      )
-    )
-  );
-});
-
 var ViewWithJQuery = $.view(function(){
   var element = this.ul({id:'jquery_test'},
     this.li('a'),
@@ -113,12 +75,6 @@ test("View instance can be used as argument to jQuery",function(){
   equal($('li',instance).length,3);
 });
 
-test("Constructor can return a jQuery object",function(){
-  var TestView = $.view(function(){
-    return $(this.div('test'));
-  });
-  equal(new TestView().element().innerHTML,'test');
-});
 
 test('HTML strings can be mixed and matched with builder args',function(){
   var instance = new HTMLStringView();
@@ -130,11 +86,6 @@ test('HTML strings can be mixed and matched with builder args',function(){
   equal($('li',instance)[5].innerHTML,'six');
   equal($('li',instance)[6].innerHTML,'seven');
   equal($('li',instance)[7].innerHTML,' &lt;b&gt;eight&lt;/b&gt;');
-});
-
-test("Node creation with deep nesting",function(){
-  var deep_instance = new DeepView();
-  equal(deep_instance.element().firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.nodeValue,'test');
 });
 
 test("Constructor can return an HTML string",function(){
@@ -640,18 +591,20 @@ test("HTML and templating escaping",function(){
       this.value = value;
     }
   });
-  var EmitView = $.view(function(){
-    this.bind('event',function(value){
-      this.value = value;
-    });
-    this.emit('event','test')();
+  var CallbackView2 = $.view(function(){
+    this.callbackTest = this.callback(this.myCallback,'test');
     return this.div();
+  },{
+    myCallback: function(value){
+      this.value = value;
+    }
   });
-  test("Test of callback and emit.",function(){
+  test("Test of callback with string or method.",function(){
     var instance = new CallbackView();
     instance.callbackTest();
     equal(instance.value,'test');
-    var instance = new EmitView();
+    var instance = new CallbackView2();
+    instance.callbackTest();
     equal(instance.value,'test');
   });
 })();
@@ -736,5 +689,27 @@ test("HTML and templating escaping",function(){
     equal($('#test').html(),'value');
     $('#test').remove();
     equal($('#test').length,0);
+  });
+})();
+
+(function(){
+  test("Generic view",function(){
+    var view = new $.view({
+      key: 'value'
+    });
+    view.$.addClass('test');
+    equal(view.get('key'),'value');
+    equal(view.element().className,'test');
+  });
+})();
+
+(function(){
+  test("Generic view can act as model, model can be passed to view",function(){
+    //var model = new $.view({
+    //  key: 'value'
+    //});
+    //
+    //
+    //console.log(model);
   });
 })();

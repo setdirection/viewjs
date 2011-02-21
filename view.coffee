@@ -1,48 +1,102 @@
+#TODO: initialize should always mean: after: initialize when passed into extend
+
 constructor = -> ->
-  if typeof @ is not 'function'
-    @_initialize arguments[0]
-    @initialize()
+  #console.log 'klass construct called'
+  if @ instanceof arguments.callee
+    @initialize.apply @, arguments
+    @
   else
+    console.log 'creating new class',arguments
     klass = View.clone()
+    #console.log 'calling klass.extend.apply', arguments
     klass.extend.apply klass, arguments
-    klass   
+    #console.log 'returning klass'
+    #console.trace()
+    klass
 
 View = constructor()
 
-View.method = View.prototype.method = (method_name,callback) ->
-  if arguments.length is 1
-    for key, callback of method_name
-      @[key] = callback
-      @prototype[key] = callback if @prototype
-  else
-    @[method_name] = callback
-    @prototype[method_name] = callback if @prototype
-  
-View.method extend: ->
-  for argument in arguments
-    if typeof argument is 'function'
-      @bind 'ready', argument
-    else
-      for key, value of argument
-        if extend_api and extend_api[key]
-          extend_api[key].apply @, [value]
-        else if typeof value is 'function'
-          @method key, value
-        else
-          @[key] = value
-          @prototype[key] = value if @prototype
+View._methods = {}
+View::_methods = {}
 
-View.extend
+View.method = View::method = View._methods.method = View::_methods.method = (method_name,method) ->
+  @_methods ||= {}
+  @::_methods ||= {} if @::
+  if arguments.length is 1
+    for _method_name, method of method_name
+      @method _method_name, method
+  else
+    @_methods[method_name] = @[method_name] = method
+    @::_methods[method_name] = @::[method_name] = method if @::
+
+extend_api =
+  initialize: (@_initialize) ->
+  publish: (path) -> #TODO
+  route: (route) -> #TODO
+  model: (model) -> @_model model
+  collection: (collection) -> @_model collection
+  on: (events) -> 
+    for event_name, callback of events
+      if event_name is 'change' and typeof callback is 'object'
+        for _event_name, _callback of events.change
+          @bind 'change:' + _event_name, _callback
+      else
+        @bind event_name, callback
+  render: -> @render.apply @ arguments
+  delegate: -> #TODO
+  $: ($) -> @$ $
+  register: (registers) -> @register registers
+  before: (methods) -> @before methods
+  after: (methods) -> @after methods
+  logging: -> #TODO
+
+View.method
+  extend: ->
+    @_mixin ||= []
+    @::_mixin ||= [] if @::
+    process_item = (key,value) ->
+      @_mixin.push [key,value]
+      @::_mixin.push [key,value] if @::
+      if extend_api[key]
+        extend_api[key].apply @, [value]
+      else if typeof value is 'function'
+        @method key, value
+      else
+        @[key] = value
+        @::[key] = value if @::
+    for argument in arguments
+      if not is_view(argument) and typeof argument is 'function'
+        @bind 'ready', argument
+      else if argument
+        if argument._mixin?
+          for item in argument._mixin
+            process_item.apply @, item
+        else
+          for key, value of argument
+            process_item.apply @, [key,value]
+            
   clone: ->
-    if @prototype
+    #TODO
+    #deep copy of delegates, attributes (but not model), and events
+    if @::
       klass = constructor()
-      for key of @prototype
-        klass[key] = klass.prototype[key] = @prototype[key]
+      klass.method = View.method
+      klass.method @_methods
+      klass.extend @_mixin
       klass
     else
       extend {}, @
     
-  _initialize: (model) ->
+  initialize: (model) ->
+    @_model model
+    if arguments.length > 1
+      #console.log 'BEFORE', arguments, array_from(arguments)[1..]
+      @extend.apply @, array_from(arguments)[1..]
+    @render()
+    @_initialize()
+    @trigger 'ready'
+  
+  _model: (model) ->
     if model and not is_model model
       @attributes = {}
       @_escapedAttributes = {}
@@ -55,8 +109,11 @@ View.extend
       @attributes = {}
       @collection = model
   
+  _initialize: ->
+  
   register: (extension,handler) ->
     if extension is '$'
+      @_$ = handler
       @extend
         before:
           $: (args,next) ->
@@ -70,14 +127,40 @@ View.extend
                 else if typeof selector is 'string'
                   handler.query selector, @[0]          
               @$ = callback
-              @prototype.$ = callback if @prototoype
+              @::$ = callback if @prototoype
             else
               next()
         after:
           tag: (args,response,next) ->
             next args, handler.extend response
-  
+    else
+      @_extensions ||= {}
+      @_extensions[extension] = (context,content) ->
+        handler context, content
+      
   render: ->
+    @_extensions ||= {}
+    if arguments.length is 0
+      @$ @_render()
+    else
+      if typeof arguments[0] is 'function'
+        @$ arguments[0].call @, if @model then @model.attributes else @attributes
+      else
+        if is_array arguments[0]
+          [[extension,content]] = arguments
+          content = content.call @ if typeof content is 'function'
+        else if typeof arguments[0] is object
+          for extension, content of arguments
+            content = content.call @ if typeof content is 'function'
+            break
+        else if arguments.length is 2
+          [extension,content] = arguments
+        if not @_extensions[extension]
+          @trigger 'error', extension + ' is not a registered template engine'
+        else
+        @$ = @_extensions[extension] @, content
+          
+  _render: ->
     @div()
     
   #data
@@ -102,6 +185,11 @@ View.extend
             @_changed = true
             @trigger 'change:' + attribute, @, value, options
       @trigger 'change', @, options if not options.silent and @_changed
+      @_changed = false
+      attributes
+  
+  toJSON: ->
+    if @model then @model.toJSON() else @attributes
   
   # events
   
@@ -129,52 +217,61 @@ View.extend
     calls = @_callbacks
     return @ if not calls
     if list = calls[event_name]
-      item.apply @, Array.prototype.slice.call arguments, 1 for item in list
+      item.apply @, Array::slice.call arguments, 1 for item in list
     if list = calls.all
       item.apply @, arguments for item in list
     @
 
   # DOM
-  $: ($) ->
+  $: ($) -> @[0]
+    
+  callback: (method) ->
+    args = array_from(arguments)[1..]
+    context = @
+    ->
+      if typeof method is 'string'
+        context[method].apply context, args
+      else
+        method.apply context, args
+      false    
       
   # reflection
-
   before: (methods) ->
     if arguments.length is 2
       methods = []
       methods[argument[0]] = argument[1]
     for method_name, method of methods
-      do (method_name,method) ->
+      do (method_name,method) =>
         original = @[method_name]
-        callback = ->
+        callback = =>
           args = array_from arguments
-          next = ->
+          next = =>
             args = arguments if arguments.length > 0
             original.apply @, args
-          method.apply @, [args,next]
+          method.apply @, [args,next,original]
         @[method_name] = callback
-        @prototype[method_name] = callback if @prototype  
-  after: (methods) ->   #TODO implement
+        @::[method_name] = callback if @::  
   
-extend_api = 
-  publish: (path) -> #TODO
-  route: (route) -> #TODO
-  model: (model) -> @_initialize model
-  collection: (collection) -> @_initialize collection
-  on: (events) -> 
-    for event_name, callback of events
-      if event_name is 'change' and typeof callback is 'object'
-        for _event_name, _callback of events.change
-          @bind 'change:' + _event_name, _callback
-      else
-        @bind event_name, callback
-  render: -> #TODO
-  delegate: -> #TODO
-  $: ($) -> @$ $
-  register: (registers) -> @register registers
-  before: (methods) -> @before methods
-  after: (methods) -> @after methods
-  logging: -> #TODO
+  #after: (methods) ->
+  #  if arguments.length is 2
+  #    methods = []
+  #    methods[argument[0]] = argument[1]
+  #  for method_name, method of methods
+  #    do (method_name,method) ->
+  #      original = @[method_name]
+        #callback = ->
+        #  args = array_from arguments
+        #  response = original.apply @, args
+          #next = ->
+          #  args = arguments if arguments.length > 0
+          #  original.apply @, args
+          #method.apply @, [args,next,original]
+        #@[method_name] = callback
+        #@::[method_name] = callback if @::  
+  
+# default error handler
+View.bind 'error', (error) ->
+  throw error
 
 # mirror nodejs event api
 View.method
@@ -183,7 +280,7 @@ View.method
   emit: View.trigger
 
 # Builder
-View.method tag: (tag_name) ->
+View.method tag: create_element = (tag_name) ->
   elements = []
   attributes = {}
   for argument in array_from(arguments)[1..]
@@ -216,10 +313,10 @@ process_node_argument = (view,elements,attributes,argument) ->
   return if not argument? or argument is false
   if typeof argument is 'function'
     argument = argument()
-  if is_view argument or is_$ argument.$
+  if is_view(argument) or is_$ argument.$
     return elements.push argument.$
-  #is vanilla object?
-  if typeof argument isnt 'string' and typeof argument isnt 'number' and not is_array argument and not is_$ argument and not is_element argument
+  #is attributes?
+  if typeof argument isnt 'string' and typeof argument isnt 'number' and not is_array(argument) and not is_$(argument) and not is_element(argument)
     for attribute_name, attribute of argument
       attributes[attribute_name] = attribute
     return
@@ -230,7 +327,7 @@ process_node_argument = (view,elements,attributes,argument) ->
     for flattened_argument in flattened
       process_node_argument view, elements, attributes, flattened_argument
     return
-  if is_element argument or typeof argument is 'string' or typeof argument is 'number'
+  if is_element(argument) or typeof argument is 'string' or typeof argument is 'number'
     elements.push argument
 
 write_attribute = (element,name,value) ->
@@ -266,7 +363,7 @@ write_attribute = (element,name,value) ->
       element.setAttribute name, value
   element
 
-ie = !!(window.attachEvent and not global_context.opera)
+ie = !!(window.attachEvent and not window.opera)
 
 ie_attribute_translations =
   class: 'className'
@@ -283,6 +380,10 @@ ie_attribute_translation_sniffing_cache = {}
 
 cache = {}
 
+supported_events = 'blur focus focusin focusout load resize scroll unload click dblclick
+	mousedown mouseup mousemove mouseover mouseout mouseenter mouseleave
+	change select submit keydown keypress keyup error'.split /\s+/m
+
 supported_html_tags = 'a abbr acronym address applet area b base basefont bdo big blockquote body
   br button canvas caption center cite code col colgroup dd del dfn dir div dl dt em embed fieldset
   font form frame frameset h1 h2 h3 h4 h5 h6 head hr html i iframe img input ins isindex
@@ -290,7 +391,7 @@ supported_html_tags = 'a abbr acronym address applet area b base basefont bdo bi
   param pre q s samp script select small span strike strong style sub sup table tbody td
   textarea tfoot th thead title tr tt u ul var
   article aside audio command details figcaption figure footer header hgroup keygen mark
-  meter nav output progress rp ruby section source summary time video'.split /\s+/
+  meter nav output progress rp ruby section source summary time video'.split /\s+/m
 
 attribute_map =
   htmlFor: 'for'
@@ -310,17 +411,17 @@ extend = (destination,source) ->
     destination[key] = value
   destination
 
-is_model = -> #TODO
-  false
+is_view = (object) ->
+  object and object.$ and object.render
 
-is_collection = -> #TODO
-  false
+is_model = (object) ->
+  object and object.get and object.set and object.trigger and object.bind
 
-is_view = -> #TODO
-  false
+is_collection = (object) ->
+  object and object.add and object.remove
 
 is_array = (array) ->
-  Object.prototype.toString.call array is '[object Array]'
+  Object::toString.call array is '[object Array]'
 
 is_element = (element) ->
   element and element.nodeType is 1 or element.nodeType is 2
@@ -373,26 +474,28 @@ array_from = (object) ->
     results[length] = object[length]
   results
 
-escape_html = (string) ->
-  string.replace(/&(?!\w+;)/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-
 exports = if module?.exports? then module.exports else window
 exports.View = View
-
 
 # jQuery Plugin
 View.register
   $:
-    detect: (object) -> object is jQuery
+    detect: (object) -> jQuery? and object is jQuery
     query: (selector,context) -> jQuery selector, context
     extend: (element) -> jQuery element
-
+    delegate: (context,selector,event_name) -> jQuery(context).delegate selector, event_name, callback
 
 # Prototype Plugin
 View.register
   $:
-    detect: (object) -> object is Prototype
-    query: (selector,context) -> $$ selector, context
+    detect: (object) -> Prototype? and object is Prototype
+    query: (selector,context) -> context.getElementsBySelector selector
     extend: (element) -> Element.extend element
-
-# express plugin
+    delegate: (context,selector,event_name) -> 
+      
+# render html
+View.register
+  html: (context,html) ->
+    div = create_element 'div'
+    div.innerHTML = html
+    array_from div.childNodes
