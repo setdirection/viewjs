@@ -1,31 +1,23 @@
 test 'Class and inheritance', ->
   # anon view
-  console.log 'a'
   instance = new View false,
     echo: (b) ->
       @a + b
-  console.log 'b'
   instance.a = 'a'
   equal instance.echo('b'), 'ab'
-  console.log 'c'
   # class
   ViewA = View
     c: 'c'
     echo: (b) ->
       @a + b
-  console.log 'ViewA', ViewA
   instance = new ViewA
   instance.a = 'a'
   equal instance.echo('b'), 'ab'
     
   # subclass
-  console.log 'build ViewB'
-  console.log '-----------'
   ViewB = View ViewA,
     echo: (_b) ->
       '1' + ViewA::echo.call(@, _b) + @c
-  console.log '-----------'    
-  console.log 'built ViewB'
   
   instance = new ViewB
   instance.a = 'a'
@@ -36,21 +28,6 @@ test 'Class and inheritance', ->
   
   notEqual ViewA::echo, ViewB::echo
   equal instance.echo('b'), 'ab'  
-
-  #
-  #console.log 'a'
-  #AppView = View
-  #  initialize: ->
-  #    @a = 'a'
-  ##console.log 'b'
-  #anon = new View
-  #  initialize: ->
-  #    @b = 'b'
-  #console.log 'c'
-  #instance = new AppView
-  #  initialize: ->
-  #    @b = 'b'
-  #console.log 'd'
   
 test 'before and after', ->
   v = new View false,
@@ -71,8 +48,11 @@ test 'before and after', ->
   ViewWithBefore = View
     echo: (a,b) ->
       a + b
-  ViewWithBefore.before echo: (args,next) ->
-    next args[0].toUpperCase(), ''
+  ,
+    before:
+      echo: (args,next) ->
+        next args[0].toUpperCase(), ''
+    
   instance = new ViewWithBefore
   equal instance.echo('a', 'b'), 'A'
   ViewWithBefore2 = View ViewWithBefore
@@ -81,54 +61,56 @@ test 'before and after', ->
   
 test 'Render method and builder', ->
   # render as argument to extend
-  instance = new View
+  instance = new View false,
     $: jQuery
     render: -> @div class: 'test'
   
-  instance2 = new View
+  instance2 = new View false,
     $: jQuery
-    render: ['html','<div class="test"></div>']
+    render: ['html','<div class="test2"></div>']
   
-  instance3 = new View
+  instance3 = new View false,
     $: jQuery
-    render: -> ['html','<div class="test"></div>']
+    render: -> ['html','<div class="test3"></div>']
   
-  equal instance.$[0].className, 'test'
-  equal instance2.$[0].className, 'test'
-  equal instance3.$[0].className, 'test'
+  #console.log instance2
+  
+  equal instance[0].className, 'test'
+  equal instance2[0].className, 'test2'
+  equal instance3[0].className, 'test3'
   
   # html render
-  v = new View
+  v = new View false,
   node = v.render html: '<b>test</b>'
-  node2 = v.render 'html', '<b>test</b>'
-  node3 = v.render -> ['html','<b>test</b>']
-  node4 = v.render -> @b 'test'
+  node2 = v.render 'html', '<b>test2</b>'
+  node3 = v.render -> ['html','<b>test3</b>']
+  node4 = v.render -> @b 'test4'
   
   equal node.innerHTML, 'test'
-  equal node2.innerHTML, 'test'
-  equal node3.innerHTML, 'test'
-  equal node4.innerHTML, 'test'
+  equal node2.innerHTML, 'test2'
+  equal node3.innerHTML, 'test3'
+  equal node4.innerHTML, 'test4'
   
   # html render with jQuery
-  v = new View
+  v = new View false,
     $: jQuery
   node = v.render html: '<b>test</b>'
-  node2 = v.render 'html', '<b>test</b>'
-  node3 = v.render -> ['html','<b>test</b>']
-  node4 = v.render -> @b 'test'
+  node2 = v.render 'html', '<b>test2</b>'
+  node3 = v.render -> ['html','<b>test3</b>']
+  node4 = v.render -> @b 'test4'
   
   equal node.html(), 'test'
-  equal node2.html(), 'test'
-  equal node3.html(), 'test'
-  equal node4.html(), 'test'
+  equal node2.html(), 'test2'
+  equal node3.html(), 'test3'
+  equal node4.html(), 'test4'
   
   # render returns jQuery object
-  instance = new View
+  instance = new View false,
     render: -> jQuery @div 'test'
   equal jQuery(instance)[0].innerHTML, 'test'
   
   # deep test of builder
-  instance = new View
+  instance = new View false,
     render: ->
       @div(
         @table(
