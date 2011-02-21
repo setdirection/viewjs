@@ -1,17 +1,12 @@
 #TODO: initialize should always mean: after: initialize when passed into extend
 
 constructor = -> ->
-  #console.log 'klass construct called'
   if @ instanceof arguments.callee
     @initialize.apply @, arguments
     @
   else
-    console.log 'creating new class',arguments
     klass = View.clone()
-    #console.log 'calling klass.extend.apply', arguments
     klass.extend.apply klass, arguments
-    #console.log 'returning klass'
-    #console.trace()
     klass
 
 View = constructor()
@@ -33,8 +28,10 @@ extend_api =
   initialize: (@_initialize) ->
   publish: (path) -> #TODO
   route: (route) -> #TODO
-  model: (model) -> @_model model
-  collection: (collection) -> @_model collection
+  model: (model) ->
+    @_model model
+  collection: (collection) ->
+    @_model collection
   on: (events) -> 
     for event_name, callback of events
       if event_name is 'change' and typeof callback is 'object'
@@ -42,12 +39,21 @@ extend_api =
           @bind 'change:' + _event_name, _callback
       else
         @bind event_name, callback
-  render: -> @render.apply @ arguments
+  render: ->
+    if typeof arguments[0] is 'function'
+      @method _render: arguments[0]
+    else
+      args = arguments
+      @method _render: -> @render.apply @, args
   delegate: -> #TODO
-  $: ($) -> @$ $
-  register: (registers) -> @register registers
-  before: (methods) -> @before methods
-  after: (methods) -> @after methods
+  $: ($) ->
+    @$ $
+  register: (registers) ->
+    @register registers
+  before: (methods) ->
+    @before methods
+  after: (methods) ->
+    @after methods
   logging: -> #TODO
 
 View.method
@@ -82,6 +88,7 @@ View.method
       klass = constructor()
       klass.method = View.method
       klass.method @_methods
+      #klass.register @_registers
       klass.extend @_mixin
       klass
     else
@@ -90,7 +97,6 @@ View.method
   initialize: (model) ->
     @_model model
     if arguments.length > 1
-      #console.log 'BEFORE', arguments, array_from(arguments)[1..]
       @extend.apply @, array_from(arguments)[1..]
     @render()
     @_initialize()
@@ -99,7 +105,6 @@ View.method
   _model: (model) ->
     if model and not is_model model
       @attributes = {}
-      @_escapedAttributes = {}
       @_changed = false
       @set model
     else if is_model model
@@ -111,54 +116,70 @@ View.method
   
   _initialize: ->
   
-  register: (extension,handler) ->
-    if extension is '$'
-      @_$ = handler
-      @extend
-        before:
-          $: (args,next) ->
-            $ = args[0]
-            if handler.detect $
-              callback = (selector) ->
-                if is_element selector
-                  @[0] = selector
-                  @length = 1
-                  extend callback, @[0]
-                else if typeof selector is 'string'
-                  handler.query selector, @[0]          
-              @$ = callback
-              @::$ = callback if @prototoype
-            else
-              next()
-        after:
-          tag: (args,response,next) ->
-            next args, handler.extend response
-    else
-      @_extensions ||= {}
-      @_extensions[extension] = (context,content) ->
-        handler context, content
+  register: (registrations) ->
+    @_registers ||= {}
+    extend @_registers, registrations
+    if @::
+      @::_registers ||= {}
+      extend @::_registers, registrations
+    for extension, handler of registrations 
+      if extension is '$'
+        @_$ = handler
+        @extend
+          before:
+            $: (args,next) ->
+              $ = args[0]
+              if handler.detect $
+                callback = (selector) ->
+                  if is_element selector
+                    @[0] = selector
+                    @length = 1
+                    extend callback, @[0]
+                  else if typeof selector is 'string'
+                    handler.query selector, @[0]
+                @method $: callback
+                @$ = callback
+                @::$ = callback if @prototoype
+              else
+                next()
+          #after:
+          #  tag: (args,response,next) ->
+          #    next args, handler.extend response
+      else
+        callback = (context,content) ->
+          handler context, content
+        @_extensions ||= {}
+        @_extensions[extension] = callback
+        if @::
+          @::_extensions ||= {}
+          @::_extensions[extension] = callback
+          
       
   render: ->
     @_extensions ||= {}
+    context = if @model then @model.attributes else @attributes
     if arguments.length is 0
-      @$ @_render()
+      @$ @_render context
     else
       if typeof arguments[0] is 'function'
-        @$ arguments[0].call @, if @model then @model.attributes else @attributes
+        @$ arguments[0].call @, context
       else
         if is_array arguments[0]
           [[extension,content]] = arguments
           content = content.call @ if typeof content is 'function'
         else if typeof arguments[0] is object
           for extension, content of arguments
-            content = content.call @ if typeof content is 'function'
+            content = content.call @, context if typeof content is 'function'
             break
         else if arguments.length is 2
           [extension,content] = arguments
+        
+        console.log 'attempting to render', extension, content, @_extensions
+        
         if not @_extensions[extension]
           @trigger 'error', extension + ' is not a registered template engine'
         else
-        @$ = @_extensions[extension] @, content
+          @$ = @_extensions[extension] content, context, @
           
   _render: ->
     @div()
@@ -223,7 +244,12 @@ View.method
     @
 
   # DOM
-  $: ($) -> @[0]
+  $: (element) ->
+    if arguments.length > 1 and element and is_element element
+      @[0] = element
+      @length = 1
+    else
+      @[0]
     
   callback: (method) ->
     args = array_from(arguments)[1..]
@@ -331,9 +357,6 @@ process_node_argument = (view,elements,attributes,argument) ->
     elements.push argument
 
 write_attribute = (element,name,value) ->
-  attribute_translations =
-    className: 'class'
-    htmlFor:   'for'
   attributes = {}
   if typeof name is 'object'
     attributes = name
@@ -378,6 +401,10 @@ ie_attribute_translations =
   
 ie_attribute_translation_sniffing_cache = {}
 
+attribute_translations =
+  className: 'class'
+  htmlFor:   'for'
+
 cache = {}
 
 supported_events = 'blur focus focusin focusout load resize scroll unload click dblclick
@@ -421,7 +448,7 @@ is_collection = (object) ->
   object and object.add and object.remove
 
 is_array = (array) ->
-  Object::toString.call array is '[object Array]'
+  Object::toString.call(array) is '[object Array]'
 
 is_element = (element) ->
   element and element.nodeType is 1 or element.nodeType is 2
@@ -495,7 +522,8 @@ View.register
       
 # render html
 View.register
-  html: (context,html) ->
-    div = create_element 'div'
+  html: (html,context,view) ->
+    console.log 'HTML', html
+    div = view.div()
     div.innerHTML = html
     array_from div.childNodes
