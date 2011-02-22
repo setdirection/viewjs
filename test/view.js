@@ -92,9 +92,10 @@
     equal(instance[0].className, 'test');
     equal(instance2[0].className, 'test2');
     equal(instance3[0].className, 'test3');
-    v = new View(false, node = v.render({
+    v = new View(false);
+    node = v.render({
       html: '<b>test</b>'
-    }));
+    });
     node2 = v.render('html', '<b>test2</b>');
     node3 = v.render(function() {
       return ['html', '<b>test3</b>'];
@@ -130,20 +131,20 @@
     });
     equal(jQuery(instance)[0].innerHTML, 'test');
     instance = new View(false, {
+      $: jQuery,
       render: function() {
         return this.div(this.table(this.tbody(this.tr(this.td(this.ul(this.li(this.span(this.b('test'))), this.li(), [
           this.li(), [
             this.li(), this.li(), [
-              this.li({
-                "class": 'test',
-                'value': 'value'
+              this.li('value', {
+                "class": 'test'
               })
             ]
           ]
         ])), this.td(this.p(this.span('test')))), this.tr(this.td(), this.td()))));
       }
     });
-    equal(instance.$[0].firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.nodeValue, 'test');
+    equal(instance.$().firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.nodeValue, 'test');
     return equal(instance.$('li.test').html(), 'value');
   });
 }).call(this);

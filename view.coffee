@@ -1,3 +1,6 @@
+#Simplify register API
+
+
 #TODO: initialize should always mean: after: initialize when passed into extend
 
 constructor = -> ->
@@ -44,7 +47,8 @@ extend_api =
       @method _render: arguments[0]
     else
       args = arguments
-      @method _render: -> @render.apply @, args
+      @method _render: ->
+        @render.apply @, args
   delegate: -> #TODO
   $: ($) ->
     @$ $
@@ -95,7 +99,7 @@ View.method
       extend {}, @
     
   initialize: (model) ->
-    @_model model
+    @_model model || {}
     if arguments.length > 1
       @extend.apply @, array_from(arguments)[1..]
     @render()
@@ -110,9 +114,11 @@ View.method
     else if is_model model
       @attributes = model.attributes
       @model = model
+      @model.bind 'all', => @trigger.apply @, arguments
     else if is_collection model
       @attributes = {}
       @collection = model
+      @model.bind 'all', => @trigger.apply @, arguments
   
   _initialize: ->
   
@@ -123,64 +129,43 @@ View.method
       @::_registers ||= {}
       extend @::_registers, registrations
     for extension, handler of registrations 
-      if extension is '$'
-        @_$ = handler
-        @extend
-          before:
-            $: (args,next) ->
-              $ = args[0]
-              if handler.detect $
-                callback = (selector) ->
-                  if is_element selector
-                    @[0] = selector
-                    @length = 1
-                    extend callback, @[0]
-                  else if typeof selector is 'string'
-                    handler.query selector, @[0]
-                @method $: callback
-                @$ = callback
-                @::$ = callback if @prototoype
-              else
-                next()
-          #after:
-          #  tag: (args,response,next) ->
-          #    next args, handler.extend response
-      else
-        callback = (context,content) ->
-          handler context, content
-        @_extensions ||= {}
-        @_extensions[extension] = callback
-        if @::
-          @::_extensions ||= {}
-          @::_extensions[extension] = callback
+      callback = (content,context,view) ->
+        handler content, context, view
+      @_extensions ||= {}
+      @_extensions[extension] = callback
+      if @::
+        @::_extensions ||= {}
+        @::_extensions[extension] = callback
           
-      
   render: ->
     @_extensions ||= {}
     context = if @model then @model.attributes else @attributes
     if arguments.length is 0
-      @$ @_render context
+      response = @_render context
+      response = @render response if is_array response
+      @$ response
     else
       if typeof arguments[0] is 'function'
-        @$ arguments[0].call @, context
+        response = @render arguments[0].call @, context
+      else if is_element arguments[0]
+        response = arguments[0]
       else
         if is_array arguments[0]
           [[extension,content]] = arguments
           content = content.call @ if typeof content is 'function'
-        else if typeof arguments[0] is object
-          for extension, content of arguments
+        else if typeof arguments[0] is 'object'
+          for extension, content of arguments[0]
             content = content.call @, context if typeof content is 'function'
             break
         else if arguments.length is 2
           [extension,content] = arguments
-        
-        console.log 'attempting to render', extension, content, @_extensions
-        
         if not @_extensions[extension]
           @trigger 'error', extension + ' is not a registered template engine'
         else
-          @$ = @_extensions[extension] content, context, @
-          
+          response = @_extensions[extension] content, context, @
+      response = @_$ response if @_$
+      response
+      
   _render: ->
     @div()
     
@@ -245,9 +230,21 @@ View.method
 
   # DOM
   $: (element) ->
-    if arguments.length > 1 and element and is_element element
-      @[0] = element
+    if jQuery? and element is jQuery
+      @_$ = element
+      @::_$ = element if @::
+    else if arguments.length > 0 and element and (is_element(element) or is_$(element))
+      if is_$ element
+        @[0] = element[0]
+      else
+        @[0] = element
       @length = 1
+      extend @$, @[0]
+    else if arguments.length > 0 and element and typeof element is 'string'
+      if not @_$?
+        @trigger 'error', 'No DOM library is available in the View'
+      else
+        @_$ element, @[0]
     else
       @[0]
     
@@ -276,7 +273,7 @@ View.method
             original.apply @, args
           method.apply @, [args,next,original]
         @[method_name] = callback
-        @::[method_name] = callback if @::  
+        @::[method_name] = callback if @::
   
   #after: (methods) ->
   #  if arguments.length is 2
@@ -339,7 +336,7 @@ process_node_argument = (view,elements,attributes,argument) ->
   return if not argument? or argument is false
   if typeof argument is 'function'
     argument = argument()
-  if is_view(argument) or is_$ argument.$
+  if is_view(argument) or (is_$(argument.$) or is_element(argument.$))
     return elements.push argument.$
   #is attributes?
   if typeof argument isnt 'string' and typeof argument isnt 'number' and not is_array(argument) and not is_$(argument) and not is_element(argument)
@@ -445,16 +442,16 @@ is_model = (object) ->
   object and object.get and object.set and object.trigger and object.bind
 
 is_collection = (object) ->
-  object and object.add and object.remove
+  object and object.add and object.remove and object.trigger and object.bind
 
 is_array = (array) ->
-  Object::toString.call(array) is '[object Array]'
+  array and Object::toString.call(array) is '[object Array]'
 
 is_element = (element) ->
-  element and element.nodeType is 1 or element.nodeType is 2
+  element?.nodeType is 1 or element?.nodeType is 2
 
 is_$ = ($) -> 
-  $? and $ and (($.nodeType) or ($[0] and $[0].nodeType))
+  $?[0] and $?[0]?.nodeType
 
 wrap_function = (func,wrapper) -> ->
   wrapper.apply @, [proxy func, @].concat array_from arguments
@@ -505,25 +502,25 @@ exports = if module?.exports? then module.exports else window
 exports.View = View
 
 # jQuery Plugin
-View.register
-  $:
-    detect: (object) -> jQuery? and object is jQuery
-    query: (selector,context) -> jQuery selector, context
-    extend: (element) -> jQuery element
-    delegate: (context,selector,event_name) -> jQuery(context).delegate selector, event_name, callback
-
-# Prototype Plugin
-View.register
-  $:
-    detect: (object) -> Prototype? and object is Prototype
-    query: (selector,context) -> context.getElementsBySelector selector
-    extend: (element) -> Element.extend element
-    delegate: (context,selector,event_name) -> 
+#View.register
+#  $:
+#    detect: (object) -> jQuery? and object is jQuery
+#    query: (selector,context) -> jQuery selector, context
+#    extend: (element) -> jQuery element
+#    delegate: (context,selector,event_name) -> jQuery(context).delegate selector, event_name, callback
+#
+## Prototype Plugin
+#View.register
+#  $:
+#    detect: (object) -> Prototype? and object is Prototype
+#    query: (selector,context) -> context.getElementsBySelector selector
+#    extend: (element) -> Element.extend element
+#    delegate: (context,selector,event_name) -> 
       
 # render html
 View.register
-  html: (html,context,view) ->
-    console.log 'HTML', html
+  html: (content,context,view) ->
     div = view.div()
-    div.innerHTML = html
-    array_from div.childNodes
+    div.innerHTML = content
+    response = array_from div.childNodes
+    if response.length is 1 then response[0] else response

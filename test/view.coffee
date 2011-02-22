@@ -73,14 +73,12 @@ test 'Render method and builder', ->
     $: jQuery
     render: -> ['html','<div class="test3"></div>']
   
-  #console.log instance2
-  
   equal instance[0].className, 'test'
   equal instance2[0].className, 'test2'
   equal instance3[0].className, 'test3'
   
   # html render
-  v = new View false,
+  v = new View false
   node = v.render html: '<b>test</b>'
   node2 = v.render 'html', '<b>test2</b>'
   node3 = v.render -> ['html','<b>test3</b>']
@@ -111,6 +109,7 @@ test 'Render method and builder', ->
   
   # deep test of builder
   instance = new View false,
+    $: jQuery
     render: ->
       @div(
         @table(
@@ -126,7 +125,7 @@ test 'Render method and builder', ->
                       @li()
                       @li()
                       [
-                        @li class: 'test', 'value'
+                        @li 'value', class: 'test'
                       ]
                     ]
                   ]
@@ -141,6 +140,6 @@ test 'Render method and builder', ->
           )
         )
       )
-  equal instance.$[0].firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.nodeValue, 'test'
+  equal instance.$().firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.nodeValue, 'test'
   equal instance.$('li.test').html(), 'value'
   
