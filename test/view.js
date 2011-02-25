@@ -147,4 +147,15 @@
     equal(instance.$().firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.nodeValue, 'test');
     return equal(instance.$('li.test').html(), 'value');
   });
+  test('Render with subclass', function() {
+    var MyView, instance;
+    MyView = View({
+      $: jQuery,
+      render: function() {
+        return this.div(this.ul(this.li(this.span('test'))));
+      }
+    });
+    instance = new MyView;
+    return equal('test', instance.$('span').html());
+  });
 }).call(this);

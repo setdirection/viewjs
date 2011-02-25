@@ -1,6 +1,5 @@
 #Simplify register API
 
-
 #TODO: initialize should always mean: after: initialize when passed into extend
 
 constructor = -> ->
@@ -93,7 +92,7 @@ View.method
       klass.method = View.method
       klass.method @_methods
       #klass.register @_registers
-      klass.extend @_mixin
+      klass.extend @ # will look for _mixin and process automatically
       klass
     else
       extend {}, @
@@ -303,7 +302,7 @@ View.method
   emit: View.trigger
 
 # Builder
-View.method tag: create_element = (tag_name) ->
+View.method tag: (tag_name) ->
   elements = []
   attributes = {}
   for argument in array_from(arguments)[1..]
@@ -319,17 +318,41 @@ View.method tag: create_element = (tag_name) ->
     tag += '>'
     delete attributes.name
     delete attributes.type
-    element = document.createElement tag
+    element = @document.createElement tag
   else
     if not cache[tag_name]
-      cache[tag_name] = document.createElement tag_name
+      cache[tag_name] = @document.createElement tag_name
     element = cache[tag_name].cloneNode false
-  write_attribute element, attributes
+
+  #write_attribute
+  for attribute_name of attributes
+    name = attribute_translations[attribute_name] or attribute_name
+    # check if things need to be remapped for IE (Some stuff has been fixed when IE > 7)
+    if ie and ie_attribute_translations[name]
+      if ie_attribute_translation_sniffing_cache[name]?
+        name = ie_attribute_translations[name]
+      else
+        test_element = @document.createElement 'div'
+        test_element.setAttribute name, 'test'
+        if test_element[ie_attribute_translations[name]] isnt 'test'
+          test_element.setAttribute ie_attribute_translations[name], 'test'
+          if ie_attribute_translation_sniffing_cache[name] = test_element[ie_attribute_translations[name]] is 'test'
+            name = ie_attribute_translations[name]
+    value = attributes[attribute_name]
+    if value is false or not value?
+      element.removeAttribute name
+    else if value is true
+      element.setAttribute name, name
+    else if name is 'style'
+      element.style.cssText = value
+    else
+      element.setAttribute name, value
+  
   for _element in elements
     if is_element _element
       element.appendChild _element
     else
-      element.appendChild document.createTextNode String _element
+      element.appendChild @document.createTextNode String _element
   element
 
 process_node_argument = (view,elements,attributes,argument) ->
@@ -353,37 +376,7 @@ process_node_argument = (view,elements,attributes,argument) ->
   if is_element(argument) or typeof argument is 'string' or typeof argument is 'number'
     elements.push argument
 
-write_attribute = (element,name,value) ->
-  attributes = {}
-  if typeof name is 'object'
-    attributes = name
-  else
-    attributes[name] = if typeof value is 'undefined' then true else value
-  for attribute_name of attributes
-    name = attribute_translations[attribute_name] or attribute_name
-    # check if things need to be remapped for IE (Some stuff has been fixed when IE > 7)
-    if ie and ie_attribute_translations[name]
-      if ie_attribute_translation_sniffing_cache[name]?
-        name = ie_attribute_translations[name]
-      else
-        test_element = window.document.createElement 'div'
-        test_element.setAttribute name, 'test'
-        if test_element[ie_attribute_translations[name]] isnt 'test'
-          test_element.setAttribute ie_attribute_translations[name], 'test'
-          if ie_attribute_translation_sniffing_cache[name] = test_element[ie_attribute_translations[name]] is 'test'
-            name = ie_attribute_translations[name]
-    value = attributes[attribute_name]
-    if value is false or not value?
-      element.removeAttribute name
-    else if value is true
-      element.setAttribute name, name
-    else if name is 'style'
-      element.style.cssText = value
-    else
-      element.setAttribute name, value
-  element
-
-ie = !!(window.attachEvent and not window.opera)
+ie = window? && !!(window.attachEvent and not window.opera)
 
 ie_attribute_translations =
   class: 'className'
@@ -498,9 +491,6 @@ array_from = (object) ->
     results[length] = object[length]
   results
 
-exports = if module?.exports? then module.exports else window
-exports.View = View
-
 # jQuery Plugin
 #View.register
 #  $:
@@ -516,7 +506,14 @@ exports.View = View
 #    query: (selector,context) -> context.getElementsBySelector selector
 #    extend: (element) -> Element.extend element
 #    delegate: (context,selector,event_name) -> 
-      
+
+if window? and window.document?
+  View.extend document: window.document
+else
+  {jsdom} = require 'jsdom'
+  document = jsdom '<html><body></body></html>'
+  View.extend document: document
+
 # render html
 View.register
   html: (content,context,view) ->
@@ -524,3 +521,7 @@ View.register
     div.innerHTML = content
     response = array_from div.childNodes
     if response.length is 1 then response[0] else response
+
+#export
+exports = if module?.exports? then module.exports else window
+exports.View = View

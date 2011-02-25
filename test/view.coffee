@@ -142,4 +142,11 @@ test 'Render method and builder', ->
       )
   equal instance.$().firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.firstChild.nodeValue, 'test'
   equal instance.$('li.test').html(), 'value'
-  
+
+test 'Render with subclass', ->
+  MyView = View
+    $: jQuery
+    render: ->
+      @div @ul @li @span 'test'
+  instance = new MyView
+  equal 'test', instance.$('span').html()
