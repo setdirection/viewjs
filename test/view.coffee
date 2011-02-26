@@ -6,7 +6,7 @@ test 'Class and inheritance', ->
   instance.a = 'a'
   equal instance.echo('b'), 'ab'
   # class
-  ViewA = View
+  ViewA = View.create
     c: 'c'
     echo: (b) ->
       @a + b
@@ -15,7 +15,7 @@ test 'Class and inheritance', ->
   equal instance.echo('b'), 'ab'
     
   # subclass
-  ViewB = View ViewA,
+  ViewB = View.create ViewA,
     echo: (_b) ->
       '1' + ViewA::echo.call(@, _b) + @c
   
@@ -45,7 +45,7 @@ test 'before and after', ->
   equal v.echo('a','b'), 'AABB'
   
   #with subclass
-  ViewWithBefore = View
+  ViewWithBefore = View.create
     echo: (a,b) ->
       a + b
   ,
@@ -55,7 +55,7 @@ test 'before and after', ->
     
   instance = new ViewWithBefore
   equal instance.echo('a', 'b'), 'A'
-  ViewWithBefore2 = View ViewWithBefore
+  ViewWithBefore2 = View.create ViewWithBefore
   instance = new ViewWithBefore2
   equal instance.echo('a', 'b'), 'A'
   
@@ -144,7 +144,7 @@ test 'Render method and builder', ->
   equal instance.$('li.test').html(), 'value'
 
 test 'Render with subclass', ->
-  MyView = View
+  MyView = View.create
     $: jQuery
     render: ->
       @div @ul @li @span 'test'

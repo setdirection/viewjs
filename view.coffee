@@ -11,9 +11,7 @@ constructor = -> ->
     @initialize.apply @, arguments
     @
   else
-    klass = View.clone()
-    klass.extend.apply klass, arguments
-    klass
+    throw 'View called as a constructor without the "new" keyword.'
 
 View = constructor()
 
@@ -97,6 +95,11 @@ extend_api =
   logging: -> #TODO
 
 View.method
+  create: ->
+    klass = View.clone()
+    klass.extend.apply klass, arguments
+    klass
+    
   extend: ->
     @_mixin ||= []
     @::_mixin ||= [] if @::
