@@ -1,3 +1,7 @@
+#TODO: 'parent' is auto disabled when a new instance is created
+#rendering a ".coffee" or ".js" should return whatever that file exports
+
+
 #Simplify register API
 
 #TODO: initialize should always mean: after: initialize when passed into extend
@@ -27,13 +31,39 @@ View.method = View::method = View._methods.method = View::_methods.method = (met
     @::_methods[method_name] = @::[method_name] = method if @::
 
 extend_api =
+  env: (envs) ->
+    
+    for env_name, args of envs
+      if !envs[env_name]
+        envs[env_name] = args
+      else
+        if envs[env_name]()
+          if typeof args is 'function'
+            response = args()
+            @extend response if response
+          else
+            @extend args
+            
+  server: (server) ->
+    if is_server server
+      servers[Number server.address().port] = server if !servers[Number server.address().port]
+      @server = server
+    else  
+      @server = create_server server
+    @::server = @server if @::
+    
   initialize: (@_initialize) ->
+  
   publish: (path) -> #TODO
+  
   route: (route) -> #TODO
+  
   model: (model) ->
     @_model model
+  
   collection: (collection) ->
     @_model collection
+  
   on: (events) -> 
     for event_name, callback of events
       if event_name is 'change' and typeof callback is 'object'
@@ -41,6 +71,7 @@ extend_api =
           @bind 'change:' + _event_name, _callback
       else
         @bind event_name, callback
+  
   render: ->
     if typeof arguments[0] is 'function'
       @method _render: arguments[0]
@@ -48,15 +79,21 @@ extend_api =
       args = arguments
       @method _render: ->
         @render.apply @, args
+  
   delegate: -> #TODO
+  
   $: ($) ->
     @$ $
+  
   register: (registers) ->
     @register registers
+  
   before: (methods) ->
     @before methods
+  
   after: (methods) ->
     @after methods
+    
   logging: -> #TODO
 
 View.method
@@ -83,10 +120,9 @@ View.method
         else
           for key, value of argument
             process_item.apply @, [key,value]
-            
   clone: ->
     #TODO
-    #deep copy of delegates, attributes (but not model), and events
+    #deep copy of delegates, attributes (but not model), and events, and envs
     if @::
       klass = constructor()
       klass.method = View.method
@@ -135,7 +171,7 @@ View.method
       if @::
         @::_extensions ||= {}
         @::_extensions[extension] = callback
-          
+  
   render: ->
     @_extensions ||= {}
     context = if @model then @model.attributes else @attributes
@@ -167,6 +203,21 @@ View.method
       
   _render: ->
     @div()
+  
+  #env
+  env: (envs) ->
+    @envs ||= {}
+    @::envs ||= {} if @::
+    if arguments.length is 2
+      [env_name, callback] = arguments
+      if not @envs[env_name]?
+        @envs[env_name] = callback
+        @::envs[env_name] = callback if @::
+      else if @envs[env_name]()
+        callback.call @
+    else
+      for env_name, callback of envs
+        @env env_name, callback
     
   #data
   get: (key) ->
@@ -290,7 +341,7 @@ View.method
           #method.apply @, [args,next,original]
         #@[method_name] = callback
         #@::[method_name] = callback if @::  
-  
+
 # default error handler
 View.bind 'error', (error) ->
   throw error
@@ -422,6 +473,23 @@ generate_builder_method = (tag_name) -> ->
 for tag in supported_html_tags
   View.method tag, generate_builder_method tag
 
+#server
+servers = {}
+
+create_server = (params) ->
+  express = require 'express'
+  port = Number params.port || 80
+  static = if typeof params.static isnt 'undefined' then params.static else (__dirname + './')
+  server = servers[port] = express.createServer()
+  server.use express.methodOverride()
+  server.use express.bodyDecoder()
+  server.use express.cookieDecoder()
+  server.use server.router
+  server.use express.logger()
+  server.use express.staticProvider static if static
+  server.listen port
+  console.log "ViewJS + Express Server listening on port " + port
+
 #support
 extend = (destination,source) ->
   for key, value of source
@@ -436,6 +504,9 @@ is_model = (object) ->
 
 is_collection = (object) ->
   object and object.add and object.remove and object.trigger and object.bind
+
+is_server = (server) ->
+  server and server.address and server.connections and server.routes
 
 is_array = (array) ->
   array and Object::toString.call(array) is '[object Array]'
@@ -507,12 +578,19 @@ array_from = (object) ->
 #    extend: (element) -> Element.extend element
 #    delegate: (context,selector,event_name) -> 
 
-if window? and window.document?
-  View.extend document: window.document
-else
-  {jsdom} = require 'jsdom'
-  document = jsdom '<html><body></body></html>'
-  View.extend document: document
+# Environments
+View.env
+  server: ->
+    not window?
+  client: ->
+    window? and window.document?
+
+# Bootstrap default document
+View.env
+  server: ->
+    View.extend document: require('jsdom')('<html><body></body></html>')
+  client: ->
+    View.extend document: window.document
 
 # render html
 View.register
