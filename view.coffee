@@ -49,7 +49,20 @@ extend_api =
       server.port ||= 80
       @server = servers[server.port] ||= create_server server
     @::server = @server if @::
+  
+  base: (base) ->
+    @base base
+  
+  javascripts: ->
+    scripts = arguments
+    @env server: ->
+      @document.javascripts.apply @document, scripts
     
+  stylesheets: ->
+    styles = arguments
+    @env server: ->
+      @document.stylesheets.apply @document, styles
+
   initialize: (@_initialize) ->
   
   publish: (path) -> #TODO
@@ -70,7 +83,7 @@ extend_api =
   collection: (collection) ->
     @_model collection
   
-  on: (events) -> 
+  bind: (events) ->
     for event_name, callback of events
       if event_name is 'change' and typeof callback is 'object'
         for _event_name, _callback of events.change
@@ -230,6 +243,14 @@ View.method
     else
       for env_name, callback of envs
         @env env_name, callback
+  
+  base: (base) ->
+    if not base
+      @_base
+    else
+      @_base = base
+      @_javascripts ||= []
+      @_stylesheets ||= []
     
   #data
   get: (key) ->
@@ -257,7 +278,12 @@ View.method
       attributes
   
   toJSON: ->
-    if @model then @model.toJSON() else @attributes
+    if @model
+      @model.toJSON()
+    else if @collection
+      @collection.toJSON()
+    else
+      @attributes
   
   # events
   
@@ -363,6 +389,7 @@ View.method
   on: View.bind
   removeListener: View.unbind
   emit: View.trigger
+extend_api.on = extend_api.bind
 
 # Builder
 View.method tag: (tag_name) ->
@@ -490,14 +517,14 @@ servers = {}
 create_server = (params) ->
   express = require 'express'
   port = Number params.port
-  static = params.static if typeof params.static isnt 'undefined'
   server = servers[port] = express.createServer()
+  public = params.public || './public' 
   server.use express.methodOverride()
   server.use express.bodyDecoder()
   server.use express.cookieDecoder()
   server.use server.router
   server.use express.logger()
-  server.use express.staticProvider static if static
+  server.use express.staticProvider public if public
   server.listen port
   console.log "ViewJS + Express Server listening on port " + port
   server
@@ -573,6 +600,29 @@ array_from = (object) ->
   while length--
     results[length] = object[length]
   results
+  
+#filesystem support
+is_directory = (dir) ->
+  require('fs').statSync(dir).isDirectory()
+  
+files_with_extension = (dir,extension) ->
+	fs = require 'fs'
+	paths = []
+	try
+	  fs.statSync dir
+	catch e
+	  return []
+	traverse = (dir,stack) ->
+		stack.push dir
+		fs.readdirSync(stack.join '/').map (file) ->
+			path = stack.concat([file]).join '/'
+			stat = fs.statSync path
+			return if file[0] is '.' or file is 'vendor'
+			paths.push path if stat.isFile() and extension.test file
+			traverse file, stack if stat.isDirectory()
+		stack.pop()
+	traverse dir || '.', []
+	paths
 
 # jQuery Plugin
 #View.register
@@ -608,16 +658,49 @@ View.env
       window.document.implementation.addFeature 'FetchExternalResources', ['script']
       window.document.implementation.addFeature 'ProcessExternalResources', ['script']
       window.document.implementation.addFeature 'MutationEvents', ['1.0']
+      
+      document.javascripts = ->
+        return @_javascripts if arguments.length is 0
+        scripts = array_flatten array_from arguments
+        @_javascripts = [] if !@_javascripts
+        add_script = (script) =>
+          if not (script in @_javascripts)
+            @_javascripts.push script
+            tag = @createElement 'script'
+            tag.type = 'text/javascript'
+            tag.src = script
+            @head.appendChild tag
+        for script in scripts
+          if is_directory script
+            files_with_extension(script, /\.(js|coffee)$/).map add_script
+          else
+            add_script script
+
+      document.stylesheets = ->
+        return @_stylesheets if arguments.length is 0
+        styles = array_flatten array_from arguments
+        @_stylesheets = [] if !@_stylesheets
+        add_style = (style) =>
+          if not (style in @_stylesheets)
+            @_stylesheets.push style
+            tag = @createElement 'link'
+            tag.rel = 'stylesheet'
+            tag.type = 'text/css'
+            tag.href = style
+            @head.appendChild tag
+        for style in styles
+          if is_directory style
+            files_with_extension(style, /\.css$/).map add_style
+          else
+            add_style style
+      
       document.toString = -> """
         <!DOCTYPE html>
         <html>
           #{@documentElement.innerHTML}
         </html>
       """
-      document
-      
-    View.Document::toString = -> 
-    
+      document    
     View.extend document: new View.Document
   client: ->
     View.extend document: window.document
@@ -629,7 +712,12 @@ View.register
     div.innerHTML = content
     response = array_from div.childNodes
     if response.length is 1 then response[0] else response
-
+  jade: (content,context,view) ->
+  haml: (content,context,view) ->
+  eco: (content,context,view) ->
+  coffeekup: (content,context,view) ->
+  template: (content,context,view) ->
+    
 #export
 exports = if module?.exports? then module.exports else window
 exports.View = View
