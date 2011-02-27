@@ -30,7 +30,6 @@ View.method = View::method = View._methods.method = View::_methods.method = (met
 
 extend_api =
   env: (envs) ->
-    
     for env_name, args of envs
       if !envs[env_name]
         envs[env_name] = args
@@ -46,15 +45,24 @@ extend_api =
     if is_server server
       servers[Number server.address().port] = server if !servers[Number server.address().port]
       @server = server
-    else  
-      @server = create_server server
+    else
+      server.port ||= 80
+      @server = servers[server.port] ||= create_server server
     @::server = @server if @::
     
   initialize: (@_initialize) ->
   
   publish: (path) -> #TODO
   
-  route: (route) -> #TODO
+  route: (route) ->
+    @env
+      server: ->
+        if not @server
+          @extend server: {}
+        @server.get route, (request,response) =>
+          response.send @document.toString()
+      client: ->
+        #TODO
   
   model: (model) ->
     @_model model
@@ -96,7 +104,7 @@ extend_api =
 
 View.method
   create: ->
-    klass = View.clone()
+    klass = @clone()
     klass.extend.apply klass, arguments
     klass
     
@@ -131,6 +139,7 @@ View.method
       klass.method = View.method
       klass.method @_methods
       #klass.register @_registers
+      klass.env @_envs
       klass.extend @ # will look for _mixin and process automatically
       klass
     else
@@ -143,6 +152,8 @@ View.method
     @render()
     @_initialize()
     @trigger 'ready'
+  
+  _initialize: ->
   
   _model: (model) ->
     if model and not is_model model
@@ -157,9 +168,7 @@ View.method
       @attributes = {}
       @collection = model
       @model.bind 'all', => @trigger.apply @, arguments
-  
-  _initialize: ->
-  
+    
   register: (registrations) ->
     @_registers ||= {}
     extend @_registers, registrations
@@ -209,14 +218,14 @@ View.method
   
   #env
   env: (envs) ->
-    @envs ||= {}
-    @::envs ||= {} if @::
+    @_envs ||= {}
+    @::_envs ||= {} if @::
     if arguments.length is 2
       [env_name, callback] = arguments
-      if not @envs[env_name]?
-        @envs[env_name] = callback
-        @::envs[env_name] = callback if @::
-      else if @envs[env_name]()
+      if not @_envs[env_name]?
+        @_envs[env_name] = callback
+        @::_envs[env_name] = callback if @::
+      else if @_envs[env_name]()
         callback.call @
     else
       for env_name, callback of envs
@@ -468,21 +477,20 @@ attribute_map =
   htmlFor: 'for'
   className: 'class'
 
-generate_builder_method = (tag_name) -> ->
-  args = [tag_name];
-  args.push argument for argument in arguments
-  @tag.apply @, args
-      
 for tag in supported_html_tags
-  View.method tag, generate_builder_method tag
+  do (tag) ->
+    View.method tag, ->
+      args = [tag]
+      args.push argument for argument in arguments
+      @tag.apply @, args
 
 #server
 servers = {}
 
 create_server = (params) ->
   express = require 'express'
-  port = Number params.port || 80
-  static = if typeof params.static isnt 'undefined' then params.static else (__dirname + './')
+  port = Number params.port
+  static = params.static if typeof params.static isnt 'undefined'
   server = servers[port] = express.createServer()
   server.use express.methodOverride()
   server.use express.bodyDecoder()
@@ -492,6 +500,7 @@ create_server = (params) ->
   server.use express.staticProvider static if static
   server.listen port
   console.log "ViewJS + Express Server listening on port " + port
+  server
 
 #support
 extend = (destination,source) ->
@@ -591,7 +600,25 @@ View.env
 # Bootstrap default document
 View.env
   server: ->
-    View.extend document: require('jsdom')('<html><body></body></html>')
+    View.Document = ->
+      {jsdom} = require 'jsdom'
+      document = jsdom '<html><head></head><body></body></html>'
+      window = document.createWindow()
+      window.XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest
+      window.document.implementation.addFeature 'FetchExternalResources', ['script']
+      window.document.implementation.addFeature 'ProcessExternalResources', ['script']
+      window.document.implementation.addFeature 'MutationEvents', ['1.0']
+      document.toString = -> """
+        <!DOCTYPE html>
+        <html>
+          #{@documentElement.innerHTML}
+        </html>
+      """
+      document
+      
+    View.Document::toString = -> 
+    
+    View.extend document: new View.Document
   client: ->
     View.extend document: window.document
 
