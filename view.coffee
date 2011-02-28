@@ -73,7 +73,7 @@ extend_api =
         if not @server
           @extend server: {}
         @server.get route, (request,response) =>
-          response.send @document.toString()
+          response.send @document.toString(@server.public)
       client: ->
         #TODO
   
@@ -511,24 +511,6 @@ for tag in supported_html_tags
       args.push argument for argument in arguments
       @tag.apply @, args
 
-#server
-servers = {}
-
-create_server = (params) ->
-  express = require 'express'
-  port = Number params.port
-  server = servers[port] = express.createServer()
-  public = params.public || './public' 
-  server.use express.methodOverride()
-  server.use express.bodyDecoder()
-  server.use express.cookieDecoder()
-  server.use server.router
-  server.use express.logger()
-  server.use express.staticProvider public if public
-  server.listen port
-  console.log "ViewJS + Express Server listening on port " + port
-  server
-
 #support
 extend = (destination,source) ->
   for key, value of source
@@ -601,6 +583,27 @@ array_from = (object) ->
     results[length] = object[length]
   results
   
+#server
+servers = {}
+
+create_server = (params) ->
+  express = require 'express'
+  port = Number params.port
+  server = servers[port] = express.createServer()
+  public = params.public || './public' 
+  server.use express.methodOverride()
+  server.use express.bodyDecoder()
+  server.use express.cookieDecoder()
+  server.use server.router
+  server.use express.logger()
+  if public
+    server.use express.staticProvider public
+    server.public = public
+  server.listen port
+  console.log "ViewJS + Express Server listening on port " + port
+  server
+  
+
 #filesystem support
 is_directory = (dir) ->
   require('fs').statSync(dir).isDirectory()
@@ -655,27 +658,39 @@ View.env
       document = jsdom '<html><head></head><body></body></html>'
       window = document.createWindow()
       window.XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest
+      window.View = View
       window.document.implementation.addFeature 'FetchExternalResources', ['script']
       window.document.implementation.addFeature 'ProcessExternalResources', ['script']
       window.document.implementation.addFeature 'MutationEvents', ['1.0']
-      
+
       document.javascripts = ->
         return @_javascripts if arguments.length is 0
-        scripts = array_flatten array_from arguments
         @_javascripts = [] if !@_javascripts
-        add_script = (script) =>
-          if not (script in @_javascripts)
-            @_javascripts.push script
-            tag = @createElement 'script'
-            tag.type = 'text/javascript'
-            tag.src = script
+        _scripts = array_flatten array_from arguments
+        scripts = []
+        i = 0
+        add_script = =>
+          @_javascripts.push scripts[i]
+          tag = @createElement 'script'
+          tag.type = 'text/javascript'
+          tag.src = scripts[i]
+          if i < scripts.length
+            tag.onload = add_script
             @head.appendChild tag
-        for script in scripts
-          if is_directory script
-            files_with_extension(script, /\.(js|coffee)$/).map add_script
+            ++i
           else
-            add_script script
-
+            ;#TODO: callback?
+          
+        should_add = (script) =>
+          not (script in scripts) and not (script in @_javascripts) and script isnt __filename
+        for script in _scripts
+          if is_directory script
+            files_with_extension(script, /\.js$/).map (script) =>
+              scripts.push script if should_add script
+          else
+            scripts.push script if should_add script
+        add_script()
+      
       document.stylesheets = ->
         return @_stylesheets if arguments.length is 0
         styles = array_flatten array_from arguments
@@ -694,13 +709,24 @@ View.env
           else
             add_style style
       
-      document.toString = -> """
-        <!DOCTYPE html>
-        <html>
-          #{@documentElement.innerHTML}
-        </html>
-      """
-      document    
+      document.toString = (base) ->
+        output = @documentElement.innerHTML
+        script_fragment = 'script type="text/javascript" src="'
+        style_fragment = 'link rel="stylesheet" type="text/css" href="'
+        script_regexp = new RegExp script_fragment + base, 'g'
+        style_regexp = new RegExp style_fragment + base, 'g'
+        output = output.replace script_regexp, script_fragment + '/'
+        output = output.replace style_regexp, style_fragment + '/'
+        output = output.replace(/<head>/,'<head><' + script_fragment + '/' + __filename.substring(base.length) + '"></script>')
+        """
+          <!DOCTYPE html>
+          <html>
+            #{output}
+          </html>
+        """
+        
+      document
+      
     View.extend document: new View.Document
   client: ->
     View.extend document: window.document
@@ -708,16 +734,27 @@ View.env
 # render html
 View.register
   html: (content,context,view) ->
-    div = view.div()
-    div.innerHTML = content
-    response = array_from div.childNodes
-    if response.length is 1 then response[0] else response
-  jade: (content,context,view) ->
-  haml: (content,context,view) ->
-  eco: (content,context,view) ->
-  coffeekup: (content,context,view) ->
-  template: (content,context,view) ->
-    
+    new Function "context", """
+      var div = View.div();
+      div.innerHTML = "#{content}";
+      return div.childNodes.length === 1 ? div.childNodes[0] : div.childNodes;
+    """
+
+View.env server: ->
+  View.register
+    jade: (content,context,view) ->
+      jade = require 'jade'
+      fs = require 'js'
+      
+      #var test_eco = String(fs.readFileSync('./templates/test.eco'));
+      #var test_jade = String(fs.readFileSync('./templates/test.jade'));
+      #
+      #console.log(eco.compile(test_eco));
+      #console.log(jade.compile(test_jade).toString());
+      
+    eco: (content,context,view) ->
+      eco = require 'eco'
+      
 #export
 exports = if module?.exports? then module.exports else window
 exports.View = View
