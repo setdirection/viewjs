@@ -1,8 +1,14 @@
+# needs to be async:
+# 'ready' event (top level document is ready, or parent is ready)
+# render
+# initialize (will trigger 'ready')
+
+# should parent be: ()
+# parent: ['ViewName','selector']
+
+
 #TODO: 'parent' is auto disabled when a new instance is created
 #rendering a ".coffee" or ".js" should return whatever that file exports
-
-
-#Simplify register API
 
 #TODO: initialize should always mean: after: initialize when passed into extend
 
@@ -62,7 +68,7 @@ extend_api =
     styles = arguments
     @env server: ->
       @document.stylesheets.apply @document, styles
-
+  
   initialize: (@_initialize) ->
   
   publish: (path) -> #TODO
@@ -76,6 +82,9 @@ extend_api =
           response.send @document.toString(@server.public)
       client: ->
         #TODO
+  
+  parent: (parent) ->
+    @parent parent
   
   model: (model) ->
     @_model model
@@ -103,9 +112,6 @@ extend_api =
   
   $: ($) ->
     @$ $
-  
-  register: (registers) ->
-    @register registers
   
   before: (methods) ->
     @before methods
@@ -151,7 +157,6 @@ View.method
       klass = constructor()
       klass.method = View.method
       klass.method @_methods
-      #klass.register @_registers
       klass.env @_envs
       klass.extend @ # will look for _mixin and process automatically
       klass
@@ -181,24 +186,8 @@ View.method
       @attributes = {}
       @collection = model
       @model.bind 'all', => @trigger.apply @, arguments
-    
-  register: (registrations) ->
-    @_registers ||= {}
-    extend @_registers, registrations
-    if @::
-      @::_registers ||= {}
-      extend @::_registers, registrations
-    for extension, handler of registrations 
-      callback = (content,context,view) ->
-        handler content, context, view
-      @_extensions ||= {}
-      @_extensions[extension] = callback
-      if @::
-        @::_extensions ||= {}
-        @::_extensions[extension] = callback
   
   render: ->
-    @_extensions ||= {}
     context = if @model then @model.attributes else @attributes
     if arguments.length is 0
       response = @_render context
@@ -219,16 +208,36 @@ View.method
             break
         else if arguments.length is 2
           [extension,content] = arguments
-        if not @_extensions[extension]
+        else
+          content = arguments[0]
+          bits = content.split '.'
+          extension = bits.pop()
+          
+        if not View._engines[extension]
           @trigger 'error', extension + ' is not a registered template engine'
         else
-          response = @_extensions[extension] content, context, @
+          View._cache[extension] ||= {}
+          if View._cache[extension][content]
+            response = View._cache[extension][content](context)
+          else 
+            if is_template_filename content
+              filename = content
+              content = String require('fs').readFileSync(@server.public + content)
+            else
+              filename = content
+            compiled = View._engines[extension](content,filename)
+            View._cache[extension][filename] = compiled
+            response = compiled(context)
       response = @_$ response if @_$
       response
       
   _render: ->
     @div()
   
+  parent: (parent) ->
+    return @_parent if arguments.length is 0
+    @_parent = parent
+    
   #env
   env: (envs) ->
     @_envs ||= {}
@@ -328,6 +337,17 @@ View.method
         @[0] = element
       @length = 1
       extend @$, @[0]
+      parent = @parent()
+      if parent
+        parent = parent.call @ if typeof parent is 'function'
+        if typeof parent is 'string'
+          if not @_$?
+            @trigger 'error', 'No DOM library is available in the View'
+          else
+            #TODO: check for @_$ and only go to highest level view that has a parent
+            parent = @_$(parent)[0]
+        parent.innerHTML = ''
+        parent.appendChild @[0]
     else if arguments.length > 0 and element and typeof element is 'string'
       if not @_$?
         @trigger 'error', 'No DOM library is available in the View'
@@ -390,6 +410,13 @@ View.method
   removeListener: View.unbind
   emit: View.trigger
 extend_api.on = extend_api.bind
+
+# Environments
+View.env
+  server: ->
+    not window?
+  client: ->
+    window? and window.document?
 
 # Builder
 View.method tag: (tag_name) ->
@@ -538,6 +565,9 @@ is_element = (element) ->
 is_$ = ($) -> 
   $?[0] and $?[0]?.nodeType
 
+is_template_filename = (str) ->
+  not str.match(/\n/m) and str.match(/\./) and not str.match(/[^\w_\-0-9\\\/\.]/)
+
 wrap_function = (func,wrapper) -> ->
   wrapper.apply @, [proxy func, @].concat array_from arguments
 
@@ -603,7 +633,6 @@ create_server = (params) ->
   console.log "ViewJS + Express Server listening on port " + port
   server
   
-
 #filesystem support
 is_directory = (dir) ->
   require('fs').statSync(dir).isDirectory()
@@ -626,29 +655,6 @@ files_with_extension = (dir,extension) ->
 		stack.pop()
 	traverse dir || '.', []
 	paths
-
-# jQuery Plugin
-#View.register
-#  $:
-#    detect: (object) -> jQuery? and object is jQuery
-#    query: (selector,context) -> jQuery selector, context
-#    extend: (element) -> jQuery element
-#    delegate: (context,selector,event_name) -> jQuery(context).delegate selector, event_name, callback
-#
-## Prototype Plugin
-#View.register
-#  $:
-#    detect: (object) -> Prototype? and object is Prototype
-#    query: (selector,context) -> context.getElementsBySelector selector
-#    extend: (element) -> Element.extend element
-#    delegate: (context,selector,event_name) -> 
-
-# Environments
-View.env
-  server: ->
-    not window?
-  client: ->
-    window? and window.document?
 
 # Bootstrap default document
 View.env
@@ -717,7 +723,7 @@ View.env
         style_regexp = new RegExp style_fragment + base, 'g'
         output = output.replace script_regexp, script_fragment + '/'
         output = output.replace style_regexp, style_fragment + '/'
-        output = output.replace(/<head>/,'<head><' + script_fragment + '/' + __filename.substring(base.length) + '"></script>')
+        output = output.replace(/<head>/,'<head><' + script_fragment + '/' + __filename.substring(base.length) + '"></script><script type="text/javascript">' + serialize_cache() + '</script>')
         """
           <!DOCTYPE html>
           <html>
@@ -732,28 +738,51 @@ View.env
     View.extend document: window.document
 
 # render html
-View.register
-  html: (content,context,view) ->
-    new Function "context", """
-      var div = View.div();
-      div.innerHTML = "#{content}";
-      return div.childNodes.length === 1 ? div.childNodes[0] : div.childNodes;
-    """
+View._engines = {}
+View._cache = {}
+View._cacheSrc = {} #server only
+
+serialize_cache = ->
+  output = "View._cache = {"
+  for engine of View._cacheSrc
+    output += engine + ':{'
+    for filename, contents of View._cacheSrc[engine]
+      output += "'" + filename + "':" + contents + ','
+    output = output.replace(/,$/,'') + '},'
+  output = output.replace(/,$/,'') + '};'
+
+engine_callback_prefix = '(function(___obj){return View._childNodesFromHTML(('
+engine_callback_suffix = ')(___obj))})'
+
+View._childNodesFromHTML = (html) ->
+  div = View.div()
+  div.innerHTML = html
+  if div.childNodes.length is 1 then div.childNodes[0] else div.childNodes
+
+View._engines.html = (content,filename) ->
+  View._cacheSrc.html ||= {}
+  content = content.replace(/\\/g,'\\\\').replace(/\'/g,'\\\'')
+  callback = new Function "context", """
+    return View._childNodesFromHTML('#{content}');
+  """
+  View._cacheSrc.html[filename] = callback.toString()
+  callback
 
 View.env server: ->
-  View.register
-    jade: (content,context,view) ->
-      jade = require 'jade'
-      fs = require 'js'
-      
-      #var test_eco = String(fs.readFileSync('./templates/test.eco'));
-      #var test_jade = String(fs.readFileSync('./templates/test.jade'));
-      #
-      #console.log(eco.compile(test_eco));
-      #console.log(jade.compile(test_jade).toString());
-      
-    eco: (content,context,view) ->
-      eco = require 'eco'
+  View._engines.jade = (content,filename) ->
+    View._cacheSrc.jade ||= {}
+    output = require('jade').compile(content).toString()
+    output = engine_callback_prefix + output + engine_callback_suffix
+    View._cacheSrc.jade[filename] = output
+    eval output
+    
+  View._engines.eco = (content,filename) ->
+    View._cacheSrc.eco ||= {}
+    output = require('eco').compile content
+    output = output.replace /module.exports = /, engine_callback_prefix
+    output = output.replace /;$/, engine_callback_suffix
+    View._cacheSrc.eco[filename] = output
+    eval output
       
 #export
 exports = if module?.exports? then module.exports else window
