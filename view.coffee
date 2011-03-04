@@ -221,7 +221,6 @@ View.method
   ready: ->
     @bind.apply @, ['ready'].concat array_from arguments
 
-
 # Environments
 ##############
 View.method
@@ -244,6 +243,8 @@ View.env
     process? and require? and global? and module?
   client: ->
     window? and window.document?
+  browser: ->
+    not (process? and require? and global? and module?)
 
 View.bind clone: (klass) ->
   klass.env @_envs
@@ -310,8 +311,15 @@ View.extend
 
 # Routing
 #########
-# Routing should be middleware
-# Server mixin should add a callback to call @server.get route
+View.middleware
+  route: (args...,next) ->
+    console.log 'route method called', args
+    next()
+
+View.extend extend:
+  route: (route) ->
+    console.log "route set:", route
+    @_route = route
 
 # Data
 ######
@@ -416,7 +424,8 @@ View.extend extend:
 
 # Templates
 ###########
-View._renderCache = {}
+get_render_cache = ->
+  window.__viewjs_render_cache || {}
 
 View.middleware
   render: (args...,next) ->
@@ -437,8 +446,8 @@ View.extend extend:
         context = if @model then @model.attributes else @attributes
         extension = filename.split('.').pop()
         @trigger 'error', extension + ' is not a registered template engine' if not render_engines[extension]
-        @trigger 'error', 'Template ' + filename + ' not found' if not View._renderCache[extension][filename]
-        next View._renderCache[extension][filename](context)
+        @trigger 'error', 'Template ' + filename + ' not found' if not get_render_cache()[extension][filename]
+        next get_render_cache()[extension][filename](context)
     else
       callback = filename
     @render.add callback
@@ -572,6 +581,10 @@ for tag in supported_html_tags
 
 # Export
 ########
-exports = if module?.exports? then module.exports else window
-exports.View = View
-exports.Builder = Builder
+if window?
+  window.View = View
+  window.Builder = Builder
+  
+if module?.exports?
+  module.exports.View = View
+  module.exports.Builder = Builder
