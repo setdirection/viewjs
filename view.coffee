@@ -6,22 +6,22 @@ extend = (destination,source) ->
   destination
 
 is_view = (object) ->
-  object and object.element and object.render
+  Boolean(object and object.element and object.render)
 
 is_model = (object) ->
-  object and object.get and object.set and object.trigger and object.bind
+  Boolean(object and object.get and object.set and object.trigger and object.bind)
 
 is_collection = (object) ->
-  object and object.add and object.remove and object.trigger and object.bind
+  Boolean(object and object.add and object.remove and object.trigger and object.bind)
 
 is_array = (array) ->
-  array and Object::toString.call(array) is '[object Array]'
+  Boolean(array and Object::toString.call(array) is '[object Array]')
 
 is_element = (element) ->
-  element?.nodeType is 1 or element?.nodeType is 2
+  Boolean(element?.nodeType is 1 or element?.nodeType is 2)
 
 is_$ = ($) -> 
-  $?[0] and $?[0]?.nodeType and $.length?
+  Boolean($?[0] and $?[0]?.nodeType and $.length?)
 
 wrap_function = (func,wrapper) -> ->
   wrapper.apply @, [proxy func, @].concat array_from arguments
@@ -92,7 +92,7 @@ View.method = View::method = View._methods.method = View::_methods.method = (met
 View.method middleware: (method_name,callbacks...) ->
   if typeof method_name is 'object'
     for _method_name, callback of method_name
-      @middleware.apply @, [_method_name].concat callbacks
+      @middleware.apply @, [_method_name,callback]
   else
     callback = ->
       stack = array_from callbacks
@@ -103,12 +103,13 @@ View.method middleware: (method_name,callbacks...) ->
       @::[method_name].complete complete_callback if @::?[method_name]?.complete #TODO, can remove if test shows that callback in @:: is the same object
       callback._complete = complete_callback
     callback.complete ->
-    callback.add = proxy (add_callback) ->
-      @::[method_name].add callback if @::?[method_name]?.add #TODO, can remove if test shows that callback in @:: is the same object
-      if is_array callback
-        callbacks.push _callback for _callback in array_flatten callback
+    callback.add = proxy (added_callback) ->
+      #caused infinite recursion
+      #@::[method_name].add callback if @::?[method_name]?.add #TODO, can remove if test shows that callback in @:: is the same object
+      if is_array added_callback
+        callbacks.push _callback for _callback in array_flatten added_callback
       else
-        callbacks.push callback
+        callbacks.push added_callback
     , @
     callback.clear = ->
       callbacks = []
@@ -163,16 +164,18 @@ View.method
           for key, value of argument
             process_item.apply @, [key,value]
 
-View.on unlock: ->
-
 # Initialize
 ############
 View.middleware 
-  initialize: (model,mixins...,next) ->
+  initialize: (mixins...,next) ->
+    model = mixins.shift()
     @lock()
     @_ready = false
     @extend.apply @, mixins if mixins.length > 1
-    @_model model || {}
+    if is_collection(model) and not @collection
+      @_collection model
+    else if not @model and not @collection
+      @_model model || {}
     @element()
     next(model || {})
 
@@ -341,18 +344,24 @@ View.extend
 
 # Routing
 #########
-get_routes = ->
-  window._viewjs_routes || false
-
 View.middleware
   route: (params,next) ->
+    params = params_from_route_and_path @_route, params if typeof params is string
     @set params
-    #TODO: figure out how unlocking will work
-    next()
+    callback = ->
+      @unbind 'render', callback
+      next()
+    @bind 'render', callback
 
 View.extend extend:
   route: (route) ->
     @_route = route
+
+named_param = /:([\w\d]+)/g
+splat_param = /\*([\w\d]+)/g
+
+get_routes = ->
+  if window?._viewjs_routes then window._viewjs_routes else false
 
 create_router = ->
   routes = get_routes()
@@ -360,12 +369,20 @@ create_router = ->
   for path, view of routes
     do (path,view) ->
       router.route path, view, (ordered_params) ->
-        params = {}
-        keys = keys_from_path path
-        for key, i of keys
-          params[key] = ordered_params[i]
-        window[view].route params
-        
+        window[view].route params_from_ordered_params_and_path ordered_params, path 
+
+params_from_ordered_params_and_path = (ordered_params,path) ->
+  params = {}
+  keys = keys_from_path path
+  for key, i of keys
+    params[key] = ordered_params[i]
+  params
+
+params_from_route_and_path = (route,path) ->
+  matcher = new RegExp '^' + route.replace(named_param,"([^\/]*)").replace(splatParam, "(.*?)") + '$'
+  ordered_params = matcher.exec path
+  params_from_ordered_params_and_path ordered_params, path
+      
 keys_from_path = (path) ->
   keys = []
   path.concat '/?'
@@ -391,10 +408,12 @@ View.method
       @attributes = model.attributes
       @model = model
       @model.bind 'all', => @trigger.apply @, arguments
-    else if is_collection model
+  
+  _collection: (collection) ->
+    if is_collection collection
       @attributes = {}
-      @collection = model
-      @model.bind 'all', => @trigger.apply @, arguments
+      @collection = collection
+      @collection.bind 'all', => @trigger.apply @, arguments
   
   get: (key) ->
     if @model
@@ -433,7 +452,7 @@ View.extend extend:
     @_model model
   
   collection: (collection) ->
-    @_model collection
+    @_collection collection
 
 # mirror nodejs event api
 View.method
@@ -488,9 +507,11 @@ get_render_cache = ->
 View.middleware
   render: (args...,next) ->
     @_ready = false if not @_ready?
-    next()
+    next.apply @, args
 
 View.render.complete (element) ->
+  if not element or not is_element element
+    @trigger 'error', 'render() did not return an element, returned ' + typeof element
   @[0].innerHTML = ''
   element = [element] if not is_array element
   @[0].appendChild _element for _element in element
@@ -498,6 +519,7 @@ View.render.complete (element) ->
   if not @_ready
     @_ready = true
     @trigger 'ready', element
+  @trigger 'render', element
 
 View.extend extend:
   render: (filename) ->
