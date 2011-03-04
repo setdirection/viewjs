@@ -163,10 +163,13 @@ View.method
           for key, value of argument
             process_item.apply @, [key,value]
 
+View.on unlock: ->
+
 # Initialize
 ############
 View.middleware 
   initialize: (model,mixins...,next) ->
+    @lock()
     @_ready = false
     @extend.apply @, mixins if mixins.length > 1
     @_model model || {}
@@ -221,6 +224,17 @@ View.method
   ready: ->
     @bind.apply @, ['ready'].concat array_from arguments
 
+# Locking
+#########
+View.method
+  lock: ->
+    @locked = true
+    @trigger 'lock'
+  
+  unlock: ->
+    @locked = false
+    @trigger 'unlock'
+
 # Environments
 ##############
 View.method
@@ -266,6 +280,18 @@ set_element = (element) ->
   @[0] = element
   extend @$, @_$ @[0] if @_$
 
+delegate_events = (events,element) ->
+  return if not (events || (events = @_delegatedEvents))
+  @trigger 'error', 'No DOM library the supports delegate() available' if not @_$?.fn?.delegate?
+  @_$(element).unbind()
+  for key, method_name of events[key]
+    [event_name,selector] = key.match /^(\w+)\s*(.*)$/
+    method = proxy @[method_name],@
+    if selector is ''
+      @_$(element).bind event_name, method
+    else
+      @_$(element).delegate selector, event_name, method
+
 View.method
   element: ->
     @[0] || set_element @document.createElement 'div'
@@ -292,14 +318,18 @@ View.method
       else
         method.apply context, args
       false
+  
+  delegate: (events) ->
+    @_delegatedEvents = events
+    delegate_events.call @, events
 
 View.extend extend:
   element: (generator) ->
     @method element: ->
       set_element generator.call @
 
-  delegate: ->
-    #TODO
+  delegate: (events) ->
+    @delegate events
     
   $: ($) ->
     @$ $
@@ -311,15 +341,43 @@ View.extend
 
 # Routing
 #########
+get_routes = ->
+  window._viewjs_routes || false
+
 View.middleware
-  route: (args...,next) ->
-    console.log 'route method called', args
+  route: (params,next) ->
+    @set params
+    #TODO: figure out how unlocking will work
     next()
 
 View.extend extend:
   route: (route) ->
-    console.log "route set:", route
     @_route = route
+
+create_router = ->
+  routes = get_routes()
+  router = Backbone.Controller.extend {}
+  for path, view of routes
+    do (path,view) ->
+      router.route path, view, (ordered_params) ->
+        params = {}
+        keys = keys_from_path path
+        for key, i of keys
+          params[key] = ordered_params[i]
+        window[view].route params
+        
+keys_from_path = (path) ->
+  keys = []
+  path.concat '/?'
+    .replace /\/\(/g, '(?:/'
+    .replace /(\/)?(\.)?:(\w+)(?:(\(.*?\)))?(\?)?/g, (_, slash, format, key, capture, optional) ->
+      keys.push(key)
+  keys
+
+if get_routes()
+  router = create_router()
+  View.env.browser ->
+    Backbone.History.start()
 
 # Data
 ######
@@ -425,19 +483,21 @@ View.extend extend:
 # Templates
 ###########
 get_render_cache = ->
-  window.__viewjs_render_cache || {}
+  window._viewjs_render_cache || {}
 
 View.middleware
   render: (args...,next) ->
-    @_ready = false
+    @_ready = false if not @_ready?
     next()
 
 View.render.complete (element) ->
-  @_ready = true
   @[0].innerHTML = ''
   element = [element] if not is_array element
   @[0].appendChild _element for _element in element
-  @trigger 'ready', element
+  @unlock()
+  if not @_ready
+    @_ready = true
+    @trigger 'ready', element
 
 View.extend extend:
   render: (filename) ->
