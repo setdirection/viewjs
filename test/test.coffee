@@ -12,14 +12,17 @@ module.exports.parses = ->
   
 module.exports.stack = ->
   i = 0
+  sequence = []
   {StackView} = View.create
     StackView:
       stack:initialize:add: (next) ->
+        sequence.push 'a'
         @a = 'a'
         ++i
         next()
 
   StackView.extend stack:initialize:add: (next) ->
+    sequence.push 'b'
     @b = 'b'
     ++i
     next()
@@ -29,6 +32,8 @@ module.exports.stack = ->
   assert.equal 2, i
   assert.equal StackView.a, 'a'
   assert.equal StackView.b, 'b'
+  assert.equal sequence[0], 'a'
+  assert.equal sequence[1], 'b'
 
 module.exports.canTriggerEvents = ->
   {TestView} = View.create TestView: {}
@@ -83,7 +88,38 @@ module.exports.viewManager = ->
     assert.equal TestView3.key, 'value2'
   assert.equal TestView2.key, 'value'
   assert.equal TestView3.key, 'value2'
-
+  
+module.exports.canDepend = ->
+  sequence = []
+  View.create
+    ParentView:
+      dependents: ['ChildView1','ChildView2','ChildView3']
+      initialize: (ChildView1,ChildView2,ChildView3,next) ->
+        assert.equal ChildView1.name, 'ChildView1'
+        assert.equal ChildView2.name, 'ChildView2'
+        assert.equal ChildView3.name, 'ChildView3'
+    ChildView1: 
+      name: 'ChildView1'
+      render: (next) ->
+        sequence.push 'a'
+        next @document.createElement 'div'
+    ChildView2:
+      name: 'ChildView2'
+      render: (next) ->
+        sequence.push 'b'
+        next @document.createElement 'div'
+    ChildView3:
+      name: 'ChildView3'
+      render: (next) ->
+        sequence.push 'c'
+        next @document.createElement 'div'
+  View ParentView: ->
+    @initialize()
+    @ready ->
+      assert.equal sequence[0], 'a'
+      assert.equal sequence[1], 'b'
+      assert.equal sequence[2], 'c'
+      
 module.exports.canPassViewsToBuilder = ->
   {OuterView} = View.create OuterView: [Builder, 
     initialize: (next) ->

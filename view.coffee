@@ -156,6 +156,18 @@ View.extend stack:initialize:complete: ->
 View.extend extend:initialize: (callback) ->
   @stack initialize:add: callback
 
+# Dependents
+############
+View.extend extend:dependents: (dependents) ->
+  for dependent in dependents
+    do (dependent) =>
+      @extend stack:initialize:add: (args...,next) ->
+        view = ViewManager dependent
+        view.bind ready: ->
+          args.push view
+          next.apply next, args
+        view.initialize()
+  
 # Events
 ########
 View.extend
@@ -623,14 +635,14 @@ for tag in supported_html_tags
 #############
 ViewManager = ->
   callback = arguments[arguments.length - 1] if typeof arguments[arguments.length - 1] is 'function'
-  if is_array(arguments[0]) or arguments.length > 1
+  if is_array(arguments[0]) or arguments.length > 1 or typeof arguments[0] is 'string'
     response = []
     for class_name in array_flatten array_from arguments
       if typeof class_name is 'string'
         View.trigger 'error', "#{class_name} has not been created." if not ViewManager.views[class_name]?
         response.push ViewManager.views[class_name]
     callback.apply callback, response if callback
-    response
+    if response.length is 1 and typeof arguments[0] is 'string' then response[0] else response
   else
     response = {}
     for class_name, _callback of arguments[0]
@@ -638,7 +650,7 @@ ViewManager = ->
       response[class_name] = ViewManager.views[class_name]
       _callback.call response[class_name], response[class_name]
     callback.apply callback, [response] if callback
-  response
+    response
   
 ViewManager.views = {}
 ViewManager.create = proxy View.create, View
