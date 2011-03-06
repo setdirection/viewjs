@@ -69,15 +69,19 @@ View =
     @extend.api ||= {}
     @_mixin ||= []
     process_item = (key,value) ->
-      @_mixin.push [key,value]
+      should_add = true
+      discard = ->
+        should_add = false
       if key is 'extend'
         for _key of value
           @extend.api[_key] = value[_key]
       else
         if @extend.api[key]
-          @extend.api[key].apply @, [value]
+          @extend.api[key].apply @, [value,discard]
         else
           @[key] = value
+      if should_add
+        @_mixin.push [key,value]
     for argument in arguments
       if not is_view(argument) and typeof argument is 'function'
         @bind 'ready', argument
@@ -317,6 +321,9 @@ View.extend env:client: ->
 
 # Routing
 #########
+routes = {}
+routing_initialized = false
+
 View.extend stack:route:add: (params,next) ->
   params = params_from_route_and_path @_route, params if typeof params is string
   @set params
@@ -328,19 +335,33 @@ View.extend stack:route:add: (params,next) ->
 View.extend extend:route: (route) ->
   @_route = route
 
+View.extend
+  routes: (_routes) ->
+    return routes if arguments.length is 0
+    routes = routes
+    for route, view of _routes
+      View view, (instance) ->
+        instance.extend route: route
+    if not routing_initialized
+      routing_initialized = true
+      create_router()
+      View.env.browser ->
+        Backbone.History.start()
+
+View.extend extend:routes: (routes,discard_mixin_item) ->
+  View.routes routes
+  discard_mixin_item()
+
 named_param = /:([\w\d]+)/g
 splat_param = /\*([\w\d]+)/g
 
-get_routes = ->
-  if window?._viewjs_routes then window._viewjs_routes else false
-
 create_router = ->
-  routes = get_routes()
   router = Backbone.Controller.extend {}
   for path, view of routes
     do (path,view) ->
       router.route path, view, (ordered_params) ->
-        window[view].route params_from_ordered_params_and_path ordered_params, path 
+        View view, (instance) ->
+          instance.route params_from_ordered_params_and_path ordered_params, path
 
 params_from_ordered_params_and_path = (ordered_params,path) ->
   params = {}
@@ -361,11 +382,6 @@ keys_from_path = (path) ->
     .replace /(\/)?(\.)?:(\w+)(?:(\(.*?\)))?(\?)?/g, (_, slash, format, key, capture, optional) ->
       keys.push(key)
   keys
-
-if get_routes()
-  router = create_router()
-  View.env.browser ->
-    Backbone.History.start()
 
 # Data
 ######
@@ -472,8 +488,11 @@ View.extend extend:before: (methods) ->
 
 # Templates
 ###########
-get_render_cache = ->
-  window._viewjs_render_cache || {}
+cache = {}
+View.extend
+  cache: (_cache) ->
+    return cache if arguments.length is 0
+    cache = _cache
 
 View.extend stack:render:add: (args...,next) ->
   @_ready = false if not @_ready?
@@ -498,8 +517,8 @@ View.extend extend:render: (filename) ->
       context = if @model then @model.attributes else @attributes
       extension = filename.split('.').pop()
       @trigger 'error', extension + ' is not a registered template engine' if not render_engines[extension]
-      @trigger 'error', 'Template ' + filename + ' not found' if not get_render_cache()[extension][filename]
-      next get_render_cache()[extension][filename](context)
+      @trigger 'error', 'Template ' + filename + ' not found' if not cache[extension][filename]
+      next cache()[extension][filename](context)
   else
     callback = filename
   @stack render:add: callback
@@ -655,6 +674,10 @@ ViewManager = ->
 ViewManager.views = {}
 ViewManager.create = proxy View.create, View
 ViewManager.extend = proxy View.extend, View
+ViewManager.env = proxy View.env, View
+ViewManager.routes = proxy View.routes, View
+ViewManager.route = proxy View.route, View
+ViewManager.cache = proxy View.cache, View
 
 # Export
 ########

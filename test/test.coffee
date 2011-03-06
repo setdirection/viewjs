@@ -136,3 +136,19 @@ module.exports.canPassViewsToBuilder = ->
   ]
   
   OuterView.initialize()
+
+module.exports.canDiscardMixin = ->
+  View.extend extend:discard: (value,discard) ->
+    @discard = value
+    discard()
+    
+  {DiscardView} = View.create
+    DiscardView: {}
+  
+  DiscardView.extend
+    discard: 'discard'
+    
+  {DiscardChildView} = DiscardView.create DiscardChildView: {}
+  
+  assert.equal DiscardView.discard, 'discard'
+  assert.equal typeof DiscardChildView.discard, 'undefined'
