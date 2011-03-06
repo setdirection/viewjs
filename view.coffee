@@ -122,12 +122,16 @@ View.extend
     klass = {}
     klass.extend = @extend
     klass.extend.api = {}
+    klass.attributes = {}
+    klass._changed = false
+    klass._ready = false
     #deep copy events
     klass._callbacks = {}
     for event_name, callbacks of @_callbacks
       klass._callbacks[event_name] = []
       klass._callbacks[event_name].push callback for callback in callbacks
     klass.extend @
+    klass.element()
     klass
 
 # Initialize
@@ -135,11 +139,7 @@ View.extend
 View.extend stack:initialize:add: (next) ->
   return if @_initialized?
   @_initialized = true
-  @attributes = {}
-  @_changed = false
   @lock()
-  @_ready = false
-  @element()
   next()
 
 View.extend stack:initialize:complete: ->

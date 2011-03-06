@@ -1,5 +1,5 @@
 assert = require 'assert'
-{View} = require '../view.js'
+{View,Builder} = require '../view.js'
 {jsdom} = require 'jsdom'
 Backbone = require 'backbone'
 
@@ -62,3 +62,29 @@ module.exports.canDetectCollection = ->
   view.initialize()
   assert.equal view.collection, collection
   assert.equal view.collection, _collection
+
+module.exports.canRender = ->
+  BuilderView = View.create Builder,
+    render: (args...,next) ->
+      next @p 'test'
+    on:ready: ->
+      assert.equal @[0].firstChild.innerHTML, 'test'
+  BuilderView.initialize()
+
+module.exports.canPassViewsToBuilder = ->
+  BuilderView = View.create Builder
+  
+  OuterView = BuilderView.create
+    initialize: (next) ->
+      InnerView.on ready: next
+      InnerView.initialize()
+    render: (next) ->
+      next(@div InnerView, class: 'test')
+    on:ready: ->
+      assert.equal @[0].firstChild.firstChild.firstChild.innerHTML, 'test'
+      
+  InnerView = BuilderView.create
+    render: (next) ->
+      next @p 'test'
+  
+  OuterView.initialize()
