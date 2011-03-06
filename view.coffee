@@ -90,31 +90,27 @@ View =
             process_item.apply @, [key,value]
 
 View.extend
-  middleware: (method_name,callbacks...) ->
-    callback = ->
-      _stack = array_from callback.stack
-      step = ->
-        (_stack.shift() || callback._complete).apply @, array_from(arguments).concat [proxy(step, @)]
-      step.apply @, array_from arguments
-    callback.stack = []
-    callback.complete = (complete_callback) ->
-      callback._complete = complete_callback
-    callback.complete ->
-    callback.add = proxy (added_callback) ->
-      if is_array added_callback
-        callback.stack.push _callback for _callback in array_flatten added_callback
-      else
-        callback.stack.push added_callback
-    , @
-    callback.clear = ->
-      callbacks = []
-    callback.add array_from callbacks
-    @[method_name] = callback  
+  stack: (commands) ->
+    @_stack ||= {}
+    for method_name of commands
+      if not @[method_name]
+        @_stack[method_name] =
+          complete: ->
+          stack: []
+        @[method_name] = ->
+          _stack = array_from @_stack[method_name].stack
+          step = ->
+            (_stack.shift() || @_stack[method_name].complete).apply @, array_from(arguments).concat [proxy(step, @)]
+          step.apply @, array_from arguments
+      for command_name, callback of commands[method_name]
+        switch command_name
+          when 'complete' then @_stack[method_name].complete = callback
+          when 'add' then @_stack[method_name].stack.push callback
+          when 'clear' then @_stack[method_name].stack = []
 
 View.extend extend:
-  middleware: (middlewares) ->
-    for middleware_name, callback of middlewares
-      @middleware middleware_name, if is_array callback then callback else [callback]
+  stack: (commands) ->
+    @stack commands
     
 View.extend
   create: ->
@@ -126,28 +122,33 @@ View.extend
     klass = {}
     klass.extend = @extend
     klass.extend.api = {}
+    #deep copy events
+    klass._callbacks = {}
+    for event_name, callbacks of @_callbacks
+      klass._callbacks[event_name] = []
+      klass._callbacks[event_name].push callback for callback in callbacks
     klass.extend @
     klass
 
 # Initialize
 ############
-View.extend middleware:
-  initialize: (mixins...,next) ->
-    @attributes = {}
-    @_changed = false
-    @lock()
-    @_ready = false
-    @extend.apply @, mixins if mixins.length > 1
-    @element()
-    next.apply @, mixins
+View.extend stack:initialize:add: (next) ->
+  return if @_initialized?
+  @_initialized = true
+  @attributes = {}
+  @_changed = false
+  @lock()
+  @_ready = false
+  @element()
+  next()
 
-View.initialize.complete = ->
+View.extend stack:initialize:complete: ->
   @render()
   @trigger 'initialize', arguments...
 
 View.extend extend:
   initialize: (callback) ->
-    @initialize.add callback
+    View.stack initialize:add: callback
 
 # Events
 ########
@@ -157,33 +158,32 @@ View.extend
       for _event_name, _callback of event_name
         @bind _event_name, _callback
     else
-      calls = @_callbacks or @_callbacks = {}
-      list = @_callbacks[event_name] or @_callbacks[event_name] = []
-      list.push callback
+      @_callbacks ||= {}
+      @_callbacks[event_name] ||= []
+      @_callbacks[event_name].push callback if not (callback in @_callbacks[event_name])
       callback.call @ if event_name is 'ready' and @_ready
-      @
+    @
 
   unbind: (event_name,callback) ->
     @_callbacks = {} if not event_name
     calls = @_callbacks
     if not callback
-      calls[event_name] = []
+      @_callbacks[event_name] = []
     else
-      list = calls[event_name]
-      return @ if not list
-      for item, i in list
+      return @ if not @_callbacks[event_name]
+      for item, i in @_callbacks[event_name]
         if item is callback
-          list.splice i, 1
+          @_callbacks[event_name].splice i, 1
           break
     @
 
   trigger: (event_name) ->
     calls = @_callbacks
-    return @ if not calls
-    if list = calls[event_name]
-      item.apply @, Array::slice.call arguments, 1 for item in list
-    if list = calls.all
-      item.apply @, arguments for item in list
+    return @ if not @_callbacks
+    if @_callbacks[event_name]
+      item.apply @, Array::slice.call arguments, 1 for item in @_callbacks[event_name]
+    if @_callbacks.all
+      item.apply @, arguments for item in @_callbacks.all
     @
 
   ready: ->
@@ -224,15 +224,14 @@ View.env
   browser: ->
     not (process? and require? and global? and module?)
 
-View.extend extend:
-  env: (envs) ->
-    for env_name, args of envs
-      if environments[env_name]()
-        if typeof args is 'function'
-          response = args()
-          @extend response if response
-        else
-          @extend args
+View.extend extend:env: (envs) ->
+  for env_name, args of envs
+    if environments[env_name]()
+      if typeof args is 'function'
+        response = args()
+        @extend response if response
+      else
+        @extend args
 
 # DOM
 #####
@@ -255,7 +254,7 @@ delegate_events = (events,element) ->
 
 View.extend
   element: ->
-    @[0] || set_element @document.createElement 'div'
+    @[0] || set_element.call @, @document.createElement 'div'
     
   $: (dom_library) ->
     if arguments.length is 1 and ((jQuery? and dom_library is jQuery) or (Zepto? and dom_library is Zepto))
@@ -286,7 +285,7 @@ View.extend
 View.extend extend:
   element: (generator) ->
     @element = ->
-      set_element generator.call @
+      set_element.call @, generator.call @
 
   delegate: (events) ->
     @delegate events
@@ -295,24 +294,21 @@ View.extend extend:
     @$ $
     
 #setup the document element
-View.extend
-  env:client: ->
-    document: window.document
+View.extend env:client: ->
+  document: window.document
 
 # Routing
 #########
-View.extend middleware:
-  route: (params,next) ->
-    params = params_from_route_and_path @_route, params if typeof params is string
-    @set params
-    callback = ->
-      @unbind 'render', callback
-      next(params)
-    @bind 'render', callback
+View.extend stack:route:add: (params,next) ->
+  params = params_from_route_and_path @_route, params if typeof params is string
+  @set params
+  callback = ->
+    @unbind 'render', callback
+    next(params)
+  @bind 'render', callback
 
-View.extend extend:
-  route: (route) ->
-    @_route = route
+View.extend extend:route: (route) ->
+  @_route = route
 
 named_param = /:([\w\d]+)/g
 splat_param = /\*([\w\d]+)/g
@@ -417,20 +413,19 @@ View.extend
   removeListener: View.unbind
   emit: View.trigger
 
-View.extend extend:
-  bind: (events) ->
-    for event_name, callback of events
-      if event_name is 'change' and typeof callback is 'object'
-        for _event_name, _callback of events.change
-          @bind 'change:' + _event_name, _callback
-      else
-        @bind event_name, callback
+View.extend extend:bind: (events) ->
+  for event_name, callback of events
+    if event_name is 'change' and typeof callback is 'object'
+      for _event_name, _callback of events.change
+        @bind 'change:' + _event_name, _callback
+    else
+      @bind event_name, callback
 
-View.extend extend:
-  on: View.extend.api.bind
+View.extend extend:on: View.extend.api.bind
 
 # default error handler
 View.bind 'error', (error) ->
+  console.log 'ViewJS error: ', error if console?.log?
   throw error
 
 # Metaprogramming
@@ -451,21 +446,19 @@ View.extend
           method.apply @, [args,next,original]
         @[method_name] = callback
 
-View.extend extend:
-  before: (methods) ->
-    @before methods
+View.extend extend:before: (methods) ->
+  @before methods
 
 # Templates
 ###########
 get_render_cache = ->
   window._viewjs_render_cache || {}
 
-View.extend middleware:
-  render: (args...,next) ->
-    @_ready = false if not @_ready?
-    next.apply @, args
+View.extend stack:render:add: (args...,next) ->
+  @_ready = false if not @_ready?
+  next.apply @, args
 
-View.render.complete (element) ->
+View.extend stack:render:complete: (element) ->
   if not element or not is_element element
     @trigger 'error', 'render() did not return an element, returned ' + typeof element
   @[0].innerHTML = ''
@@ -477,18 +470,17 @@ View.render.complete (element) ->
     @trigger 'ready', element
   @trigger 'render', element
 
-View.extend extend:
-  render: (filename) ->
-    if typeof filename is 'string'
-      callback = (args...,next) ->
-        context = if @model then @model.attributes else @attributes
-        extension = filename.split('.').pop()
-        @trigger 'error', extension + ' is not a registered template engine' if not render_engines[extension]
-        @trigger 'error', 'Template ' + filename + ' not found' if not get_render_cache()[extension][filename]
-        next get_render_cache()[extension][filename](context)
-    else
-      callback = filename
-    @render.add callback
+View.extend extend:render: (filename) ->
+  if typeof filename is 'string'
+    callback = (args...,next) ->
+      context = if @model then @model.attributes else @attributes
+      extension = filename.split('.').pop()
+      @trigger 'error', extension + ' is not a registered template engine' if not render_engines[extension]
+      @trigger 'error', 'Template ' + filename + ' not found' if not get_render_cache()[extension][filename]
+      next get_render_cache()[extension][filename](context)
+  else
+    callback = filename
+  @stack render:add: callback
 
 # Builder
 #########
@@ -550,7 +542,7 @@ Builder =
 process_node_argument = (view,elements,attributes,argument) ->
   return if not argument? or argument is false
   if typeof argument is 'function'
-    argument = argument()
+    argument = argument.call view
   if is_view argument
     return elements.push argument.element()
   if is_$ argument
@@ -567,7 +559,7 @@ process_node_argument = (view,elements,attributes,argument) ->
   if is_array argument
     flattened = array_flatten argument
     for flattened_argument in flattened
-      process_node_argument view, elements, attributes, flattened_argument
+      process_node_argument.call view, elements, attributes, flattened_argument
     return
   if is_element(argument) or typeof argument is 'string' or typeof argument is 'number'
     elements.push argument
