@@ -114,9 +114,10 @@ View.extend extend:
 
 View.extend
   create: ->
+    return @clone() if arguments.length is 0
     created_views = {}
     for class_name, mixins of arguments[0]
-      @trigger 'warning', class_name ' already exists, overwriting.' if ViewManager.views[class_name]?
+      @trigger 'warning', class_name + ' already exists, overwriting.' if ViewManager.views[class_name]?
       ViewManager.views[class_name] = created_views[class_name] = @clone()
       if is_array mixins
         created_views[class_name].extend mixin for mixin in mixins 
@@ -621,20 +622,22 @@ for tag in supported_html_tags
 # ViewManager
 #############
 ViewManager = ->
+  callback = arguments[arguments.length - 1] if typeof arguments[arguments.length - 1] is 'function'
   if is_array(arguments[0]) or arguments.length > 1
     response = []
     for class_name in array_flatten array_from arguments
-      View.trigger 'error', "#{class_name} has not been created." if not ViewManager.views[class_name]?
-      response.push ViewManager.views[class_name] 
+      if typeof class_name is 'string'
+        View.trigger 'error', "#{class_name} has not been created." if not ViewManager.views[class_name]?
+        response.push ViewManager.views[class_name]
+    callback.apply callback, response if callback
     response
   else
     response = {}
-    for class_name of arguments[0]
+    for class_name, _callback of arguments[0]
       View.trigger 'error', "#{class_name} has not been created." if not ViewManager.views[class_name]?
       response[class_name] = ViewManager.views[class_name]
-      arguments[0][class_name].call response[class_name] if typeof arguments[0][class_name] is 'function'
-  if typeof arguments[arguments.length - 1] is 'function'
-    arguments[arguments.length - 1] response
+      _callback.call response[class_name], response[class_name]
+    callback.apply callback, [response] if callback
   response
   
 ViewManager.views = {}

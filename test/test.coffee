@@ -75,8 +75,14 @@ module.exports.canRender = ->
   BuilderView = View.create Builder,
   BuilderView.initialize()
 
-module.exports.canReference = ->
-  
+module.exports.viewManager = ->
+  View.create TestView2: key: 'value'
+  View.create TestView3: key: 'value2'
+  [TestView2,TestView3] = View 'TestView2', 'TestView3', (TestView2,TestView3) ->
+    assert.equal TestView2.key, 'value'
+    assert.equal TestView3.key, 'value2'
+  assert.equal TestView2.key, 'value'
+  assert.equal TestView3.key, 'value2'
 
 module.exports.canPassViewsToBuilder = ->
   {OuterView} = View.create OuterView: [Builder, 
