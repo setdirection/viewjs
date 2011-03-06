@@ -10,24 +10,34 @@ View.extend
 module.exports.parses = ->
   assert.ok(true)
   
-module.exports.middleware = ->
+module.exports.stack = ->
   i = 0
-  MiddlewareView = View.create
-    initialize: (next) ->
+  StackView = View.create()
+  StackView.extend
+    stack:initialize:add: (next) ->
       @a = 'a'
       ++i
       next()
-  MiddlewareView.initialize.add (next) ->
+  
+  StackView.extend stack:initialize:add: (next) ->
     @b = 'b'
     ++i
     next()
-  MiddlewareView.initialize()
+  StackView.initialize()
   
-  assert.equal View.initialize.stack.length, 1
+  assert.equal View._stack.initialize.stack.length, 1
+  assert.equal StackView._stack.initialize.stack.length, 3
   assert.equal 2, i
-  assert.equal MiddlewareView.a, 'a'
-  assert.equal MiddlewareView.b, 'b'
-  
+  assert.equal StackView.a, 'a'
+  assert.equal StackView.b, 'b'
+
+module.exports.canTriggerEvents = ->
+  view = View.create()
+  i = 0
+  view.bind 'test', -> ++i
+  view.trigger 'test'
+  assert.equal i, 1
+
 module.exports.canDetectModel = ->
   _model = false
   model = new Backbone.Model

@@ -114,8 +114,8 @@ View.extend extend:
     
 View.extend
   create: ->
-    klass = @clone {}
-    klass.extend.apply klass, arguments
+    klass = @clone()
+    klass.extend mixin for mixin in arguments
     klass
     
   clone: ->
@@ -146,9 +146,8 @@ View.extend stack:initialize:complete: ->
   @render()
   @trigger 'initialize', arguments...
 
-View.extend extend:
-  initialize: (callback) ->
-    View.stack initialize:add: callback
+View.extend extend:initialize: (callback) ->
+  @stack initialize:add: callback
 
 # Events
 ########
@@ -459,11 +458,12 @@ View.extend stack:render:add: (args...,next) ->
   next.apply @, args
 
 View.extend stack:render:complete: (element) ->
-  if not element or not is_element element
-    @trigger 'error', 'render() did not return an element, returned ' + typeof element
-  @[0].innerHTML = ''
-  element = [element] if not is_array element
-  @[0].appendChild _element for _element in element
+  if arguments.length > 1
+    if not element or not is_element element
+      @trigger 'error', 'render() did not return an element, returned ' + typeof element
+    @[0].innerHTML = ''
+    element = [element] if not is_array element
+    @[0].appendChild _element for _element in element
   @unlock()
   if not @_ready
     @_ready = true
@@ -544,7 +544,7 @@ process_node_argument = (view,elements,attributes,argument) ->
   if typeof argument is 'function'
     argument = argument.call view
   if is_view argument
-    return elements.push argument.element()
+    return elements.push argument[0]
   if is_$ argument
     return elements.push _element for _element in argument
   if is_element argument
