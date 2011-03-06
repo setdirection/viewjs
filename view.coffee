@@ -63,7 +63,7 @@ array_from = (object) ->
   results
 
 # Class & Mixin System
-######################
+######################  
 View =
   extend: ->
     @extend.api ||= {}
@@ -111,12 +111,18 @@ View.extend
 View.extend extend:
   stack: (commands) ->
     @stack commands
-    
+
 View.extend
   create: ->
-    klass = @clone()
-    klass.extend mixin for mixin in arguments
-    klass
+    created_views = {}
+    for class_name, mixins of arguments[0]
+      @trigger 'warning', class_name ' already exists, overwriting.' if ViewManager.views[class_name]?
+      ViewManager.views[class_name] = created_views[class_name] = @clone()
+      if is_array mixins
+        created_views[class_name].extend mixin for mixin in mixins 
+      else
+        created_views[class_name].extend mixins
+    created_views
     
   clone: ->
     klass = {}
@@ -423,8 +429,11 @@ View.extend extend:bind: (events) ->
 View.extend extend:on: View.extend.api.bind
 
 # default error handler
+View.bind 'warning', (warning) ->
+  console.log.apply console, ['ViewJS warning: '].concat arguments if console?.log?
+
 View.bind 'error', (error) ->
-  console.log 'ViewJS error: ', error if console?.log?
+  console.log.apply console, ['ViewJS error: '].concat arguments if console?.log?
   throw error
 
 # Metaprogramming
@@ -609,12 +618,35 @@ for tag in supported_html_tags
       args.push argument for argument in arguments
       @tag.apply @, args
 
+# ViewManager
+#############
+ViewManager = ->
+  if is_array(arguments[0]) or arguments.length > 1
+    response = []
+    for class_name in array_flatten array_from arguments
+      View.trigger 'error', "#{class_name} has not been created." if not ViewManager.views[class_name]?
+      response.push ViewManager.views[class_name] 
+    response
+  else
+    response = {}
+    for class_name of arguments[0]
+      View.trigger 'error', "#{class_name} has not been created." if not ViewManager.views[class_name]?
+      response[class_name] = ViewManager.views[class_name]
+      arguments[0][class_name].call response[class_name] if typeof arguments[0][class_name] is 'function'
+  if typeof arguments[arguments.length - 1] is 'function'
+    arguments[arguments.length - 1] response
+  response
+  
+ViewManager.views = {}
+ViewManager.create = proxy View.create, View
+ViewManager.extend = proxy View.extend, View
+
 # Export
 ########
 if window?
-  window.View = View
+  window.View = ViewManager
   window.Builder = Builder
   
 if module?.exports?
-  module.exports.View = View
+  module.exports.View = ViewManager
   module.exports.Builder = Builder
