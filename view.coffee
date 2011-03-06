@@ -64,95 +64,20 @@ array_from = (object) ->
 
 # Class & Mixin System
 ######################
-constructor = -> ->
-  if @ instanceof arguments.callee
-    @initialize.apply @, arguments
-    @
-  else
-    throw 'View called as a constructor without the "new" keyword.'
-
-View = constructor()
-
-View._methods = {}
-View::_methods = {}
-
-View.method = View::method = View._methods.method = View::_methods.method = (method_name,method) ->
-  @_methods ||= {}
-  @::_methods ||= {} if @::
-  if arguments.length is 1
-    for _method_name, method of method_name
-      @method _method_name, method
-  else
-    @_methods[method_name] = @[method_name] = method
-    @::_methods[method_name] = @::[method_name] = method if @::
-
-# middleware methods have properties
-# complete
-# add
-View.method middleware: (method_name,callbacks...) ->
-  if typeof method_name is 'object'
-    for _method_name, callback of method_name
-      @middleware.apply @, [_method_name,callback]
-  else
-    callback = ->
-      stack = array_from callbacks
-      step = ->
-        (stack.shift() || callback._complete).apply @, array_from(arguments).concat [proxy(step, @)]
-      step.apply @, array_from arguments
-    callback.complete = (complete_callback) ->
-      @::[method_name].complete complete_callback if @::?[method_name]?.complete #TODO, can remove if test shows that callback in @:: is the same object
-      callback._complete = complete_callback
-    callback.complete ->
-    callback.add = proxy (added_callback) ->
-      #caused infinite recursion
-      #@::[method_name].add callback if @::?[method_name]?.add #TODO, can remove if test shows that callback in @:: is the same object
-      if is_array added_callback
-        callbacks.push _callback for _callback in array_flatten added_callback
-      else
-        callbacks.push added_callback
-    , @
-    callback.clear = ->
-      callbacks = []
-    @method method_name, callback  
-
-View.method
-  create: ->
-    klass = @clone()
-    klass.extend.apply klass, arguments
-    klass
-
-  clone: ->
-    #TODO
-    #deep copy of delegates, attributes (but not model), and events, and envs
-    if @::
-      klass = constructor()
-      klass.method = View.method
-      klass.method @_methods
-      @trigger 'clone', klass
-      klass.extend @ # will look for _mixin and process automatically
-      klass
-    else
-      extend {}, @
-
+View =
   extend: ->
     @extend.api ||= {}
     @_mixin ||= []
-    @::_mixin ||= [] if @::
     process_item = (key,value) ->
+      @_mixin.push [key,value]
       if key is 'extend'
         for _key of value
           @extend.api[_key] = value[_key]
-          @::extend.api[_key] = value[_key] 
       else
-        @_mixin.push [key,value]
-        @::_mixin.push [key,value] if @::
         if @extend.api[key]
           @extend.api[key].apply @, [value]
-        else if typeof value is 'function'
-          @method key, value
         else
           @[key] = value
-          @::[key] = value if @::
     for argument in arguments
       if not is_view(argument) and typeof argument is 'function'
         @bind 'ready', argument
@@ -164,22 +89,59 @@ View.method
           for key, value of argument
             process_item.apply @, [key,value]
 
+View.extend
+  middleware: (method_name,callbacks...) ->
+    callback = ->
+      _stack = array_from callback.stack
+      step = ->
+        (_stack.shift() || callback._complete).apply @, array_from(arguments).concat [proxy(step, @)]
+      step.apply @, array_from arguments
+    callback.stack = []
+    callback.complete = (complete_callback) ->
+      callback._complete = complete_callback
+    callback.complete ->
+    callback.add = proxy (added_callback) ->
+      if is_array added_callback
+        callback.stack.push _callback for _callback in array_flatten added_callback
+      else
+        callback.stack.push added_callback
+    , @
+    callback.clear = ->
+      callbacks = []
+    callback.add array_from callbacks
+    @[method_name] = callback  
+
+View.extend extend:
+  middleware: (middlewares) ->
+    for middleware_name, callback of middlewares
+      @middleware middleware_name, if is_array callback then callback else [callback]
+    
+View.extend
+  create: ->
+    klass = @clone {}
+    klass.extend.apply klass, arguments
+    klass
+    
+  clone: ->
+    klass = {}
+    klass.extend = @extend
+    klass.extend.api = {}
+    klass.extend @
+    klass
+
 # Initialize
 ############
-View.middleware 
+View.extend middleware:
   initialize: (mixins...,next) ->
-    model = mixins.shift()
+    @attributes = {}
+    @_changed = false
     @lock()
     @_ready = false
     @extend.apply @, mixins if mixins.length > 1
-    if is_collection(model) and not @collection
-      @_collection model
-    else if not @model and not @collection
-      @_model model || {}
     @element()
-    next(model || {})
+    next.apply @, mixins
 
-View.initialize.complete = View::initialize.complete = ->
+View.initialize.complete = ->
   @render()
   @trigger 'initialize', arguments...
 
@@ -189,7 +151,7 @@ View.extend extend:
 
 # Events
 ########
-View.method
+View.extend
   bind: (event_name,callback) ->
     if arguments.length is 1 and typeof event_name is 'object'
       for _event_name, _callback of event_name
@@ -229,7 +191,7 @@ View.method
 
 # Locking
 #########
-View.method
+View.extend
   lock: ->
     @locked = true
     @trigger 'lock'
@@ -240,16 +202,15 @@ View.method
 
 # Environments
 ##############
-View.method
+environments = {}
+
+View.extend
   env: (envs) ->
-    @_envs ||= {}
-    @::_envs ||= {} if @::
     if arguments.length is 2
       [env_name, callback] = arguments
-      if not @_envs[env_name]?
-        @_envs[env_name] = callback
-        @::_envs[env_name] = callback if @::
-      else if @_envs[env_name]()
+      if not environments[env_name]?
+        environments[env_name] = callback
+      else if environments[env_name]()
         callback.call @
     else
       for env_name, callback of envs
@@ -263,13 +224,10 @@ View.env
   browser: ->
     not (process? and require? and global? and module?)
 
-View.bind clone: (klass) ->
-  klass.env @_envs
-
 View.extend extend:
   env: (envs) ->
     for env_name, args of envs
-      if @_envs[env_name]()
+      if environments[env_name]()
         if typeof args is 'function'
           response = args()
           @extend response if response
@@ -295,14 +253,13 @@ delegate_events = (events,element) ->
     else
       @_$(element).delegate selector, event_name, method
 
-View.method
+View.extend
   element: ->
     @[0] || set_element @document.createElement 'div'
     
   $: (dom_library) ->
     if arguments.length is 1 and ((jQuery? and dom_library is jQuery) or (Zepto? and dom_library is Zepto))
       @_$ = dom_library
-      @::_$ = dom_library if @::
     else if arguments.length is 1 and typeof dom_library is 'string'
       selector = dom_library
       if not @_$?
@@ -328,7 +285,7 @@ View.method
 
 View.extend extend:
   element: (generator) ->
-    @method element: ->
+    @element = ->
       set_element generator.call @
 
   delegate: (events) ->
@@ -344,13 +301,13 @@ View.extend
 
 # Routing
 #########
-View.middleware
+View.extend middleware:
   route: (params,next) ->
     params = params_from_route_and_path @_route, params if typeof params is string
     @set params
     callback = ->
       @unbind 'render', callback
-      next()
+      next(params)
     @bind 'render', callback
 
 View.extend extend:
@@ -398,22 +355,22 @@ if get_routes()
 
 # Data
 ######
-View.method
+View.extend
   _model: (model) ->
-    if model and not is_model model
-      @attributes = {}
-      @_changed = false
-      @set model
-    else if is_model model
+    if is_model model
       @attributes = model.attributes
       @model = model
       @model.bind 'all', => @trigger.apply @, arguments
-  
+    else
+      @trigger 'error', 'The model object passed is not a valid model.'
+
   _collection: (collection) ->
     if is_collection collection
       @attributes = {}
       @collection = collection
       @collection.bind 'all', => @trigger.apply @, arguments
+    else
+      @trigger 'error', 'The collection object passed is not a valid collection.'
   
   get: (key) ->
     if @model
@@ -455,7 +412,7 @@ View.extend extend:
     @_collection collection
 
 # mirror nodejs event api
-View.method
+View.extend
   on: View.bind
   removeListener: View.unbind
   emit: View.trigger
@@ -478,7 +435,7 @@ View.bind 'error', (error) ->
 
 # Metaprogramming
 #################
-View.method
+View.extend
   before: (methods) ->
     if arguments.length is 2
       methods = []
@@ -493,7 +450,6 @@ View.method
             original.apply @, args
           method.apply @, [args,next,original]
         @[method_name] = callback
-        @::[method_name] = callback if @::
 
 View.extend extend:
   before: (methods) ->
@@ -504,7 +460,7 @@ View.extend extend:
 get_render_cache = ->
   window._viewjs_render_cache || {}
 
-View.middleware
+View.extend middleware:
   render: (args...,next) ->
     @_ready = false if not @_ready?
     next.apply @, args
