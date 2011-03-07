@@ -216,6 +216,31 @@ View.extend
 
   ready: ->
     @bind.apply @, ['ready'].concat array_from arguments
+    # mirror nodejs event api
+
+View.extend
+  on: View.bind
+  removeListener: View.unbind
+  emit: View.trigger
+
+bind_extend_handler = (events) ->
+  for event_name, callback of events
+    if event_name is 'change' and typeof callback is 'object'
+      for _event_name, _callback of events.change
+        @bind 'change:' + _event_name, _callback
+    else
+      @bind event_name, callback
+      
+View.extend extend:bind: bind_extend_handler
+View.extend extend:on: bind_extend_handler
+
+# default error handler
+View.bind 'warning', (warning) ->
+  console.log.apply console, ['ViewJS warning: '].concat array_from arguments if console?.log?
+
+View.bind 'error', (error) ->
+  console.log.apply console, ['ViewJS error: '].concat array_from arguments if console?.log?
+  throw error
 
 # Locking
 #########
@@ -363,14 +388,15 @@ create_router = ->
   router = new Backbone.Controller
   for path, view of routes
     do (path,view) ->
-      router.route path, view, (ordered_params) ->
+      router.route path, view, ->
+        ordered_params = array_from arguments
         ViewManager view, (instance) ->
           instance.route params_from_ordered_params_and_path ordered_params, path
 
 params_from_ordered_params_and_path = (ordered_params,path) ->
   params = {}
   keys = keys_from_path path
-  for key, i of keys
+  for key, i in keys
     params[key] = ordered_params[i]
   params
 
@@ -381,10 +407,12 @@ params_from_route_and_path = (route,path) ->
       
 keys_from_path = (path) ->
   keys = []
-  path.concat '/?'
-    .replace /\/\(/g, '(?:/'
-    .replace /(\/)?(\.)?:(\w+)(?:(\(.*?\)))?(\?)?/g, (_, slash, format, key, capture, optional) ->
-      keys.push(key)
+  path
+    .concat('/?')
+    .replace(/\/\(/g, '(?:/')
+    .replace(/(\/)?(\.)?:(\w+)(?:(\(.*?\)))?(\?)?/g, (_, slash, format, key, capture, optional) ->
+      keys.push key
+    )
   keys
 
 siblings = (element) ->
@@ -397,6 +425,9 @@ siblings = (element) ->
 
 # Data
 ######
+View.extend extend:defaults: (defaults) ->
+  @set defaults, silent: true
+
 View.extend
   _model: (model) ->
     if is_model model
@@ -408,7 +439,6 @@ View.extend
 
   _collection: (collection) ->
     if is_collection collection
-      @attributes = {}
       @collection = collection
       @collection.bind 'all', => @trigger.apply @, arguments
     else
@@ -452,30 +482,6 @@ View.extend extend:
   
   collection: (collection) ->
     @_collection collection
-
-# mirror nodejs event api
-View.extend
-  on: View.bind
-  removeListener: View.unbind
-  emit: View.trigger
-
-View.extend extend:bind: (events) ->
-  for event_name, callback of events
-    if event_name is 'change' and typeof callback is 'object'
-      for _event_name, _callback of events.change
-        @bind 'change:' + _event_name, _callback
-    else
-      @bind event_name, callback
-
-View.extend extend:on: View.extend.api.bind
-
-# default error handler
-View.bind 'warning', (warning) ->
-  console.log.apply console, ['ViewJS warning: '].concat array_from arguments if console?.log?
-
-View.bind 'error', (error) ->
-  console.log.apply console, ['ViewJS error: '].concat array_from arguments if console?.log?
-  throw error
 
 # Metaprogramming
 #################

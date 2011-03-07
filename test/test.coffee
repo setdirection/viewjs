@@ -153,3 +153,10 @@ module.exports.canDiscardMixin = ->
   
   assert.equal DiscardView.discard, 'discard'
   assert.equal typeof DiscardChildView.discard, 'undefined'
+  
+module.exports.canHaveDefaults = ->
+  {DefaultsView} = View.create DefaultsView:
+    defaults:
+      key: 'value'
+  assert.equal DefaultsView.get('key'), 'value'
+  assert.equal DefaultsView.create().get('key'), 'value'
