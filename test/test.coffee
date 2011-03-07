@@ -2,6 +2,13 @@ assert = require 'assert'
 {View,Builder} = require '../view.js'
 {jsdom} = require 'jsdom'
 Backbone = require 'backbone'
+array_from = (object) ->
+  return [] if not object
+  length = object.length or 0
+  results = new Array length
+  while length--
+    results[length] = object[length]
+  results
 
 View.extend
   document: jsdom '<html><head></head><body></body></html>'
@@ -79,6 +86,40 @@ module.exports.canRender = ->
   
   BuilderView = View.create Builder,
   BuilderView.initialize()
+
+module.exports.canRenderCollection = ->
+  Item = Backbone.Model.extend()
+  List = new (Backbone.Collection.extend(model: Item))
+  
+  contents = [
+    {content: 'One'}
+    {content: 'Two'}
+    {content: 'Three'}
+  ]
+  List.add array_from contents
+  {ListView} = View.create ListView:
+    collection: List
+    element: -> @tag 'ul'
+    render: (item) ->
+      @tag 'li', item.get 'content'
+
+  ListView.initialize ->
+    assert.equal ListView[0].childNodes.length, 3
+    assert.equal ListView[0].firstChild.innerHTML, 'One'
+    List.remove List.at(0)
+    
+    assert.equal ListView[0].childNodes.length, 2
+    assert.equal ListView[0].firstChild.innerHTML, 'Two'
+    List.add content: 'Four'
+    
+    assert.equal ListView[0].childNodes.length, 3
+    assert.equal ListView[0].firstChild.innerHTML, 'Two'
+    assert.equal ListView[0].childNodes[2].innerHTML, 'Four'
+    List.refresh contents
+    
+    assert.equal ListView[0].childNodes.length, 3
+    assert.equal ListView[0].firstChild.innerHTML, 'One'
+    assert.equal ListView[0].childNodes[2].innerHTML, 'Three'
 
 module.exports.viewManager = ->
   View.create TestView2: key: 'value'

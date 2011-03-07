@@ -143,22 +143,21 @@ View.extend
     klass._ready = false
     #deep copy events
     klass._callbacks = {}
-    for event_name, callbacks of @_callbacks
-      klass._callbacks[event_name] = []
-      klass._callbacks[event_name].push callback for callback in callbacks
     klass.extend @
     klass.element()
     klass
 
 # Initialize
 ############
-View.extend stack:initialize:add: (next) ->
+View.extend stack:initialize:add: (args...,next) ->
   return if @_initialized?
   @_initialized = true
+  @_initialize_callback = args[0] if args[0]
   next()
 
 View.extend stack:initialize:complete: ->
   @render()
+  @_initialize_callback.call @ if @_initialize_callback
   @trigger 'initialize', arguments...
 
 View.extend extend:initialize: (callback) ->
@@ -429,6 +428,12 @@ View.extend
     if is_collection collection
       @collection = collection
       @collection.bind 'all', => @trigger.apply @, arguments
+      @bind add: (model) ->
+        @_elements[model.cid] = @_render(model)
+        @[0].insertBefore @_elements[model.cid], (@[0].childNodes[@collection.models.indexOf(model)] || null)
+      @bind remove: (model) ->
+        @[0].removeChild @_elements[model.cid] if @_elements[model.cid]
+      @bind refresh: @render
     else
       @trigger 'error', 'The collection object passed is not a valid collection.'
   
@@ -464,17 +469,11 @@ View.extend
     else
       @attributes
 
-  collection: (collection) ->
-    @_collection collection
+View.extend extend:model: (model) ->
+  @_model model
 
-# Collection Binding
-####################
-
-# create list of dom nodes inside
-
-
-# make render() a regular meth
-
+View.extend extend:collection: (collection) ->
+  @_collection collection
 
 # Metaprogramming
 #################
@@ -509,11 +508,17 @@ View.extend
   render: (options) ->
     options ||= {}
     options.update = true if not options.update?
-    element = @_render()
+    if @collection?
+      @_elements = {}
+      element = @collection.map (model) ->
+        @_elements[model.cid] = @_render model
+      , @
+    else
+      element = @_render if @model then @model.attributes else @attributes
     return element if not options.update
     if element
-      if not is_element element
-        @trigger 'error', 'render() did not return an element, returned ' + typeof element
+      if not is_element(element) and not is_array element
+        @trigger 'error', 'render() did not return an element or array, returned ' + typeof element
       @[0].innerHTML = ''
       element = [element] if not is_array element
       @[0].appendChild _element for _element in element
@@ -524,8 +529,7 @@ View.extend
 
 View.extend extend:render: (filename) ->
   if typeof filename is 'string'
-    callback = (args...,next) ->
-      context = if @model then @model.attributes else @attributes
+    callback = (context) ->
       extension = filename.split('.').pop()
       @trigger 'error', extension + ' is not a registered template engine' if not render_engines[extension]
       @trigger 'error', 'Template ' + filename + ' not found' if not cache[extension][filename]
