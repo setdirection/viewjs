@@ -155,7 +155,6 @@ View.extend
 View.extend stack:initialize:add: (next) ->
   return if @_initialized?
   @_initialized = true
-  @lock()
   next()
 
 View.extend stack:initialize:complete: ->
@@ -241,17 +240,6 @@ View.bind 'warning', (warning) ->
 View.bind 'error', (error) ->
   console.log.apply console, ['ViewJS error: '].concat array_from arguments if console?.log?
   throw error
-
-# Locking
-#########
-View.extend
-  lock: ->
-    @locked = true
-    @trigger 'lock'
-  
-  unlock: ->
-    @locked = false
-    @trigger 'unlock'
 
 # Environments
 ##############
@@ -476,12 +464,17 @@ View.extend
     else
       @attributes
 
-View.extend extend:
-  model: (model) ->
-    @_model model
-  
   collection: (collection) ->
     @_collection collection
+
+# Collection Binding
+####################
+
+# create list of dom nodes inside
+
+
+# make render() a regular meth
+
 
 # Metaprogramming
 #################
@@ -510,23 +503,24 @@ cache = {}
 View.extend extend:cache: (_cache,discard) ->
   cache = _cache
   discard()
-  
-View.extend stack:render:add: (args...,next) ->
-  @_ready = false if not @_ready?
-  next.apply @, args
 
-View.extend stack:render:complete: (element) ->
-  if arguments.length > 1
-    if not element or not is_element element
-      @trigger 'error', 'render() did not return an element, returned ' + typeof element
-    @[0].innerHTML = ''
-    element = [element] if not is_array element
-    @[0].appendChild _element for _element in element
-  @unlock()
-  if not @_ready
-    @_ready = true
-    @trigger 'ready', element
-  @trigger 'render', element
+View.extend
+  _render: ->
+  render: (options) ->
+    options ||= {}
+    options.update = true if not options.update?
+    element = @_render()
+    return element if not options.update
+    if element
+      if not is_element element
+        @trigger 'error', 'render() did not return an element, returned ' + typeof element
+      @[0].innerHTML = ''
+      element = [element] if not is_array element
+      @[0].appendChild _element for _element in element
+    if not @_ready
+      @_ready = true
+      @trigger 'ready', element
+    @trigger 'render', element
 
 View.extend extend:render: (filename) ->
   if typeof filename is 'string'
@@ -535,67 +529,69 @@ View.extend extend:render: (filename) ->
       extension = filename.split('.').pop()
       @trigger 'error', extension + ' is not a registered template engine' if not render_engines[extension]
       @trigger 'error', 'Template ' + filename + ' not found' if not cache[extension][filename]
-      next cache()[extension][filename](context)
+      cache()[extension][filename](context)
   else
     callback = filename
-  @stack render:add: callback
+  @_render = callback
 
 # Builder
 #########
-Builder =
-  tag: (tag_name) ->
-    elements = []
-    attributes = {}
-    for argument in array_from(arguments)[1..]
-      process_node_argument @, elements, attributes, argument
-    tag_name = tag_name.toLowerCase()
-    if ie and (attributes.name or (tag_name is 'input' && attributes.type))
-      # ie needs these attributes to be written in the string passed to createElement
-      tag = '<' + tag_name;
-      if attributes.name
-        tag += ' name="' + attributes.name + '"'
-      if tag_name is 'input' and attributes.type
-        tag += ' type="' + attributes.type + '"'
-      tag += '>'
-      delete attributes.name
-      delete attributes.type
-      element = @document.createElement tag
+tag = (tag_name) ->
+  elements = []
+  attributes = {}
+  for argument in array_from(arguments)[1..]
+    process_node_argument @, elements, attributes, argument
+  tag_name = tag_name.toLowerCase()
+  if ie and (attributes.name or (tag_name is 'input' && attributes.type))
+    # ie needs these attributes to be written in the string passed to createElement
+    tag = '<' + tag_name;
+    if attributes.name
+      tag += ' name="' + attributes.name + '"'
+    if tag_name is 'input' and attributes.type
+      tag += ' type="' + attributes.type + '"'
+    tag += '>'
+    delete attributes.name
+    delete attributes.type
+    element = @document.createElement tag
+  else
+    if not element_cache[tag_name]
+      element_cache[tag_name] = @document.createElement tag_name
+    element = element_cache[tag_name].cloneNode false
+
+  #write_attribute
+  for attribute_name of attributes
+    name = attribute_translations[attribute_name] or attribute_name
+    # check if things need to be remapped for IE (Some stuff has been fixed when IE > 7)
+    if ie and ie_attribute_translations[name]
+      if ie_attribute_translation_sniffing_cache[name]?
+        name = ie_attribute_translations[name]
+      else
+        test_element = @document.createElement 'div'
+        test_element.setAttribute name, 'test'
+        if test_element[ie_attribute_translations[name]] isnt 'test'
+          test_element.setAttribute ie_attribute_translations[name], 'test'
+          if ie_attribute_translation_sniffing_cache[name] = test_element[ie_attribute_translations[name]] is 'test'
+            name = ie_attribute_translations[name]
+    value = attributes[attribute_name]
+    if value is false or not value?
+      element.removeAttribute name
+    else if value is true
+      element.setAttribute name, name
+    else if name is 'style'
+      element.style.cssText = value
     else
-      if not element_cache[tag_name]
-        element_cache[tag_name] = @document.createElement tag_name
-      element = element_cache[tag_name].cloneNode false
+      element.setAttribute name, value
+  # end write attribute
 
-    #write_attribute
-    for attribute_name of attributes
-      name = attribute_translations[attribute_name] or attribute_name
-      # check if things need to be remapped for IE (Some stuff has been fixed when IE > 7)
-      if ie and ie_attribute_translations[name]
-        if ie_attribute_translation_sniffing_cache[name]?
-          name = ie_attribute_translations[name]
-        else
-          test_element = @document.createElement 'div'
-          test_element.setAttribute name, 'test'
-          if test_element[ie_attribute_translations[name]] isnt 'test'
-            test_element.setAttribute ie_attribute_translations[name], 'test'
-            if ie_attribute_translation_sniffing_cache[name] = test_element[ie_attribute_translations[name]] is 'test'
-              name = ie_attribute_translations[name]
-      value = attributes[attribute_name]
-      if value is false or not value?
-        element.removeAttribute name
-      else if value is true
-        element.setAttribute name, name
-      else if name is 'style'
-        element.style.cssText = value
-      else
-        element.setAttribute name, value
-    # end write attribute
-
-    for _element in elements
-      if is_element _element
-        element.appendChild _element
-      else
-        element.appendChild @document.createTextNode String _element
-    element
+  for _element in elements
+    if is_element _element
+      element.appendChild _element
+    else
+      element.appendChild @document.createTextNode String _element
+  element
+  
+View.extend tag: ->
+  tag.apply @, arguments
 
 process_node_argument = (view,elements,attributes,argument) ->
   return if not argument? or argument is false
@@ -660,10 +656,11 @@ attribute_map =
   htmlFor: 'for'
   className: 'class'
 
-for tag in supported_html_tags
-  do (tag) =>
-    Builder[tag] = ->
-      @tag.apply @, [tag].concat array_from arguments
+Builder = {}
+for tag_name in supported_html_tags
+  do (tag_name) ->
+    Builder[tag_name] = ->
+      tag.apply @, [tag_name].concat array_from arguments    
 
 # ViewManager
 #############

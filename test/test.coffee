@@ -69,8 +69,8 @@ module.exports.canDetectCollection = ->
 
 module.exports.canRender = ->
   {BuilderView} = View.create BuilderView: [Builder,
-      render: (args...,next) ->
-        next @p 'test'
+      render: ->
+        @p 'test'
       on:ready: ->
         assert.equal @[0].firstChild.innerHTML, 'test'
     ]
@@ -101,19 +101,19 @@ module.exports.canDepend = ->
         next()
     ChildView1: 
       name: 'ChildView1'
-      render: (next) ->
+      render: ->
         sequence.push 'a'
-        next @document.createElement 'div'
+        @document.createElement 'div'
     ChildView2:
       name: 'ChildView2'
-      render: (next) ->
+      render: ->
         sequence.push 'b'
-        next @document.createElement 'div'
+        @document.createElement 'div'
     ChildView3:
       name: 'ChildView3'
-      render: (next) ->
+      render: ->
         sequence.push 'c'
-        next @document.createElement 'div'
+        @document.createElement 'div'
   View ParentView: ->
     @initialize()
     @ready ->
@@ -126,14 +126,14 @@ module.exports.canPassViewsToBuilder = ->
     initialize: (next) ->
       InnerView.on ready: next
       InnerView.initialize()
-    render: (next) ->
-      next(@div InnerView, class: 'test')
+    render: ->
+      @div InnerView, class: 'test'
     on:ready: ->
       assert.equal @[0].firstChild.firstChild.firstChild.innerHTML, 'test'
   ]
   {InnerView} = View.create InnerView: [Builder,
-    render: (next) ->
-      next @p 'test'
+    render: ->
+      @p 'test'
   ]
   
   OuterView.initialize()
