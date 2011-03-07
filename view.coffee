@@ -123,8 +123,13 @@ View.extend
     for class_name, mixins of arguments[0]
       @trigger 'warning', class_name + ' already exists, overwriting.' if ViewManager.views[class_name]?
       ViewManager.views[class_name] = created_views[class_name] = @clone()
+      #add route if it exists in routing table
+      for path, _class_name of routes
+        if _class_name is class_name
+          ViewManager.views[class_name].extend route: path
+      #process mixins passed to create()
       if is_array mixins
-        created_views[class_name].extend mixin for mixin in mixins 
+        created_views[class_name].extend mixin for mixin in mixins
       else
         created_views[class_name].extend mixins
     created_views
@@ -162,13 +167,14 @@ View.extend extend:initialize: (callback) ->
 
 # Dependents
 ############
-View.extend extend:dependents: (dependents) ->
+View.extend extend:views: (dependents) ->
+  caller = @
   for dependent in dependents
-    do (dependent) =>
-      @extend stack:initialize:add: (args...,next) ->
+    do (dependent) ->
+      caller.extend stack:initialize:add: (args...,next) ->
         view = ViewManager dependent
         view.bind ready: ->
-          args.push view
+          caller[dependent] = view
           next.apply next, args
         view.initialize()
   
@@ -325,42 +331,40 @@ routes = {}
 routing_initialized = false
 
 View.extend stack:route:add: (params,next) ->
-  params = params_from_route_and_path @_route, params if typeof params is string
+  params = params_from_route_and_path @_route, params if typeof params is 'string'
   @set params
   callback = ->
     @unbind 'render', callback
+    sibling.style.display = 'none' for sibling in siblings @[0]  
+    @[0].style.display = null
     next(params)
   @bind 'render', callback
 
 View.extend extend:route: (route) ->
   @_route = route
 
-View.extend
-  routes: (_routes) ->
-    return routes if arguments.length is 0
-    routes = routes
+View.extend extend:routes: (_routes,discard) ->
+  if not routing_initialized
+    routing_initialized = true
+    routes = _routes
     for route, view of _routes
-      View view, (instance) ->
-        instance.extend route: route
-    if not routing_initialized
-      routing_initialized = true
-      create_router()
-      View.env.browser ->
-        Backbone.History.start()
-
-View.extend extend:routes: (routes,discard_mixin_item) ->
-  View.routes routes
-  discard_mixin_item()
+      if ViewManager.views[view]?
+        ViewManager view, (instance) ->
+          instance.extend route: route
+    create_router()
+    View.env browser: ->
+      setTimeout -> Backbone.history.start()
+  discard()
 
 named_param = /:([\w\d]+)/g
 splat_param = /\*([\w\d]+)/g
 
 create_router = ->
-  router = Backbone.Controller.extend {}
+  router = new Backbone.Controller
   for path, view of routes
     do (path,view) ->
       router.route path, view, (ordered_params) ->
-        View view, (instance) ->
+        ViewManager view, (instance) ->
           instance.route params_from_ordered_params_and_path ordered_params, path
 
 params_from_ordered_params_and_path = (ordered_params,path) ->
@@ -382,6 +386,14 @@ keys_from_path = (path) ->
     .replace /(\/)?(\.)?:(\w+)(?:(\(.*?\)))?(\?)?/g, (_, slash, format, key, capture, optional) ->
       keys.push(key)
   keys
+
+siblings = (element) ->
+  first = element.parentNode.firstChild
+  response = []
+  sibling = element
+  while sibling = sibling.nextSibling
+    response.push sibling if sibling.nodeType is 1 and sibling isnt element
+  response
 
 # Data
 ######
@@ -459,10 +471,10 @@ View.extend extend:on: View.extend.api.bind
 
 # default error handler
 View.bind 'warning', (warning) ->
-  console.log.apply console, ['ViewJS warning: '].concat arguments if console?.log?
+  console.log.apply console, ['ViewJS warning: '].concat array_from arguments if console?.log?
 
 View.bind 'error', (error) ->
-  console.log.apply console, ['ViewJS error: '].concat arguments if console?.log?
+  console.log.apply console, ['ViewJS error: '].concat array_from arguments if console?.log?
   throw error
 
 # Metaprogramming
@@ -489,11 +501,10 @@ View.extend extend:before: (methods) ->
 # Templates
 ###########
 cache = {}
-View.extend
-  cache: (_cache) ->
-    return cache if arguments.length is 0
-    cache = _cache
-
+View.extend extend:cache: (_cache,discard) ->
+  cache = _cache
+  discard()
+  
 View.extend stack:render:add: (args...,next) ->
   @_ready = false if not @_ready?
   next.apply @, args
@@ -646,9 +657,7 @@ attribute_map =
 for tag in supported_html_tags
   do (tag) =>
     Builder[tag] = ->
-      args = [tag]
-      args.push argument for argument in arguments
-      @tag.apply @, args
+      @tag.apply @, [tag].concat array_from arguments
 
 # ViewManager
 #############
@@ -675,9 +684,7 @@ ViewManager.views = {}
 ViewManager.create = proxy View.create, View
 ViewManager.extend = proxy View.extend, View
 ViewManager.env = proxy View.env, View
-ViewManager.routes = proxy View.routes, View
 ViewManager.route = proxy View.route, View
-ViewManager.cache = proxy View.cache, View
 
 # Export
 ########

@@ -93,11 +93,12 @@ module.exports.canDepend = ->
   sequence = []
   View.create
     ParentView:
-      dependents: ['ChildView1','ChildView2','ChildView3']
-      initialize: (ChildView1,ChildView2,ChildView3,next) ->
-        assert.equal ChildView1.name, 'ChildView1'
-        assert.equal ChildView2.name, 'ChildView2'
-        assert.equal ChildView3.name, 'ChildView3'
+      views: ['ChildView1','ChildView2','ChildView3']
+      initialize: (next) ->
+        assert.equal @ChildView1.name, 'ChildView1'
+        assert.equal @ChildView2.name, 'ChildView2'
+        assert.equal @ChildView3.name, 'ChildView3'
+        next()
     ChildView1: 
       name: 'ChildView1'
       render: (next) ->
