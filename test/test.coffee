@@ -194,6 +194,22 @@ module.exports.canDiscardMixin = ->
   
   assert.equal DiscardView.discard, 'discard'
   assert.equal typeof DiscardChildView.discard, 'undefined'
+
+module.exports.canObserveKeyChanges = ->
+  _a = ''
+  _b = ''
+  _c = ''
+  {KeyChangeView} = View.create KeyChangeView:
+    on:
+      change:
+        a: (a) -> _a = a
+        b: (b) -> _b = b
+  KeyChangeView.bind 'change:c', (c) -> _c = c
+  KeyChangeView.set a: 'a', b: 'b', c: 'c'
+  
+  assert.equal _a, 'a'
+  assert.equal _b, 'b'
+  assert.equal _c, 'c'
   
 module.exports.canHaveDefaults = ->
   {DefaultsView} = View.create DefaultsView:
