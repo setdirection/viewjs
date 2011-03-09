@@ -118,11 +118,15 @@ View.extend extend:
 
 View.extend
   create: ->
-    return @clone() if arguments.length is 0
+    if arguments.length is 0 or (arguments.length is 1 and typeof arguments[0] is 'function')
+      instance = @clone()
+      arguments[0].call instance if arguments[0]
+      return instance
     created_views = {}
     for class_name, mixins of arguments[0]
       @trigger 'warning', class_name + ' already exists, overwriting.' if ViewManager.views[class_name]?
       ViewManager.views[class_name] = created_views[class_name] = @clone()
+      ViewManager.views[class_name].name = class_name
       #add route if it exists in routing table
       for path, _class_name of routes
         if _class_name is class_name
@@ -294,7 +298,10 @@ delegate_events = (events,element) ->
 
 View.extend
   element: ->
-    @[0] || set_element.call @, @document.createElement 'div'
+    return @[0] if @[0]
+    element = @document.createElement 'div'
+    element.setAttribute 'data-view', @name if @name 
+    set_element.call @, element
     
   $: (dom_library) ->
     if arguments.length is 1 and ((jQuery? and dom_library is jQuery) or (Zepto? and dom_library is Zepto))
@@ -344,13 +351,19 @@ routing_initialized = false
 
 View.extend stack:route:add: (params,next) ->
   params = params_from_route_and_path @_route, params if typeof params is 'string'
-  @set params
+  did_change = false
+  did_change_observer = ->
+    did_change = true
+  @bind 'change', did_change_observer
   callback = ->
     @unbind 'render', callback
-    sibling.style.display = 'none' for sibling in siblings @[0]  
+    sibling.style.display = 'none' for sibling in @[0].parentNode.childNodes
     @[0].style.display = null
     next(params)
   @bind 'render', callback
+  @set params
+  @unbind 'change', did_change_observer
+  callback.call @ if not did_change
 
 View.extend extend:route: (route) ->
   @_route = route
@@ -365,6 +378,7 @@ View.extend extend:routes: (_routes,discard) ->
           instance.extend route: route
     create_router()
     View.env browser: ->
+      #TODO: use document:ready
       setTimeout -> Backbone.history.start()
   discard()
 
@@ -373,42 +387,37 @@ splat_param = /\*([\w\d]+)/g
 
 create_router = ->
   router = new Backbone.Controller
-  for path, view of routes
-    do (path,view) ->
-      router.route path, view, ->
+  for route, view of routes
+    do (route,view) ->
+      router.route route, view, ->
         ordered_params = array_from arguments
-        ViewManager view, (instance) ->
-          instance.route params_from_ordered_params_and_path ordered_params, path
+        #TODO: REMOVE!
+        setTimeout ->
+          ViewManager view, (instance) ->
+            instance.route params_from_ordered_params_and_route ordered_params, route
+        ,250
 
-params_from_ordered_params_and_path = (ordered_params,path) ->
+params_from_ordered_params_and_route = (ordered_params,route) ->
   params = {}
-  keys = keys_from_path path
+  keys = keys_from_route route
   for key, i in keys
     params[key] = ordered_params[i]
   params
 
 params_from_route_and_path = (route,path) ->
-  matcher = new RegExp '^' + route.replace(named_param,"([^\/]*)").replace(splatParam, "(.*?)") + '$'
-  ordered_params = matcher.exec path
-  params_from_ordered_params_and_path ordered_params, path
+  matcher = new RegExp '^' + route.replace(named_param,"([^\/]*)").replace(splat_param, "(.*?)") + '$'
+  ordered_params = matcher.exec(path).slice(1)
+  params_from_ordered_params_and_route ordered_params, route
       
-keys_from_path = (path) ->
+keys_from_route = (route) ->
   keys = []
-  path
+  String(route)
     .concat('/?')
     .replace(/\/\(/g, '(?:/')
     .replace(/(\/)?(\.)?:(\w+)(?:(\(.*?\)))?(\?)?/g, (_, slash, format, key, capture, optional) ->
       keys.push key
     )
   keys
-
-siblings = (element) ->
-  first = element.parentNode.firstChild
-  response = []
-  sibling = element
-  while sibling = sibling.nextSibling
-    response.push sibling if sibling.nodeType is 1 and sibling isnt element
-  response
 
 # Data
 ######
@@ -439,13 +448,13 @@ View.extend
   
   get: (key) ->
     if @model
-      @model.apply.get @model, arguments
+      @model.get.apply @model, arguments
     else
       @attributes[key]
       
   set: (attributes,options) ->
     if @model
-      @model.apply.set @model, arguments
+      @model.set.apply @model, arguments
     else
       options ||= {}
       return @ if not attributes
@@ -456,7 +465,8 @@ View.extend
           now[attribute] = value
           if not options.silent
             @_changed = true
-            @trigger 'change:' + attribute, @, value, options
+            #TODO: note incompatibility with backbone.js, it passes "@" as the first argument
+            @trigger 'change:' + attribute, value, options
       @trigger 'change', @, options if not options.silent and @_changed
       @_changed = false
       attributes
@@ -666,6 +676,37 @@ for tag_name in supported_html_tags
     Builder[tag_name] = ->
       tag.apply @, [tag_name].concat array_from arguments    
 
+# Router
+########
+Router = (resolve) ->
+  views_by_path = {}
+  for path, view of Router
+    views_by_path[path] = view if Router.hasOwnProperty path
+  if typeof resolve is 'string'
+    url = resolve
+  else
+    for view, params of resolve
+      View.trigger 'error', view + ' has not been defined' if not Router[view]?
+      url = String(Router[view]).replace(/\*/,params.path.replace(/^\//,'')) if params.path
+      param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?(/|$)','g')
+      for param_name of params
+        url = url.replace param_matcher, ->
+          if arguments[2] is param_name
+            params[param_name] + arguments[4]
+          else
+            (arguments[1] || '') + ':' + arguments[2] + (arguments[3] || '') + arguments[4]
+      return
+    
+    
+    if(typeof(params) == 'string' && url.match(/\*/)){
+      url = url.replace(/\*/,params).replace(/\/\//g,'/');
+    }else{
+    }
+    url = url.replace(/\([^\)]+\)/g,'');
+    return url;
+    
+    
+
 # ViewManager
 #############
 ViewManager = ->
@@ -698,7 +739,9 @@ ViewManager.route = proxy View.route, View
 if window?
   window.View = ViewManager
   window.Builder = Builder
+  window.Router = Router
   
 if module?.exports?
   module.exports.View = ViewManager
   module.exports.Builder = Builder
+  module.exports.Router = Router

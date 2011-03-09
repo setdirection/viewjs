@@ -1,5 +1,5 @@
 assert = require 'assert'
-{View,Builder} = require '../view.js'
+{View,Builder,Router} = require '../view.js'
 {jsdom} = require 'jsdom'
 Backbone = require 'backbone'
 array_from = (object) ->
@@ -130,6 +130,11 @@ module.exports.viewManager = ->
   assert.equal TestView2.key, 'value'
   assert.equal TestView3.key, 'value2'
   
+module.exports.canUseCreateAsCallback = ->
+  instance = View.create ->
+    @key = 'value'
+  assert.equal instance.key, 'value'
+
 module.exports.canDepend = ->
   sequence = []
   View.create
@@ -217,3 +222,80 @@ module.exports.canHaveDefaults = ->
       key: 'value'
   assert.equal DefaultsView.get('key'), 'value'
   assert.equal DefaultsView.create().get('key'), 'value'
+
+module.exports.router = ->
+  #initial call sets
+  Router [
+    ['/', 'IndexView']
+    ['/post/:id', 'PostView']
+    ['/:a/:b/:c', 'AlphabetView']
+  ]
+  
+  #can turn a url into parsed view and params
+  #can turn an object with params into a url 
+  assert.equal '/post/5', Router PostView: id: 5
+  assert.equal {PostView: id: 5}, Router '/post/5'
+  assert.equal '/', Router IndexView: {}
+  assert.equal {IndexView: {}}, Router '/'
+  assert.equal {AlphabetView: {a:'a',b:'b',c:'c'}}, Router '/a/b/c'
+  assert.equal Router '/a/b/c', AlphabetView: {a:'a',b:'b',c:'c'}
+  
+  #router can resolve ordered params
+  assert.equal '/a/b/c', Router(['a','b','c'], '/:a/:b/:c')
+  
+  #views should be auto assigned routes after they are created
+  #if they didn't exist at the time the router was called
+  post_view_render_count = 0
+  index_view_render_count = 0
+  {PostView,IndexView,ContainerView} = View.create
+    PostView:
+      render: ->
+        ++post_view_render_count
+        @tag 'div', 'post'
+    IndexView:
+      render: ->
+        ++index_view_render_count
+        @tag 'div', 'index'
+    ContainerView:
+      views: ['PostView','IndexView']
+      render: ->
+        @div(
+          @PostView
+          @IndexView
+        )
+  
+  #view can generate a url for itself
+  assert.equal '/router/5', RouterView.url id: 5
+  assert.equal Router['/router/:id'], 'RouterView'
+  
+  #should have route auto set
+  ContainerView.initialize ->
+    #use as dispatcher
+    Router '/post/5', (view,params) ->
+      #callback should only be called after 
+      assert.equal 1, post_view_render_count
+      assert.equal view.get('id'), '5'
+      assert.ok PostView.element().style.display isnt 'hidden'
+      assert.ok IndexView.element().style.display is 'hidden'
+    #dispatcher can take object argument
+    Router {IndexView: {}}, (view,params) ->
+      assert.equal 1, index_view_render_count
+      assert.ok IndexView.element().style.display isnt 'hidden'
+      assert.ok PostView.element().style.display is 'hidden'
+    #dispatcher can take ordered param argument
+    Router ['4'], '/post/:id', (view,params) ->
+      assert.equal 2, post_view_render_count
+      assert.equal view.get('id'), '4'
+      assert.ok PostView.element().style.display isnt 'hidden'
+      assert.ok IndexView.element().style.display is 'hidden'
+    #IndexView should not re-render
+    Router {IndexView: {}}, (view,params) ->
+      assert.equal 1, index_view_render_count
+      assert.ok IndexView.element().style.display isnt 'hidden'
+      assert.ok PostView.element().style.display is 'hidden'
+    #default logic of hiding siblings can be disabled
+    PostView.unbind 'route'
+    Router ['4'], '/post/:id', (view,params) ->
+      assert.equal 2, post_view_render_count
+      assert.ok IndexView.element().style.display isnt 'hidden'
+      assert.ok PostView.element().style.display is 'hidden'
