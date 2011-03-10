@@ -1,5 +1,5 @@
 assert = require 'assert'
-{View,Builder,Router} = require '../view.js'
+{View,Builder,Router,Logger} = require '../view.js'
 {jsdom} = require 'jsdom'
 Backbone = require 'backbone'
 array_from = (object) ->
@@ -12,7 +12,6 @@ array_from = (object) ->
 
 View.extend
   document: jsdom '<html><head></head><body></body></html>'
-#Backbone = require 'backbone'
 
 module.exports.parses = ->
   assert.ok(true)
@@ -169,7 +168,7 @@ module.exports.canDepend = ->
         @document.createElement 'div'
   View ParentView: ->
     @initialize()
-    @ready ->
+    @on ready: ->
       assert.equal sequence[0], 'a'
       assert.equal sequence[1], 'b'
       assert.equal sequence[2], 'c'

@@ -112,9 +112,8 @@ View.extend
           when 'add' then @_stack[method_name].stack.push callback
           when 'clear' then @_stack[method_name].stack = []
 
-View.extend extend:
-  stack: (commands) ->
-    @stack commands
+View.extend extend:stack: (commands) ->
+  @stack commands
 
 View.extend
   create: ->
@@ -211,10 +210,7 @@ View.extend
       item.apply @, arguments for item in @_callbacks.all
     @
 
-  ready: ->
-    @bind.apply @, ['ready'].concat array_from arguments
-    # mirror nodejs event api
-
+# mirror nodejs event api
 View.extend
   on: View.bind
   removeListener: View.unbind
@@ -235,9 +231,9 @@ View.extend extend:on: bind_extend_handler
 View.extend
   on:
     warning: (warning) ->
-      console.log.apply console, ["ViewJS [#{@name}] warning: "].concat array_from arguments if console?.log?
+      console.log.apply console, ["#{@name} warning: "].concat array_from arguments if console?.log?
     error: (error) ->
-      console.log.apply console, ["ViewJS [#{@name}] error: "].concat array_from arguments if console?.log?
+      console.log.apply console, ["#{@name} error: "].concat array_from arguments if console?.log?
       throw error
 
 # Environments
@@ -275,23 +271,6 @@ View.extend extend:env: (envs) ->
 
 # DOM
 #####
-set_element = (element) ->
-  @length = 1
-  @[0] = element
-  extend @$, @_$ @[0] if @_$
-
-delegate_events = (events,element) ->
-  return if not (events || (events = @_delegatedEvents))
-  @trigger 'error', 'No DOM library the supports delegate() available' if not @_$?.fn?.delegate?
-  @_$(element).unbind()
-  for key, method_name of events[key]
-    [event_name,selector] = key.match /^(\w+)\s*(.*)$/
-    method = proxy @[method_name],@
-    if selector is ''
-      @_$(element).bind event_name, method
-    else
-      @_$(element).delegate selector, event_name, method
-
 View.extend
   element: ->
     return @[0] if @[0]
@@ -336,6 +315,23 @@ View.extend extend:
     
   $: ($) ->
     @$ $
+
+set_element = (element) ->
+  @length = 1
+  @[0] = element
+  extend @$, @_$ @[0] if @_$
+
+delegate_events = (events,element) ->
+  return if not (events || (events = @_delegatedEvents))
+  @trigger 'error', 'No DOM library the supports delegate() available' if not @_$?.fn?.delegate?
+  @_$(element).unbind()
+  for key, method_name of events[key]
+    [event_name,selector] = key.match /^(\w+)\s*(.*)$/
+    method = proxy @[method_name],@
+    if selector is ''
+      @_$(element).bind event_name, method
+    else
+      @_$(element).delegate selector, event_name, method
     
 #setup the document element
 View.extend env:client: ->
@@ -412,18 +408,12 @@ View.extend extend:collection: (collection) ->
 View.extend
   before: (methods) ->
     if arguments.length is 2
-      methods = []
-      methods[argument[0]] = argument[1]
-    for method_name, method of methods
-      do (method_name,method) =>
-        original = @[method_name]
-        callback = =>
-          args = array_from arguments
-          next = =>
-            args = arguments if arguments.length > 0
-            original.apply @, args
-          method.apply @, [args,next,original]
-        @[method_name] = callback
+      _methods = {}
+      _methods[arguments[0]] = arguments[1]
+    else
+      _methods = methods
+    for method_name, method of _methods
+      @[method_name] = wrap_function @[method_name], method
 
 View.extend extend:before: (methods) ->
   @before methods
@@ -666,7 +656,8 @@ Router = ->
     for route in arguments[0]
       [path,view] = route
       routes_by_path[path] = view
-      routes_regexps_by_path[path] = new RegExp('^' + path.replace(named_param, "([^\/]*)").replace(splat_param, "(.*?)") + '$')      
+      regexp = '^' + path.replace(named_param, "([^\/]*)").replace(splat_param, "(.*?)") + '$'
+      routes_regexps_by_path[path] = new RegExp regexp
       routes_by_view[view] = path
       ordered_routes.push route
     View.env browser: ->
@@ -736,16 +727,33 @@ ViewManager.views = {}
 ViewManager.create = proxy View.create, View
 ViewManager.extend = proxy View.extend, View
 ViewManager.env = proxy View.env, View
-ViewManager.route = proxy View.route, View
 
+# Logger
+########
+Logger = 
+  log: (method_name) ->
+    execute = ->
+      @before method_name, (next,args...) ->
+        console.log "#{@name}.#{method_name}", array_from(args)
+        next.apply @, args
+    if is_array method_name
+      execute.call @, _method_name for _method_name in method_name
+    else
+      execute.call @, method_name
+  extend:
+    log: (method_name) ->
+      @log method_name
+  
 # Export
 ########
 if window?
   window.View = ViewManager
   window.Builder = Builder
   window.Router = Router
+  window.Logger = Logger
   
 if module?.exports?
   module.exports.View = ViewManager
   module.exports.Builder = Builder
   module.exports.Router = Router
+  module.exports.Logger = Logger
