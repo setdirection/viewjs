@@ -90,7 +90,7 @@ module.exports.canRender = ->
 module.exports.canRenderCollection = ->
   Item = Backbone.Model.extend()
   List = new (Backbone.Collection.extend(model: Item))
-  
+  render_count = 0
   contents = [
     {content: 'One'}
     {content: 'Two'}
@@ -101,22 +101,29 @@ module.exports.canRenderCollection = ->
     collection: List
     element: -> @tag 'ul'
     render: (item) ->
+      ++render_count
       @tag 'li', item.get 'content'
-
+  
   ListView.initialize ->
+    assert.equal @[0].tagName.toLowerCase(), 'ul'
+  
+    assert.equal render_count, 3
     assert.equal ListView[0].childNodes.length, 3
     assert.equal ListView[0].firstChild.innerHTML, 'One'
-    List.remove List.at(0)
     
+    List.remove List.at(0)
+    assert.equal render_count, 3
     assert.equal ListView[0].childNodes.length, 2
     assert.equal ListView[0].firstChild.innerHTML, 'Two'
-    List.add content: 'Four'
     
+    List.add content: 'Four'
+    assert.equal render_count, 4
     assert.equal ListView[0].childNodes.length, 3
     assert.equal ListView[0].firstChild.innerHTML, 'Two'
     assert.equal ListView[0].childNodes[2].innerHTML, 'Four'
-    List.refresh contents
     
+    List.refresh contents
+    assert.equal render_count, 7
     assert.equal ListView[0].childNodes.length, 3
     assert.equal ListView[0].firstChild.innerHTML, 'One'
     assert.equal ListView[0].childNodes[2].innerHTML, 'Three'

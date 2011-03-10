@@ -24,7 +24,7 @@ The builder library is an available mixin, which adds all HTML tags as methods:
     
 Subclasses are created with the "create" keyword as well:
 
-    SubApplicationView = ApplicationView.create SubApplicationView:
+    {SubApplicationView} = ApplicationView.create SubApplicationView:
       render: ->
         @div 'test'
 

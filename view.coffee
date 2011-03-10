@@ -127,15 +127,12 @@ View.extend
       @trigger 'warning', class_name + ' already exists, overwriting.' if ViewManager.views[class_name]?
       ViewManager.views[class_name] = created_views[class_name] = @clone()
       ViewManager.views[class_name].name = class_name
-      #add route if it exists in routing table
-      for path, _class_name of routes_by_path
-        if _class_name is class_name
-          ViewManager.views[class_name].extend route: path
       #process mixins passed to create()
       if is_array mixins
         created_views[class_name].extend mixin for mixin in mixins
       else
         created_views[class_name].extend mixins
+      created_views[class_name].element()
     created_views
     
   clone: ->
@@ -146,8 +143,7 @@ View.extend
     klass._changed = false
     klass._ready = false
     klass._callbacks = {}
-    klass.extend @
-    klass.element()
+    klass.extend @    
     klass
 
 # Initialize
@@ -332,6 +328,7 @@ View.extend
 View.extend extend:
   element: (generator) ->
     @element = ->
+      return @[0] if @[0]
       set_element.call @, generator.call @
 
   delegate: (events) ->
