@@ -10,7 +10,7 @@ Find views later:
 Name, callback pairs passed to View are executed with the view as the scope. Initialize must be called before a view is rendered, and views can be passed as arguments to jQuery. The 'ready' event is fired when initialize is complete and the view has been rendered.
 
     View ApplicationView: ->
-      @ready -> $('body').append @
+      @on ready: -> $('body').append @
       @initialize()
       
 Views can be extended with mixins (just plain old objects):

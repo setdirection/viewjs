@@ -67,7 +67,7 @@ array_from = (object) ->
 View =
   extend: ->
     @extend.api ||= {}
-    @_mixin ||= []
+    @mixin ||= []
     process_item = (key,value) ->
       should_add = true
       discard = ->
@@ -81,13 +81,13 @@ View =
         else
           @[key] = value
       if should_add
-        @_mixin.push [key,value]
+        @mixin.push [key,value]
     for argument in arguments
-      if not is_view(argument) and typeof argument is 'function'
+      if not is_view(argument) and typeof argument is 'function' and not argument.mixin?
         @bind 'ready', argument
       else if argument
-        if argument._mixin?
-          for item in argument._mixin
+        if argument.mixin?
+          for item in argument.mixin
             process_item.apply @, item
         else
           for key, value of argument
@@ -132,6 +132,8 @@ View.extend
       else
         created_views[class_name].extend mixins
       created_views[class_name].element()
+      if deffered[class_name]?
+        callback.call created_views[class_name] while callback = deffered[class_name].pop() 
     created_views
     
   clone: ->
@@ -233,7 +235,7 @@ View.extend
     warning: (warning) ->
       console.log.apply console, ["#{@name} warning: "].concat array_from arguments if console?.log?
     error: (error) ->
-      console.log.apply console, ["#{@name} error: "].concat array_from arguments if console?.log?
+      console.log.apply console, ["#{@name || 'View'} error: "].concat array_from arguments if console?.log?
       throw error
 
 # Environments
@@ -539,7 +541,7 @@ process_node_argument = (view,elements,attributes,argument) ->
   if is_array argument
     flattened = array_flatten argument
     for flattened_argument in flattened
-      process_node_argument.call view, elements, attributes, flattened_argument
+      process_node_argument.call @, view, elements, attributes, flattened_argument
     return
   if is_element(argument) or typeof argument is 'string' or typeof argument is 'number'
     elements.push argument
@@ -598,6 +600,77 @@ ordered_routes = []
 named_param = /:([\w\d]+)/g
 splat_param = /\*([\w\d]+)/g
 
+Router = ->
+  #setup routes
+  if not Router.mixin
+    dependent_views = []
+    for route in arguments[0]
+      [path,view] = route
+      dependent_views.push view
+      routes_by_path[path] = view
+      regexp = '^' + path.replace(named_param, "([^\/]*)").replace(splat_param, "(.*?)") + '$'
+      routes_regexps_by_path[path] = new RegExp regexp
+      routes_by_view[view] = path
+      ordered_routes.push route
+    View.env browser: ->
+      create_router()
+    Router.mixin = [
+      ['views',dependent_views]
+      ['initialize', (next) ->
+        @router = []
+        for view in dependent_views
+          @router.push ViewManager view
+        @on ready: ->
+          Router '/', ->
+        next()
+      ]
+    ]
+  else
+    #if just a string view name is passed
+    if typeof arguments[0] is 'string' and ViewManager.views[arguments[0]]?
+      router_params = {}
+      router_params[arguments[0]] = {}
+      arguments[0] = router_params
+      
+    #url string from object View: params
+    if typeof arguments[0] is 'object'
+      for view, params of arguments[0]
+        ViewManager(view) #check the current view, will trigger and error if it doesn't exist
+        params = params_from_ordered_params_and_route params, routes_by_view[view] if is_array params
+        url = String(routes_by_view[view])
+        url = url.replace(/\*/,params.path.replace(/^\//,'')) if params.path
+        param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?(/|$)','g')
+        for param_name of params
+          url = url.replace param_matcher, ->
+            if arguments[2] is param_name
+              params[param_name] + arguments[4]
+            else
+              (arguments[1] || '') + ':' + arguments[2] + (arguments[3] || '') + arguments[4]
+        if typeof arguments[1] is 'function'
+          dispatcher ViewManager(view), params, arguments[1]
+        return url.replace(/\([^\)]+\)/g,'')
+        
+    #return an object with params from a url string
+    else if typeof arguments[0] is 'string'
+      fragment = arguments[0]
+      for route in ordered_routes
+        [path,view] = route
+        ViewManager(view) #check the current view, will trigger and error if it doesn't exist
+        if routes_regexps_by_path[path].test fragment
+          ordered_params = routes_regexps_by_path[path].exec(fragment).slice(1)
+          params = params_from_ordered_params_and_route ordered_params, path
+          response = {}
+          response[view] = params
+          if typeof arguments[1] is 'function'
+            dispatcher ViewManager(view), params, arguments[1]
+          return response
+      View.trigger 'error', 'Could not resolve the url: ' + arguments[0]
+
+View.extend url: (params) ->
+  router_params = {}
+  router_params[@name] = params || {}
+  Router router_params
+
 #TODO: remove backbone dependency
 create_router = ->
   #this is only called in the browser
@@ -609,15 +682,15 @@ create_router = ->
         router_params = {}
         router_params[view] = params_from_ordered_params_and_route ordered_params, route
         Router router_params, ->
-  setTimeout -> Backbone.history.start()
-
+  $ -> Backbone.history.start()
+    
 has_change_callback = (view) ->
   return false if not view._callbacks?
   for event_name of view._callbacks
     if event_name is 'change' or event_name.match /^change\:/
       return true if view._callbacks[event_name].length > 0
   false
-  
+
 dispatcher = (view_instance,params,callback) ->
   did_change = false
   did_change_observer = ->
@@ -635,7 +708,7 @@ dispatcher = (view_instance,params,callback) ->
     next()
   else if not has_change_callback view_instance
     view_instance.trigger 'error', 'View with route must respond to a change, or change:key event with a render() call.'
-  
+
 params_from_ordered_params_and_route = (ordered_params,route) ->
   params = {}
   keys = []
@@ -649,93 +722,15 @@ params_from_ordered_params_and_route = (ordered_params,route) ->
     params[key] = ordered_params[i]
   params
 
-Router = ->
-  #setup routes
-  if not router_initialized
-    router_initialized = true
-    for route in arguments[0]
-      [path,view] = route
-      routes_by_path[path] = view
-      regexp = '^' + path.replace(named_param, "([^\/]*)").replace(splat_param, "(.*?)") + '$'
-      routes_regexps_by_path[path] = new RegExp regexp
-      routes_by_view[view] = path
-      ordered_routes.push route
-    View.env browser: ->
-      create_router()
-    
-  #url string from object View: params
-  else if typeof arguments[0] is 'object'
-    for view, params of arguments[0]
-      ViewManager(view) #check the current view, will trigger and error if it doesn't exist
-      params = params_from_ordered_params_and_route params, routes_by_view[view] if is_array params
-      url = String(routes_by_view[view])
-      url = url.replace(/\*/,params.path.replace(/^\//,'')) if params.path
-      param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?(/|$)','g')
-      for param_name of params
-        url = url.replace param_matcher, ->
-          if arguments[2] is param_name
-            params[param_name] + arguments[4]
-          else
-            (arguments[1] || '') + ':' + arguments[2] + (arguments[3] || '') + arguments[4]
-      if typeof arguments[1] is 'function'
-        dispatcher ViewManager(view), params, arguments[1]
-      return url.replace(/\([^\)]+\)/g,'')
-      
-  #return an object with params from a url string
-  else if typeof arguments[0] is 'string'
-    fragment = arguments[0]
-    for route in ordered_routes
-      [path,view] = route
-      ViewManager(view) #check the current view, will trigger and error if it doesn't exist
-      if routes_regexps_by_path[path].test fragment
-        ordered_params = routes_regexps_by_path[path].exec(fragment).slice(1)
-        params = params_from_ordered_params_and_route ordered_params, path
-        response = {}
-        response[view] = params
-        if typeof arguments[1] is 'function'
-          dispatcher ViewManager(view), params, arguments[1]
-        return response
-    View.trigger 'error', 'Could not resolve the url: ' + arguments[0]
-
-View.extend url: (params) ->
-  router_params = {}
-  router_params[@name] = params
-  Router router_params
-  
-# ViewManager
-#############
-ViewManager = ->
-  callback = arguments[arguments.length - 1] if typeof arguments[arguments.length - 1] is 'function'
-  if is_array(arguments[0]) or arguments.length > 1 or typeof arguments[0] is 'string'
-    response = []
-    for class_name in array_flatten array_from arguments
-      if typeof class_name is 'string'
-        View.trigger 'error', "#{class_name} has not been created." if not ViewManager.views[class_name]?
-        response.push ViewManager.views[class_name]
-    callback.apply callback, response if callback
-    if response.length is 1 and typeof arguments[0] is 'string' then response[0] else response
-  else
-    response = {}
-    for class_name, _callback of arguments[0]
-      View.trigger 'error', "#{class_name} has not been created." if not ViewManager.views[class_name]?
-      response[class_name] = ViewManager.views[class_name]
-      _callback.call response[class_name], response[class_name]
-    callback.apply callback, [response] if callback
-    response
-  
-ViewManager.views = {}
-ViewManager.create = proxy View.create, View
-ViewManager.extend = proxy View.extend, View
-ViewManager.env = proxy View.env, View
-
 # Logger
 ########
 Logger = 
   log: (method_name) ->
-    execute = ->
+    execute = (method_name) ->
       @before method_name, (next,args...) ->
-        console.log "#{@name}.#{method_name}", array_from(args)
-        next.apply @, args
+        response = next.apply @, args
+        console.log "#{@name}.#{method_name}", array_from(args), ' -> ', response
+        response
     if is_array method_name
       execute.call @, _method_name for _method_name in method_name
     else
@@ -743,7 +738,36 @@ Logger =
   extend:
     log: (method_name) ->
       @log method_name
+
+# ViewManager
+#############
+deffered = {}
+ViewManager = ->
+  callback = arguments[arguments.length - 1] if typeof arguments[arguments.length - 1] is 'function'
+  if is_array(arguments[0]) or typeof arguments[0] is 'string'
+    response = []
+    for class_name in array_flatten array_from arguments
+      if typeof class_name is 'string'
+        View.trigger 'error', "#{class_name} has not been created." if not ViewManager.views[class_name]?
+        response.push ViewManager.views[class_name]
+    if typeof arguments[0] is 'string' then response[0] else response
+  else
+    response = {}
+    for class_name, _callback of arguments[0]
+      if not ViewManager.views[class_name]?
+        response[class_name] = null
+        deffered[class_name] = [] if not deffered[class_name]?
+        deffered[class_name].push _callback
+      else
+        response[class_name] = ViewManager.views[class_name]
+        _callback.call response[class_name], response[class_name]
+    response
   
+ViewManager.views = {}
+ViewManager.create = proxy View.create, View
+ViewManager.extend = proxy View.extend, View
+ViewManager.env = proxy View.env, View
+
 # Export
 ########
 if window?

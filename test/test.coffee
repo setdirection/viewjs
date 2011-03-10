@@ -2,6 +2,7 @@ assert = require 'assert'
 {View,Builder,Router,Logger} = require '../view.js'
 {jsdom} = require 'jsdom'
 Backbone = require 'backbone'
+
 array_from = (object) ->
   return [] if not object
   length = object.length or 0
@@ -40,6 +41,13 @@ module.exports.stack = ->
   assert.equal StackView.b, 'b'
   assert.equal sequence[0], 'a'
   assert.equal sequence[1], 'b'
+
+module.exports.canDeferViewManagerCallback = ->
+  call_count = 0
+  View QuantumView: ->
+    ++call_count
+  View.create QuantumView: {}
+  assert.equal call_count, 1
 
 module.exports.canTriggerEvents = ->
   {TestView} = View.create TestView: {}
@@ -82,9 +90,6 @@ module.exports.canRender = ->
     ]
   
   View BuilderView: -> @initialize()
-  
-  BuilderView = View.create Builder,
-  BuilderView.initialize()
 
 module.exports.canRenderCollection = ->
   Item = Backbone.Model.extend()
@@ -130,9 +135,7 @@ module.exports.canRenderCollection = ->
 module.exports.viewManager = ->
   View.create TestView2: key: 'value'
   View.create TestView3: key: 'value2'
-  [TestView2,TestView3] = View 'TestView2', 'TestView3', (TestView2,TestView3) ->
-    assert.equal TestView2.key, 'value'
-    assert.equal TestView3.key, 'value2'
+  [TestView2,TestView3] = View ['TestView2', 'TestView3']
   assert.equal TestView2.key, 'value'
   assert.equal TestView3.key, 'value2'
   
@@ -229,6 +232,23 @@ module.exports.canHaveDefaults = ->
   assert.equal DefaultsView.get('key'), 'value'
   assert.equal DefaultsView.create().get('key'), 'value'
 
+module.exports.canUseArrayInBuilder = (before_exit) ->
+  {ArrayBuilderViewA,ArrayBuilderViewB,ArrayBuilderViewC} = View.create
+    ArrayBuilderViewA:
+      views: ['ArrayBuilderViewB','ArrayBuilderViewC']
+      render: ->
+        @tag 'ul', [@ArrayBuilderViewB,@ArrayBuilderViewC]
+    ArrayBuilderViewB:
+      render: ->
+        @tag 'li', 'b'
+    ArrayBuilderViewC:
+      render: ->
+        @tag 'li', 'c'
+  ArrayBuilderViewA.initialize ->
+    before_exit =>
+      assert.ok @[0].firstChild.firstChild?
+      assert.equal @[0].firstChild.firstChild.firstChild.innerHTML, 'b'
+      
 module.exports.router = (before_exit) ->
   #initial call sets
   Router [
@@ -242,6 +262,9 @@ module.exports.router = (before_exit) ->
   post_view_render_count = 0
   index_view_render_count = 0
   {PostView,IndexView,ContainerView} = View.create
+    SidebarView: 
+      render: ->
+        @tag 'div', class: 'sidebar'
     PostView:
       on:
         change:id: ->
@@ -253,13 +276,16 @@ module.exports.router = (before_exit) ->
       render: ->
         ++index_view_render_count
         @tag 'div', 'index'
-    ContainerView:
-      views: ['PostView','IndexView']
+    ContainerView: [Router,
+      views: ['SidebarView']
       render: ->
-        @tag('div',
-          @PostView
-          @IndexView
+        @tag('div'
+          @SidebarView
+          @tag('div',
+            @router
+          )
         )
+    ]
     AlphabetView: {}
   
   #can turn a url into parsed view and params
@@ -276,10 +302,13 @@ module.exports.router = (before_exit) ->
     
   #view can generate a url for itself
   assert.equal '/post/5', PostView.url id: 5
+  assert.equal '/', IndexView.url()
+  assert.equal '/', Router 'IndexView'
   
   #should have route auto set
   callback_count = 0
   ContainerView.initialize ->
+  
     #use as dispatcher
     Router '/post/5', (view,params) ->
       #callback should only be called after 
