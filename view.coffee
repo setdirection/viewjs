@@ -128,7 +128,7 @@ View.extend
       ViewManager.views[class_name] = created_views[class_name] = @clone()
       ViewManager.views[class_name].name = class_name
       #add route if it exists in routing table
-      for path, _class_name of routes
+      for path, _class_name of routes_by_path
         if _class_name is class_name
           ViewManager.views[class_name].extend route: path
       #process mixins passed to create()
@@ -145,7 +145,6 @@ View.extend
     klass.attributes = {}
     klass._changed = false
     klass._ready = false
-    #deep copy events
     klass._callbacks = {}
     klass.extend @
     klass.element()
@@ -237,12 +236,13 @@ View.extend extend:bind: bind_extend_handler
 View.extend extend:on: bind_extend_handler
 
 # default error handler
-View.bind 'warning', (warning) ->
-  console.log.apply console, ['ViewJS warning: '].concat array_from arguments if console?.log?
-
-View.bind 'error', (error) ->
-  console.log.apply console, ['ViewJS error: '].concat array_from arguments if console?.log?
-  throw error
+View.extend
+  on:
+    warning: (warning) ->
+      console.log.apply console, ["ViewJS [#{@name}] warning: "].concat array_from arguments if console?.log?
+    error: (error) ->
+      console.log.apply console, ["ViewJS [#{@name}] error: "].concat array_from arguments if console?.log?
+      throw error
 
 # Environments
 ##############
@@ -343,81 +343,6 @@ View.extend extend:
 #setup the document element
 View.extend env:client: ->
   document: window.document
-
-# Routing
-#########
-routes = {}
-routing_initialized = false
-
-View.extend stack:route:add: (params,next) ->
-  params = params_from_route_and_path @_route, params if typeof params is 'string'
-  did_change = false
-  did_change_observer = ->
-    did_change = true
-  @bind 'change', did_change_observer
-  callback = ->
-    @unbind 'render', callback
-    sibling.style.display = 'none' for sibling in @[0].parentNode.childNodes
-    @[0].style.display = null
-    next(params)
-  @bind 'render', callback
-  @set params
-  @unbind 'change', did_change_observer
-  callback.call @ if not did_change
-
-View.extend extend:route: (route) ->
-  @_route = route
-
-View.extend extend:routes: (_routes,discard) ->
-  if not routing_initialized
-    routing_initialized = true
-    routes = _routes
-    for route, view of _routes
-      if ViewManager.views[view]?
-        ViewManager view, (instance) ->
-          instance.extend route: route
-    create_router()
-    View.env browser: ->
-      #TODO: use document:ready
-      setTimeout -> Backbone.history.start()
-  discard()
-
-named_param = /:([\w\d]+)/g
-splat_param = /\*([\w\d]+)/g
-
-create_router = ->
-  router = new Backbone.Controller
-  for route, view of routes
-    do (route,view) ->
-      router.route route, view, ->
-        ordered_params = array_from arguments
-        #TODO: REMOVE!
-        setTimeout ->
-          ViewManager view, (instance) ->
-            instance.route params_from_ordered_params_and_route ordered_params, route
-        ,250
-
-params_from_ordered_params_and_route = (ordered_params,route) ->
-  params = {}
-  keys = keys_from_route route
-  for key, i in keys
-    params[key] = ordered_params[i]
-  params
-
-params_from_route_and_path = (route,path) ->
-  matcher = new RegExp '^' + route.replace(named_param,"([^\/]*)").replace(splat_param, "(.*?)") + '$'
-  ordered_params = matcher.exec(path).slice(1)
-  params_from_ordered_params_and_route ordered_params, route
-      
-keys_from_route = (route) ->
-  keys = []
-  String(route)
-    .concat('/?')
-    .replace(/\/\(/g, '(?:/')
-    .replace(/(\/)?(\.)?:(\w+)(?:(\(.*?\)))?(\?)?/g, (_, slash, format, key, capture, optional) ->
-      keys.push key
-    )
-  keys
 
 # Data
 ######
@@ -678,16 +603,85 @@ for tag_name in supported_html_tags
 
 # Router
 ########
-Router = (resolve) ->
-  views_by_path = {}
-  for path, view of Router
-    views_by_path[path] = view if Router.hasOwnProperty path
-  if typeof resolve is 'string'
-    url = resolve
-  else
-    for view, params of resolve
-      View.trigger 'error', view + ' has not been defined' if not Router[view]?
-      url = String(Router[view]).replace(/\*/,params.path.replace(/^\//,'')) if params.path
+router_initialized = false
+routes_by_path = {}
+routes_by_view = {}
+routes_regexps_by_path = {}
+ordered_routes = []
+named_param = /:([\w\d]+)/g
+splat_param = /\*([\w\d]+)/g
+
+#TODO: remove backbone dependency
+create_router = ->
+  #this is only called in the browser
+  router = new Backbone.Controller
+  for route, view of routes_by_path
+    do (route,view) ->
+      router.route route, view, ->
+        ordered_params = array_from arguments
+        router_params = {}
+        router_params[view] = params_from_ordered_params_and_route ordered_params, route
+        Router router_params, ->
+  setTimeout -> Backbone.history.start()
+
+has_change_callback = (view) ->
+  return false if not view._callbacks?
+  for event_name of view._callbacks
+    if event_name is 'change' or event_name.match /^change\:/
+      return true if view._callbacks[event_name].length > 0
+  false
+  
+dispatcher = (view_instance,params,callback) ->
+  did_change = false
+  did_change_observer = ->
+    did_change = true
+  next = ->
+    view_instance.unbind 'render', next
+    sibling.style.display = 'none' for sibling in view_instance[0].parentNode.childNodes
+    view_instance[0].style.display = null
+    callback view_instance, params
+  view_instance.bind 'render', next
+  view_instance.bind 'change', did_change_observer
+  view_instance.set params
+  view_instance.unbind 'change', did_change_observer
+  if not did_change
+    next()
+  else if not has_change_callback view_instance
+    view_instance.trigger 'error', 'View with route must respond to a change, or change:key event with a render() call.'
+  
+params_from_ordered_params_and_route = (ordered_params,route) ->
+  params = {}
+  keys = []
+  String(route)
+    .concat('/?')
+    .replace(/\/\(/g, '(?:/')
+    .replace(/(\/)?(\.)?:(\w+)(?:(\(.*?\)))?(\?)?/g, (_, slash, format, key, capture, optional) ->
+      keys.push key
+    )
+  for key, i in keys
+    params[key] = ordered_params[i]
+  params
+
+Router = ->
+  #setup routes
+  if not router_initialized
+    router_initialized = true
+    for route in arguments[0]
+      [path,view] = route
+      routes_by_path[path] = view
+      routes_regexps_by_path[path] = new RegExp('^' + path.replace(named_param, "([^\/]*)").replace(splat_param, "(.*?)") + '$')      
+      routes_by_view[view] = path
+      ordered_routes.push route
+    View.env browser: ->
+      create_router()
+    
+  #url string from object View: params
+  else if typeof arguments[0] is 'object'
+    for view, params of arguments[0]
+      ViewManager(view) #check the current view, will trigger and error if it doesn't exist
+      params = params_from_ordered_params_and_route params, routes_by_view[view] if is_array params
+      url = String(routes_by_view[view])
+      url = url.replace(/\*/,params.path.replace(/^\//,'')) if params.path
       param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?(/|$)','g')
       for param_name of params
         url = url.replace param_matcher, ->
@@ -695,18 +689,31 @@ Router = (resolve) ->
             params[param_name] + arguments[4]
           else
             (arguments[1] || '') + ':' + arguments[2] + (arguments[3] || '') + arguments[4]
-      return
-    
-    
-    if(typeof(params) == 'string' && url.match(/\*/)){
-      url = url.replace(/\*/,params).replace(/\/\//g,'/');
-    }else{
-    }
-    url = url.replace(/\([^\)]+\)/g,'');
-    return url;
-    
-    
+      if typeof arguments[1] is 'function'
+        dispatcher ViewManager(view), params, arguments[1]
+      return url.replace(/\([^\)]+\)/g,'')
+      
+  #return an object with params from a url string
+  else if typeof arguments[0] is 'string'
+    fragment = arguments[0]
+    for route in ordered_routes
+      [path,view] = route
+      ViewManager(view) #check the current view, will trigger and error if it doesn't exist
+      if routes_regexps_by_path[path].test fragment
+        ordered_params = routes_regexps_by_path[path].exec(fragment).slice(1)
+        params = params_from_ordered_params_and_route ordered_params, path
+        response = {}
+        response[view] = params
+        if typeof arguments[1] is 'function'
+          dispatcher ViewManager(view), params, arguments[1]
+        return response
+    View.trigger 'error', 'Could not resolve the url: ' + arguments[0]
 
+View.extend url: (params) ->
+  router_params = {}
+  router_params[@name] = params
+  Router router_params
+  
 # ViewManager
 #############
 ViewManager = ->
