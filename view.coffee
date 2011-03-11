@@ -256,11 +256,11 @@ View.extend
 
 View.env
   server: ->
-    process? and require? and global? and module?
+    (window? and window.name is 'nodejs') or (process? and require? and global? and module?)
   client: ->
     window? and window.document?
   browser: ->
-    not (process? and require? and global? and module?)
+    window? and window.name? and window.name isnt 'nodejs'
 
 View.extend extend:env: (envs) ->
   for env_name, args of envs
@@ -347,9 +347,7 @@ View.extend extend:defaults: (defaults) ->
 View.extend
   _model: (model) ->
     if is_model model
-      @attributes = model.attributes
       @model = model
-      @model.bind 'all', => @trigger.apply @, arguments
     else
       @trigger 'error', 'The model object passed is not a valid model.'
 
@@ -367,37 +365,23 @@ View.extend
       @trigger 'error', 'The collection object passed is not a valid collection.'
   
   get: (key) ->
-    if @model
-      @model.get.apply @model, arguments
-    else
-      @attributes[key]
+    @attributes[key]
       
   set: (attributes,options) ->
-    if @model
-      @model.set.apply @model, arguments
-    else
-      options ||= {}
-      return @ if not attributes
-      attributes = attributes.attributes if attributes.attributes?
-      now = @attributes
-      for attribute, value of attributes
-        if now[attribute] != value
-          now[attribute] = value
-          if not options.silent
-            @_changed = true
-            #TODO: note incompatibility with backbone.js, it passes "@" as the first argument
-            @trigger 'change:' + attribute, value, options
-      @trigger 'change', @, options if not options.silent and @_changed
-      @_changed = false
-      attributes
-
-  toJSON: ->
-    if @model
-      @model.toJSON()
-    else if @collection
-      @collection.toJSON()
-    else
-      @attributes
+    options ||= {}
+    return @ if not attributes
+    attributes = attributes.attributes if attributes.attributes?
+    now = @attributes
+    for attribute, value of attributes
+      if now[attribute] != value
+        now[attribute] = value
+        if not options.silent
+          @_changed = true
+          #TODO: note incompatibility with backbone.js, it passes "@" as the first argument
+          @trigger 'change:' + attribute, value, options
+    @trigger 'change', @, options if not options.silent and @_changed
+    @_changed = false
+    attributes
 
 View.extend extend:model: (model) ->
   @_model model
@@ -599,77 +583,88 @@ routes_regexps_by_path = {}
 ordered_routes = []
 named_param = /:([\w\d]+)/g
 splat_param = /\*([\w\d]+)/g
+initial_route = '/'
 
-Router = ->
-  #setup routes
-  if not Router.mixin
-    dependent_views = []
-    for route in arguments[0]
-      [path,view] = route
-      dependent_views.push view
-      routes_by_path[path] = view
-      regexp = '^' + path.replace(named_param, "([^\/]*)").replace(splat_param, "(.*?)") + '$'
-      routes_regexps_by_path[path] = new RegExp regexp
-      routes_by_view[view] = path
-      ordered_routes.push route
-    View.env browser: ->
-      create_router()
-    Router.mixin = [
-      ['views',dependent_views]
-      ['initialize', (next) ->
-        @router = []
-        for view in dependent_views
-          @router.push ViewManager view
-        @on ready: ->
-          Router '/', ->
-        next()
-      ]
-    ]
-  else
-    #if just a string view name is passed
-    if typeof arguments[0] is 'string' and ViewManager.views[arguments[0]]?
-      router_params = {}
-      router_params[arguments[0]] = {}
-      arguments[0] = router_params
+Router = mixin: []
+
+RouteResolver = ->
+  #if just a string view name is passed
+  if typeof arguments[0] is 'string' and ViewManager.views[arguments[0]]?
+    router_params = {}
+    router_params[arguments[0]] = {}
+    arguments[0] = router_params
+    
+  #url string from object View: params
+  if typeof arguments[0] is 'object'
+    for view, params of arguments[0]
+      ViewManager(view) #check the current view, will trigger and error if it doesn't exist
+      params = params_from_ordered_params_and_route params, routes_by_view[view] if is_array params
+      url = String(routes_by_view[view])
+      url = url.replace(/\*/,params.path.replace(/^\//,'')) if params.path
+      param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?(/|$)','g')
+      for param_name of params
+        url = url.replace param_matcher, ->
+          if arguments[2] is param_name
+            params[param_name] + arguments[4]
+          else
+            (arguments[1] || '') + ':' + arguments[2] + (arguments[3] || '') + arguments[4]
+      if typeof arguments[1] is 'function'
+        dispatcher ViewManager(view), params, arguments[1]
+      return url.replace(/\([^\)]+\)/g,'')
       
-    #url string from object View: params
-    if typeof arguments[0] is 'object'
-      for view, params of arguments[0]
-        ViewManager(view) #check the current view, will trigger and error if it doesn't exist
-        params = params_from_ordered_params_and_route params, routes_by_view[view] if is_array params
-        url = String(routes_by_view[view])
-        url = url.replace(/\*/,params.path.replace(/^\//,'')) if params.path
-        param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?(/|$)','g')
-        for param_name of params
-          url = url.replace param_matcher, ->
-            if arguments[2] is param_name
-              params[param_name] + arguments[4]
-            else
-              (arguments[1] || '') + ':' + arguments[2] + (arguments[3] || '') + arguments[4]
+  #return an object with params from a url string
+  else if typeof arguments[0] is 'string'
+    fragment = arguments[0]
+    for route in ordered_routes
+      [path,view] = route
+      ViewManager(view) #check the current view, will trigger and error if it doesn't exist
+      if routes_regexps_by_path[path].test fragment
+        ordered_params = routes_regexps_by_path[path].exec(fragment).slice(1)
+        params = params_from_ordered_params_and_route ordered_params, path
+        response = {}
+        response[view] = params
         if typeof arguments[1] is 'function'
           dispatcher ViewManager(view), params, arguments[1]
-        return url.replace(/\([^\)]+\)/g,'')
-        
-    #return an object with params from a url string
-    else if typeof arguments[0] is 'string'
-      fragment = arguments[0]
-      for route in ordered_routes
-        [path,view] = route
-        ViewManager(view) #check the current view, will trigger and error if it doesn't exist
-        if routes_regexps_by_path[path].test fragment
-          ordered_params = routes_regexps_by_path[path].exec(fragment).slice(1)
-          params = params_from_ordered_params_and_route ordered_params, path
-          response = {}
-          response[view] = params
-          if typeof arguments[1] is 'function'
-            dispatcher ViewManager(view), params, arguments[1]
-          return response
-      View.trigger 'error', 'Could not resolve the url: ' + arguments[0]
+        return response
+    View.trigger 'error', 'Could not resolve the url: ' + arguments[0]
 
+View.extend extend:route: (route,discard) ->
+  initial_route = route
+  discard()
+
+View.extend extend:routes: (routes,discard) ->
+  dependent_views = []
+  for route in routes
+    [path,view] = route
+    dependent_views.push view
+    routes_by_path[path] = view
+    regexp = '^' + path.replace(named_param, "([^\/]*)").replace(splat_param, "(.*?)") + '$'
+    routes_regexps_by_path[path] = new RegExp regexp
+    routes_by_view[view] = path
+    ordered_routes.push route
+  View.env browser: ->
+    create_router()
+  Router.mixin.push ['views',dependent_views]
+  Router.mixin.push ['initialize', (next) ->
+    Router.view = @
+    @router = []
+    for view in dependent_views
+      @router.push ViewManager view
+    @on ready: ->
+      RouteResolver initial_route, ->
+      View.env browser: ->
+        Backbone.history.start()
+    next()
+  ]
+  discard()
+  
 View.extend url: (params) ->
   router_params = {}
   router_params[@name] = params || {}
-  Router router_params
+  url = RouteResolver router_params
+  View.env browser: ->
+    url = '#' + url
+  url
 
 #TODO: remove backbone dependency
 create_router = ->
@@ -681,8 +676,7 @@ create_router = ->
         ordered_params = array_from arguments
         router_params = {}
         router_params[view] = params_from_ordered_params_and_route ordered_params, route
-        Router router_params, ->
-  $ -> Backbone.history.start()
+        RouteResolver router_params, ->
     
 has_change_callback = (view) ->
   return false if not view._callbacks?
@@ -697,9 +691,17 @@ dispatcher = (view_instance,params,callback) ->
     did_change = true
   next = ->
     view_instance.unbind 'render', next
-    sibling.style.display = 'none' for sibling in view_instance[0].parentNode.childNodes
+    View.env
+      browser: ->
+        sibling.style.display = 'none' for sibling in view_instance[0].parentNode.childNodes
+      server: ->
+        for sibling in view_instance[0].parentNode.childNodes
+          if sibling isnt view_instance[0]
+            view_instance[0].parentNode.removeChild sibling
     view_instance[0].style.display = null
-    callback view_instance, params
+    callback.call view_instance, view_instance, params
+    View.trigger 'route', view_instance
+    View.trigger 'route:' + view_instance.name, view_instance
   view_instance.bind 'render', next
   view_instance.bind 'change', did_change_observer
   view_instance.set params
@@ -774,10 +776,12 @@ if window?
   window.View = ViewManager
   window.Builder = Builder
   window.Router = Router
+  window.RouteResolver = RouteResolver
   window.Logger = Logger
   
 if module?.exports?
   module.exports.View = ViewManager
   module.exports.Builder = Builder
   module.exports.Router = Router
+  module.exports.RouteResolver = RouteResolver
   module.exports.Logger = Logger
