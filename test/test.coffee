@@ -1,5 +1,5 @@
 assert = require 'assert'
-{View,Builder,Router,Logger} = require '../view.js'
+{View,Builder,Router,RouteResolver,Logger} = require '../view.js'
 {jsdom} = require 'jsdom'
 Backbone = require 'backbone'
 
@@ -251,7 +251,7 @@ module.exports.canUseArrayInBuilder = (before_exit) ->
       
 module.exports.router = (before_exit) ->
   #initial call sets
-  Router [
+  View.extend routes: [
     ['/', 'IndexView']
     ['/post/:id', 'PostView']
     ['/:a/:b/:c', 'AlphabetView']
@@ -290,27 +290,27 @@ module.exports.router = (before_exit) ->
   
   #can turn a url into parsed view and params
   #can turn an object with params into a url 
-  assert.deepEqual '/post/5', Router PostView: id: 5
-  assert.deepEqual {PostView: id: "5"}, Router '/post/5'
-  assert.deepEqual '/', Router IndexView: {}
-  assert.deepEqual {IndexView: {}}, Router '/'
-  assert.deepEqual {AlphabetView: {a:'a',b:'b',c:'c'}}, Router '/a/b/c'
-  assert.deepEqual {AlphabetView: {a:'a',b:'b',c:'c'}}, Router '/a/b/c' 
+  assert.deepEqual '/post/5', RouteResolver PostView: id: 5
+  assert.deepEqual {PostView: id: "5"}, RouteResolver '/post/5'
+  assert.deepEqual '/', RouteResolver IndexView: {}
+  assert.deepEqual {IndexView: {}}, RouteResolver '/'
+  assert.deepEqual {AlphabetView: {a:'a',b:'b',c:'c'}}, RouteResolver '/a/b/c'
+  assert.deepEqual {AlphabetView: {a:'a',b:'b',c:'c'}}, RouteResolver '/a/b/c' 
   
   #router can resolve ordered params
-  assert.equal '/a/b/c', Router(AlphabetView: ['a','b','c'])
+  assert.equal '/a/b/c', RouteResolver(AlphabetView: ['a','b','c'])
     
   #view can generate a url for itself
   assert.equal '/post/5', PostView.url id: 5
   assert.equal '/', IndexView.url()
-  assert.equal '/', Router 'IndexView'
+  assert.equal '/', RouteResolver 'IndexView'
   
   #should have route auto set
   callback_count = 0
   ContainerView.initialize ->
   
     #use as dispatcher
-    Router '/post/5', (view,params) ->
+    RouteResolver '/post/5', (view,params) ->
       #callback should only be called after 
       assert.equal view.get('id'), '5'
       assert.ok PostView.element().style.display isnt 'none'
@@ -318,27 +318,27 @@ module.exports.router = (before_exit) ->
       ++callback_count
       
     #dispatcher can take object argument
-    Router {IndexView: {}}, (view,params) ->
+    RouteResolver {IndexView: {}}, (view,params) ->
       assert.ok IndexView.element().style.display isnt 'none'
       assert.ok PostView.element().style.display is 'none'
       ++callback_count
       
     #dispatcher can take ordered param argument
-    Router {PostView:['4']}, (view,params) ->
+    RouteResolver {PostView:['4']}, (view,params) ->
       assert.equal view.get('id'), '4'
       assert.ok PostView.element().style.display isnt 'none'
       assert.ok IndexView.element().style.display is 'none'
       ++callback_count
       
     #IndexView should not re-render
-    Router {IndexView: {}}, (view,params) ->
+    RouteResolver {IndexView: {}}, (view,params) ->
       assert.ok IndexView.element().style.display isnt 'none'
       assert.ok PostView.element().style.display is 'none'
       ++callback_count
       
     #default logic of hiding siblings can be disabled
     PostView.unbind 'route'
-    Router {PostView: id: 4}, (view,params) ->
+    RouteResolver {PostView: id: 4}, (view,params) ->
       assert.ok IndexView.element().style.display is 'none'
       assert.ok PostView.element().style.display isnt 'none'
       ++callback_count
