@@ -7,17 +7,9 @@ View.extend
     element.setAttribute 'data-view', @name if @name 
     set_element.call @, element
     
-  $: (dom_library) ->
-    if arguments.length is 1 and ((jQuery? and dom_library is jQuery) or (Zepto? and dom_library is Zepto))
-      @_$ = dom_library
-    else if arguments.length is 1 and typeof dom_library is 'string'
-      selector = dom_library
-      if not @_$?
-        @trigger 'error', 'No DOM library is available in the View'
-      else
-        @_$ selector, @[0]
-    else
-      @_$
+  $: (selector) ->
+    @trigger 'error', "No DOM library is available in #{name}" if not @_$?
+    @_$ selector, @[0]
     
   callback: (method) ->
     args = array_from(arguments)[1..]
@@ -42,12 +34,17 @@ View.extend extend:
   delegate: (events) ->
     @delegate events
     
-  $: ($) ->
-    @$ $
+  $: (dom_library,discard) ->
+    if (jQuery? and dom_library is jQuery) or (Zepto? and dom_library is Zepto)
+      @_$ = dom_library
+    else
+      @trigger 'error', 'Unsupported DOM library specified, use jQuery or Zepto', dom_library
+    discard()
 
 set_element = (element) ->
   @length = 1
   @[0] = element
+  #create a 
   extend @$, @_$ @[0] if @_$
 
 delegate_events = (events,element) ->
