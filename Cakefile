@@ -25,8 +25,6 @@ files =
   ]
   
 sources = {}
-compiled = {}
-
 for name of files
   sources[name] = files[name].map (filename) -> fs.readFileSync filename
 
@@ -49,7 +47,6 @@ task 'compile', 'compile library', ->
     print "compiled ./lib/#{name}.js\n"
 
 task 'test', 'run tests', ->
-  fs.writeFile './test/test.js', CoffeeScript.compile sources.test.join('\n')
-  exec 'expresso ./test/test.js', (stderr,stdout) ->
+  exec 'expresso ./lib/test.js', (stderr,stdout) ->
     print stdout 
     print stderr

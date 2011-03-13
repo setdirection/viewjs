@@ -42,6 +42,29 @@ module.exports.stack = ->
   assert.equal sequence[0], 'a'
   assert.equal sequence[1], 'b'
 
+module.exports.envBasics = ->
+  View.env set:
+    a: false
+    b: -> true
+  call_count = 0
+  View.env
+    a: ->
+      ++call_count
+    b: ->
+      ++call_count
+  assert.equal call_count, 1
+  View.extend env:set:
+    a: -> true
+    b: false
+  View.env
+    a: ->
+      ++call_count
+  assert.equal call_count, 2
+  View.env
+    b: ->
+      ++call_count
+  assert.equal call_count, 2
+
 module.exports.canDeferViewManagerCallback = ->
   call_count = 0
   View QuantumView: ->
@@ -347,4 +370,37 @@ module.exports.router = (before_exit) ->
     assert.equal 5, callback_count
     assert.equal 4, post_view_render_count
     assert.equal 1, index_view_render_count
-    
+
+module.exports.canPassDataInitialize = ->
+  model = new Backbone.Model
+  collection = new Backbone.Collection
+  attributes = {key:'value'}
+  
+  model_view = View.create()
+  model_view.initialize model
+  assert.equal model_view.model, model
+  collection_view = View.create()
+  collection_view.initialize collection
+  assert.equal collection_view.collection, collection
+  attributes_view = View.create()
+  attributes_view.initialize attributes
+  assert.equal attributes.key, attributes_view.get 'key'
+
+module.exports.canUse$InBuilder = ->
+  click_count = 0
+  {$BuilderView} = View.create $BuilderView:
+    $: jQuery
+    delegate:
+      click:
+        div: ->
+          ++click_count
+    render: ->
+      @key = 'test'
+      @table @tr @td(), @td()
+      @div().click ->
+        ++click_count
+        assert.equal @key, 'test'
+  $BuilderView.initialize()
+  $BuilderView.$('div').trigger('click')
+  assert.equal click_count, 2
+  assert.equal $BuilderView.$('td').length, 2
