@@ -2,6 +2,7 @@ assert = require 'assert'
 {View,Builder,Router,RouteResolver,Logger} = require '../lib/view.js'
 {jsdom} = require 'jsdom'
 Backbone = require 'backbone'
+global.Backbone = Backbone
 
 array_from = (object) ->
   return [] if not object
@@ -12,6 +13,8 @@ array_from = (object) ->
   results
 
 View.extend
+  env:
+    set:test: true
   document: jsdom '<html><head></head><body></body></html>'
 
 module.exports.parses = ->
@@ -130,7 +133,7 @@ module.exports.canRenderCollection = ->
     render: (item) ->
       ++render_count
       @tag 'li', item.get 'content'
-  
+
   ListView.initialize ->
     assert.equal @[0].tagName.toLowerCase(), 'ul'
   
@@ -279,6 +282,10 @@ module.exports.router = (before_exit) ->
     ['/post/:id', 'PostView']
     ['/:a/:b/:c', 'AlphabetView']
   ]
+  View.extend
+    env:
+      server: false
+      browser: false
   
   #views should be auto assigned routes after they are created
   #if they didn't exist at the time the router was called
@@ -370,6 +377,11 @@ module.exports.router = (before_exit) ->
     assert.equal 5, callback_count
     assert.equal 4, post_view_render_count
     assert.equal 1, index_view_render_count
+
+  View.extend
+    env:
+      server: true
+      browser: false
 
 module.exports.canPassDataInitialize = ->
   model = new Backbone.Model

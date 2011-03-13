@@ -3,7 +3,14 @@
 View.extend stack:initialize:add: (args...,next) ->
   return if @_initialized?
   @_initialized = true
-  @_initialize_callback = args[0] if args[0]
+  if args.length > 0
+    if is_model args[0]
+      @_model args[0]
+    else if is_collection args[0]
+      @_collection args[0]
+    else if typeof args[0] isnt 'function'
+      @set args[0]
+    @_initialize_callback = args[args.length - 1] if typeof args[args.length - 1] is 'function'
   next()
 
 View.extend stack:initialize:complete: ->

@@ -115,13 +115,16 @@ dispatcher = (view_instance,params,callback) ->
     did_change = true
   next = ->
     view_instance.unbind 'render', next
+    hide = ->
+      sibling.style.display = 'none' for sibling in view_instance[0].parentNode.childNodes
+    remove = ->
+      for sibling in view_instance[0].parentNode.childNodes
+        if sibling isnt view_instance[0]
+          view_instance[0].parentNode.removeChild sibling
     View.env
-      browser: ->
-        sibling.style.display = 'none' for sibling in view_instance[0].parentNode.childNodes
-      server: ->
-        for sibling in view_instance[0].parentNode.childNodes
-          if sibling isnt view_instance[0]
-            view_instance[0].parentNode.removeChild sibling
+      test: hide
+      browser: hide
+      server: remove
     view_instance[0].style.display = null
     callback.call view_instance, view_instance, params
     View.trigger 'route', view_instance

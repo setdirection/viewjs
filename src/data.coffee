@@ -25,7 +25,7 @@ View.extend
   
   get: (key) ->
     @attributes[key]
-      
+  
   set: (attributes,options) ->
     options ||= {}
     return @ if not attributes

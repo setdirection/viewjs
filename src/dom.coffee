@@ -40,6 +40,13 @@ View.extend extend:
     else
       @trigger 'error', 'Unsupported DOM library specified, use jQuery or Zepto', dom_library
     discard()
+    View.extend
+      before:
+        tag: (next,arguments...) ->
+          @_$ next.apply @, arguments
+          for event in supported_events
+            $[event] = wrap_function $[event], (next,arguments...) =>
+              arguments[arguments.length - 1] = proxy arguments[arguments.length - 1], @
 
 set_element = (element) ->
   @length = 1
@@ -51,14 +58,20 @@ delegate_events = (events,element) ->
   return if not (events || (events = @_delegatedEvents))
   @trigger 'error', 'No DOM library the supports delegate() available' if not @_$?.fn?.delegate?
   @_$(element).unbind()
-  for key, method_name of events[key]
-    [event_name,selector] = key.match /^(\w+)\s*(.*)$/
-    method = proxy @[method_name],@
+  process_item = (event_name,selector,method_name) ->
+    method = proxy (if typeof method_name is 'string' then @[method_name] else method_name), @
     if selector is ''
       @_$(element).bind event_name, method
     else
       @_$(element).delegate selector, event_name, method
-    
+  for key, method_name of events
+    if typeof key is 'string'
+      [event_name,selector] = key.match /^(\w+)\s*(.*)$/
+      process_item.call @, event_name, selector, method_name
+    else
+      for selector, method_name of key
+        process_item.call @, event_name, selector, method_name
+
 #setup the document element
 View.extend env:client: ->
   document: window.document
