@@ -6,28 +6,45 @@ CoffeeScript = require 'coffee-script'
 _ = require 'underscore'
 
 files =
-  view: [
-    './src/support.coffee'
-    './src/mixin.coffee'
-    './src/initialize.coffee'
-    './src/events.coffee'
-    './src/env.coffee'
-    './src/dom.coffee'
-    './src/data.coffee'
-    './src/aspect.coffee'
-    './src/template.coffee'
-    './src/builder.coffee'
-    './src/router.coffee'
-    './src/logger.coffee'
-    './src/manager.coffee'
-    './src/export.coffee'
+  'view.client': [
+    './src/client/support.coffee'
+    './src/client/mixin.coffee'
+    './src/client/initialize.coffee'
+    './src/client/events.coffee'
+    './src/client/env.coffee'
+    './src/client/dom.coffee'
+    './src/client/data.coffee'
+    './src/client/aspect.coffee'
+    './src/client/templates.coffee'
+    './src/client/builder.coffee'
+    './src/client/router.coffee'
+    './src/client/logger.coffee'
+    './src/client/manager.coffee'
+    './src/client/export.coffee'
   ]
-  test: [
-    './test/test.coffee'
+  'view.server': [
+    './src/server/support.coffee'
+    './src/server/mixin.coffee'
+    './src/server/events.coffee'
+    './src/server/server.coffee'
+    './src/server/templates.coffee'
+    './src/server/stylesheets.coffee'
+    './src/server/javascripts.coffee'
+    './src/server/routes.coffee'
+    './src/server/response.coffee'
+    './src/server/proxy.coffee'
+    './src/server/env.coffee'
+    './src/server/manager.coffee'
+    './src/server/export.coffee'
+  ]
+  'test': [
+    './test/client.coffee'
+    './test/server.coffee'
   ]
 directories = 
-  view: './src'
-  test: './test'
+  'view.client': './src/client'
+  'view.server': './src/server'
+  'test': './test'
 
 watch_directory = (_opts, callback) ->
   opts = _.extend(
@@ -62,16 +79,10 @@ watch_directory = (_opts, callback) ->
   addToWatch opts.path
 
 run_tests = ->
-  tester = spawn 'expresso', ['./lib/test.js']
-  tester.stdout.setEncoding 'utf8'
-  tester.stderr.setEncoding 'utf8'
-  output = []
-  tester.stdout.on 'data', (data) ->
-    output.push data
-  tester.stderr.on 'data', (data) ->
-    output.push data
-  tester.on 'exit', (code) ->
-    console.log output.join('')
+  exec 'expresso ./lib/test.js', (err,stdin,stderr) ->
+    console.log stdin
+    console.log err
+    console.log stderr
   
 run_tests = _.throttle run_tests, 500
 

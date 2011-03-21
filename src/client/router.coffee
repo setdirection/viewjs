@@ -4,7 +4,6 @@ router_initialized = false
 routes_by_path = {}
 routes_by_view = {}
 routes_regexps_by_path = {}
-ordered_routes = []
 named_param = /:([\w\d]+)/g
 splat_param = /\*([\w\d]+)/g
 initial_route = '/'
@@ -39,8 +38,7 @@ RouteResolver = ->
   #return an object with params from a url string
   else if typeof arguments[0] is 'string'
     fragment = arguments[0]
-    for route in ordered_routes
-      [path,view] = route
+    for path, view of routes_by_path
       ViewManager(view) #check the current view, will trigger and error if it doesn't exist
       if routes_regexps_by_path[path].test fragment
         ordered_params = routes_regexps_by_path[path].exec(fragment).slice(1)
@@ -65,7 +63,6 @@ View.extend extend:routes: (routes,discard) ->
     regexp = '^' + path.replace(named_param, "([^\/]*)").replace(splat_param, "(.*?)") + '$'
     routes_regexps_by_path[path] = new RegExp regexp
     routes_by_view[view] = path
-    ordered_routes.push route
   View.env browser: ->
     create_router()
   Router.mixin.push ['views',dependent_views]

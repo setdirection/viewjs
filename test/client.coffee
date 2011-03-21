@@ -1,5 +1,5 @@
 assert = require 'assert'
-{View,Builder,Router,RouteResolver,Logger} = require './view.js'
+{View,Builder,Router,RouteResolver,Logger} = require './view.client.js'
 {jsdom} = require 'jsdom'
 jQuery = require 'jquery'
 Backbone = require 'backbone'
@@ -434,6 +434,13 @@ module.exports.canUse$InBuilder = ->
   assert.equal click_count, 3
   assert.equal $BuilderView.$('td').length, 2
   
+module.exports.canReverseLookup = ->
+  {ReverseLookupView} = View.create ReverseLookupView:
+    $: jQuery
+  ReverseLookupView.initialize ->
+    assert.equal jQuery(@).view().name, 'ReverseLookupView'
+    assert.equal @$.view().name, 'ReverseLookupView'
+
 module.exports.anonViewHasElement = ->
   anon = View.create()
   assert.ok anon[0]

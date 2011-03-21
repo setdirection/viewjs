@@ -4,7 +4,7 @@ View.extend
   element: ->
     return @[0] if @[0]
     element = @document.createElement 'div'
-    element.setAttribute 'data-view', @name if @name 
+    element.setAttribute 'class', @name if @name 
     set_element.call @, element
     
   $: (selector) ->
@@ -36,6 +36,7 @@ View.extend extend:
   $: (dom_library,discard) ->
     if dom_library and dom_library.fn
       @_$ = dom_library
+      dom_library.fn.view = reverse_lookup
     else
       @trigger 'error', 'Unsupported DOM library specified, use jQuery or Zepto', dom_library
 
@@ -64,6 +65,9 @@ delegate_events = (events,element) ->
       for selector, _method_name of method_name
         process_item.call @, event_name, selector, _method_name
 
+reverse_lookup = ->
+  ViewManager @[0].className
+  
 #setup the document element
 View.extend env:client: ->
   document: window.document
