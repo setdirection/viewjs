@@ -110,17 +110,23 @@ has_change_callback = (view) ->
   false
 
 dispatcher = (view_instance,params,callback) ->
+  siblings = ->
+    view_instance[0].parentNode.childNodes
   did_change = false
   did_change_observer = ->
     did_change = true
+  ensure_parent_node = ->
+    if not view_instance[0].parentNode
+      view_instance.trigger 'error', 'This view is part of a Router, and must be attched to a parent node.'
   next = ->
     view_instance.unbind 'render', next
     hide = ->
-      sibling.style.display = 'none' for sibling in view_instance[0].parentNode.childNodes
+      sibling.style.display = 'none' for sibling in siblings()
     remove = ->
-      for sibling in view_instance[0].parentNode.childNodes
+      for sibling in siblings()
         if sibling isnt view_instance[0]
           view_instance[0].parentNode.removeChild sibling
+    ensure_parent_node()
     View.env
       test: hide
       browser: hide

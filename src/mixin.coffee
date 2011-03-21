@@ -53,10 +53,13 @@ View.extend extend:stack: (commands) ->
 
 View.extend
   create: ->
+    #anon view
     if arguments.length is 0 or (arguments.length is 1 and typeof arguments[0] is 'function')
       instance = @clone()
+      instance.element()
       arguments[0].call instance if arguments[0]
       return instance
+    #named view
     created_views = {}
     for class_name, mixins of arguments[0]
       @trigger 'warning', class_name + ' already exists, overwriting.' if ViewManager.views[class_name]?

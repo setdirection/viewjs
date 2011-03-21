@@ -52,6 +52,9 @@ tag = (tag_name) ->
       element.appendChild _element
     else
       element.appendChild @document.createTextNode String _element
+  
+  #if jQuery/Zepto is present wrap elements in $
+  element = @_$ element if @_$
   element
   
 View.extend tag: ->

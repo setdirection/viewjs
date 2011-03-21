@@ -3,13 +3,15 @@
 environments = {}
 
 View.extend
-  env: (envs) ->    
+  env: (envs) ->
     if arguments.length is 2
       [env_name, callback] = arguments
-      should_call = if typeof environments[env_name] is 'boolean'
-        environments[env_name]
+      if not environments[env_name]?
+        should_call = false
+      else if typeof environments[env_name] is 'boolean'
+        should_call = environments[env_name]
       else
-        environments[env_name]()
+        should_call = environments[env_name]()
       if should_call
         callback.call @
     else

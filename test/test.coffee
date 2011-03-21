@@ -1,6 +1,7 @@
 assert = require 'assert'
-{View,Builder,Router,RouteResolver,Logger} = require '../lib/view.js'
+{View,Builder,Router,RouteResolver,Logger} = require './view.js'
 {jsdom} = require 'jsdom'
+jQuery = require 'jquery'
 Backbone = require 'backbone'
 global.Backbone = Backbone
 
@@ -67,6 +68,11 @@ module.exports.envBasics = ->
     b: ->
       ++call_count
   assert.equal call_count, 2
+  #non-existent env will not be called
+  View.env c: ->
+    ++call_count
+  assert.equal call_count, 2
+
 
 module.exports.canDeferViewManagerCallback = ->
   call_count = 0
@@ -282,10 +288,11 @@ module.exports.router = (before_exit) ->
     ['/post/:id', 'PostView']
     ['/:a/:b/:c', 'AlphabetView']
   ]
+  
   View.extend
-    env:
-      server: false
-      browser: false
+    env:set:
+      server: -> false
+      browser: -> false
   
   #views should be auto assigned routes after they are created
   #if they didn't exist at the time the router was called
@@ -309,12 +316,13 @@ module.exports.router = (before_exit) ->
     ContainerView: [Router,
       views: ['SidebarView']
       render: ->
-        @tag('div'
+        element = @tag('div'
           @SidebarView
           @tag('div',
             @router
           )
         )
+        element
     ]
     AlphabetView: {}
   
@@ -380,8 +388,8 @@ module.exports.router = (before_exit) ->
 
   View.extend
     env:
-      server: true
-      browser: false
+      server: -> true
+      browser: -> false
 
 module.exports.canPassDataInitialize = ->
   model = new Backbone.Model
@@ -400,19 +408,33 @@ module.exports.canPassDataInitialize = ->
 
 module.exports.canUse$InBuilder = ->
   click_count = 0
-  {$BuilderView} = View.create $BuilderView:
+  {$BuilderView} = View.create $BuilderView: [Builder,
     $: jQuery
     delegate:
+      'click div': ->
+        ++click_count
       click:
         div: ->
           ++click_count
     render: ->
       @key = 'test'
-      @table @tr @td(), @td()
-      @div().click ->
-        ++click_count
-        assert.equal @key, 'test'
+      @table(
+        @tr(
+          @td(),
+          @td(
+            @div().click =>
+              ++click_count
+              assert.equal @key, 'test'
+          )
+        )
+      )
+  ]
   $BuilderView.initialize()
   $BuilderView.$('div').trigger('click')
-  assert.equal click_count, 2
+  assert.equal click_count, 3
   assert.equal $BuilderView.$('td').length, 2
+  
+module.exports.anonViewHasElement = ->
+  anon = View.create()
+  assert.ok anon[0]
+  assert.equal anon[0].tagName, 'DIV'

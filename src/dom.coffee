@@ -23,7 +23,6 @@ View.extend
   
   delegate: (events) ->
     @_delegatedEvents = events
-    delegate_events.call @, events
 
 View.extend extend:
   element: (generator) ->
@@ -35,24 +34,17 @@ View.extend extend:
     @delegate events
     
   $: (dom_library,discard) ->
-    if (jQuery? and dom_library is jQuery) or (Zepto? and dom_library is Zepto)
+    if dom_library and dom_library.fn
       @_$ = dom_library
     else
       @trigger 'error', 'Unsupported DOM library specified, use jQuery or Zepto', dom_library
-    discard()
-    View.extend
-      before:
-        tag: (next,arguments...) ->
-          @_$ next.apply @, arguments
-          for event in supported_events
-            $[event] = wrap_function $[event], (next,arguments...) =>
-              arguments[arguments.length - 1] = proxy arguments[arguments.length - 1], @
 
 set_element = (element) ->
   @length = 1
   @[0] = element
-  #create a 
+  #create a hybrid function object to allow: both @$('li a') and @$.hide()
   extend @$, @_$ @[0] if @_$
+  delegate_events.call @, @_delegatedEvents, @[0] if @_delegatedEvents
 
 delegate_events = (events,element) ->
   return if not (events || (events = @_delegatedEvents))
@@ -65,12 +57,12 @@ delegate_events = (events,element) ->
     else
       @_$(element).delegate selector, event_name, method
   for key, method_name of events
-    if typeof key is 'string'
-      [event_name,selector] = key.match /^(\w+)\s*(.*)$/
+    [discard,event_name,selector] = key.match /^(\w+)\s*(.*)$/
+    if typeof method_name is 'string' or typeof method_name is 'function'
       process_item.call @, event_name, selector, method_name
     else
-      for selector, method_name of key
-        process_item.call @, event_name, selector, method_name
+      for selector, _method_name of method_name
+        process_item.call @, event_name, selector, _method_name
 
 #setup the document element
 View.extend env:client: ->

@@ -13,13 +13,15 @@ View.extend
   _collection: (collection) ->
     if is_collection collection
       @collection = collection
-      @collection.bind 'all', => @trigger.apply @, arguments
+      @collection.bind 'all', =>
+        @trigger.apply @, arguments
       @bind add: (model) ->
         @_elements[model.cid] = @_render(model)
         @[0].insertBefore @_elements[model.cid], (@[0].childNodes[@collection.models.indexOf(model)] || null)
       @bind remove: (model) ->
         @[0].removeChild @_elements[model.cid] if @_elements[model.cid]
-      @bind refresh: @render
+      @bind refresh: -> 
+        @render()
     else
       @trigger 'error', 'The collection object passed is not a valid collection.'
   
