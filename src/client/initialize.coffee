@@ -11,7 +11,8 @@ View.extend stack:initialize:add: (args...,next) ->
     else if typeof args[0] isnt 'function'
       @set args[0]
     @_initialize_callback = args[args.length - 1] if typeof args[args.length - 1] is 'function'
-  next()
+  #the server depends on initialize being async, ensure that it is
+  setTimeout(next,0)
 
 View.extend stack:initialize:complete: ->
   @render()

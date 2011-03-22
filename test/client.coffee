@@ -21,7 +21,7 @@ View.extend
 module.exports.parses = ->
   assert.ok(true)
   
-module.exports.stack = ->
+module.exports.stack = (before_exit) ->
   i = 0
   sequence = []
   {StackView} = View.create
@@ -37,14 +37,14 @@ module.exports.stack = ->
     @b = 'b'
     ++i
     next()
-  StackView.initialize()
-  
-  assert.equal StackView._stack.initialize.stack.length, 3
-  assert.equal 2, i
-  assert.equal StackView.a, 'a'
-  assert.equal StackView.b, 'b'
-  assert.equal sequence[0], 'a'
-  assert.equal sequence[1], 'b'
+  StackView.initialize ->
+    before_exit ->
+      assert.equal StackView._stack.initialize.stack.length, 3
+      assert.equal 2, i
+      assert.equal StackView.a, 'a'
+      assert.equal StackView.b, 'b'
+      assert.equal sequence[0], 'a'
+      assert.equal sequence[1], 'b'
 
 module.exports.envBasics = ->
   View.env set:
@@ -88,7 +88,7 @@ module.exports.canTriggerEvents = ->
   TestView.trigger 'test'
   assert.equal i, 1
 
-module.exports.canDetectModel = ->
+module.exports.canDetectModel = (before_exit) ->
   _model = false
   model = new Backbone.Model
   model.set key: 'value'
@@ -97,11 +97,11 @@ module.exports.canDetectModel = ->
     initialize: (next) ->
       _model = @model
       next()
-  ModelView.initialize()
-  assert.equal ModelView.model, model
-  assert.equal _model, model
+  ModelView.initialize -> before_exit ->
+    assert.equal ModelView.model, model
+    assert.equal _model, model
   
-module.exports.canDetectCollection = ->
+module.exports.canDetectCollection = (before_exit) ->
   _collection = false
   collection = new Backbone.Collection
   {CollectionView} = View.create CollectionView:
@@ -109,9 +109,10 @@ module.exports.canDetectCollection = ->
     initialize: (next) ->
       _collection = @collection
       next()
-  CollectionView.initialize()
-  assert.equal CollectionView.collection, collection
-  assert.equal CollectionView.collection, _collection
+  CollectionView.initialize ->
+    before_exit ->
+      assert.equal CollectionView.collection, collection
+      assert.equal CollectionView.collection, _collection
 
 module.exports.canRender = ->
   {BuilderView} = View.create BuilderView: [Builder,
@@ -283,11 +284,11 @@ module.exports.canUseArrayInBuilder = (before_exit) ->
       
 module.exports.router = (before_exit) ->
   #initial call sets
-  View.extend routes: [
-    ['/', 'IndexView']
-    ['/post/:id', 'PostView']
-    ['/:a/:b/:c', 'AlphabetView']
-  ]
+  View.extend routes: {
+    '/': 'IndexView'
+    '/post/:id': 'PostView'
+    '/:a/:b/:c': 'AlphabetView'
+  }
   
   View.extend
     env:set:
@@ -391,22 +392,22 @@ module.exports.router = (before_exit) ->
       server: -> true
       browser: -> false
 
-module.exports.canPassDataInitialize = ->
+module.exports.canPassDataInitialize = (before_exit) ->
   model = new Backbone.Model
   collection = new Backbone.Collection
   attributes = {key:'value'}
-  
   model_view = View.create()
-  model_view.initialize model
-  assert.equal model_view.model, model
-  collection_view = View.create()
-  collection_view.initialize collection
-  assert.equal collection_view.collection, collection
-  attributes_view = View.create()
-  attributes_view.initialize attributes
-  assert.equal attributes.key, attributes_view.get 'key'
+  model_view.initialize model, ->
+    assert.equal model_view.model, model
+    collection_view = View.create()
+    collection_view.initialize collection, ->
+      assert.equal collection_view.collection, collection
+      attributes_view = View.create()
+      attributes_view.initialize attributes, ->
+      before_exit ->
+        assert.equal attributes.key, attributes_view.get 'key'
 
-module.exports.canUse$InBuilder = ->
+module.exports.canUse$InBuilder = (before_exit) ->
   click_count = 0
   {$BuilderView} = View.create $BuilderView: [Builder,
     $: jQuery
@@ -429,10 +430,10 @@ module.exports.canUse$InBuilder = ->
         )
       )
   ]
-  $BuilderView.initialize()
-  $BuilderView.$('div').trigger('click')
-  assert.equal click_count, 3
-  assert.equal $BuilderView.$('td').length, 2
+  $BuilderView.initialize -> before_exit ->
+    $BuilderView.$('div').trigger('click')
+    assert.equal click_count, 3
+    assert.equal $BuilderView.$('td').length, 2
   
 module.exports.canReverseLookup = ->
   {ReverseLookupView} = View.create ReverseLookupView:

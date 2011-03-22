@@ -110,7 +110,10 @@ task 'watch', 'watch source dir and recompile', ->
           console.log 'coffee err: There was a problem during .coffee to .js compilation. see above'
     watch_directory {path: directories[target], callOnAdd: true}, _.throttle(call_coffeescript,250)
   for name of files
-    spawn_watcher name, files[name]
+    do (name) ->
+      setTimeout ->
+        spawn_watcher name, files[name]
+      , 300
 
 task 'compile', 'compile library', ->
   sources = {}

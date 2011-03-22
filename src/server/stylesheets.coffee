@@ -5,7 +5,7 @@ ViewServer.extend stylesheets: (stylesheets) ->
   add_style = (style) =>
     @_stylesheets.push style if not (style in @stylesheets)
   styles = array_flatten array_from arguments
-  for style in stylesheets
+  for style in styles
     if is_directory style
       files_with_extension(style, /\.css$/).map add_style
     else

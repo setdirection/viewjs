@@ -21,20 +21,20 @@ ViewServer.extend compileTemplates: (as_string = false,document) ->
   suffix = ')(___obj))})'
 
   #html templates
-  files_with_extension(@templates,/\.html$/).map (filename) ->
+  files_with_extension(@templates,/\.html$/).map (filename) =>
     content = String fs.readFileSync filename
     content = content.replace(/\\/g,'\\\\').replace(/\'/g,'\\\'')
     compiled[filename.substring(@templates.length + 1)] = "(function(){return #{child_nodes_from_html}('#{content}')})"  
 
   #jade templates
-  files_with_extension(@templates,/\.jade$/).map (filename) ->
+  files_with_extension(@templates,/\.jade$/).map (filename) =>
     content = String fs.readFileSync filename
     output = require('jade').compile(content).toString()
     output = prefix + output + suffix
     compiled[filename.substring(@templates.length + 1)] = output
 
   #eco templates
-  files_with_extension(@templates,/\.eco$/).map (filename) ->
+  files_with_extension(@templates,/\.eco$/).map (filename) =>
     content = String fs.readFileSync filename
     output = eco.compile content
     output = output.replace /module.exports = /, prefix

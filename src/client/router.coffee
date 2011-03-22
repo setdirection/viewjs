@@ -56,13 +56,13 @@ View.extend extend:route: (route,discard) ->
 
 View.extend extend:routes: (routes,discard) ->
   dependent_views = []
-  for route in routes
-    [path,view] = route
+  for path,view of routes
     dependent_views.push view
     routes_by_path[path] = view
     regexp = '^' + path.replace(named_param, "([^\/]*)").replace(splat_param, "(.*?)") + '$'
     routes_regexps_by_path[path] = new RegExp regexp
     routes_by_view[view] = path
+  
   View.env browser: ->
     create_router()
   Router.mixin.push ['views',dependent_views]

@@ -3,7 +3,8 @@
 ViewServer.extend proxy: (options) ->
   for option in ['port','host','base']
     @trigger 'error', "no host specified for #{option}" if not options[option]
-  @server.get new RegExp('^' + options.base.replace(/\//g,'\\/')+ '(.+)$'), (request,response) ->
+  options.base = options.base + '/' if not options.base.match /\/$/
+  @server.get new RegExp('^' + options.base.replace(/\//g,'\\/') + '(.+)$'), (request,response) ->
     request_options =
       host: options.host
       port: options.port
