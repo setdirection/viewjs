@@ -26,3 +26,4 @@ ViewServerManager.servers = {}
 ViewServerManager.create = proxy ViewServer.create, ViewServer
 ViewServerManager.extend = proxy ViewServer.extend, ViewServer
 ViewServerManager.env = proxy ViewServer.env, ViewServer
+ViewServerManager.compileTemplates = proxy ViewServer.compileTemplates, ViewServer

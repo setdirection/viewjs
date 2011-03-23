@@ -38,7 +38,7 @@ module.exports.canServeStatic = (before_exit) ->
   before_exit ->
     assert.equal request_count, 2
 
-module.exports.canServeBasicApp = (before_exit) ->
+module.exports.canServeBasicApp = ->
   request_count = 0
   
   {BasicAppServer} = TestServer.create BasicAppServer:
@@ -66,10 +66,9 @@ module.exports.canServeBasicApp = (before_exit) ->
           assert.match data.toString(), /<p>value<\/p>/
           
           BasicAppServer.server.close()
-          before_exit ->
-            assert.equal request_count, 2
+          assert.equal request_count, 2
 
-module.exports.canServeProxies = (before_exit) ->
+module.exports.canServeProxies = ->
   {ProxyServerSource1} = ViewServer.create ProxyServerSource1:
     port: 4004
   ProxyServerSource1.server.get '/1', (request,response) ->
@@ -94,10 +93,9 @@ module.exports.canServeProxies = (before_exit) ->
           ProxyServerSource1.server.close()
           ProxyServerSource2.server.close()
           ProxyServer.server.close()
-          before_exit ->
-            assert.equal data.toString(), 'b'
+          assert.equal data.toString(), 'b'
 
-module.exports.envsExecuteCorrectly = (before_exit) ->
+module.exports.envsExecuteCorrectly = ->
   ViewServer.env set:
     a: -> false
     b: true
@@ -125,14 +123,13 @@ module.exports.envsExecuteCorrectly = (before_exit) ->
   
   http.get {host: 'localhost', port: 4007, path: '/'}, (response) ->
     response.on 'data', (data) ->
-      before_exit ->
-        assert.match data.toString(), /href="b"/
-        assert.match data.toString(), /href="c"/
-        assert.isNull data.toString().match /href="a"/
-        ConditionalViewServer.server.close()
+      assert.match data.toString(), /href="b"/
+      assert.match data.toString(), /href="c"/
+      assert.isNull data.toString().match /href="a"/
+      ConditionalViewServer.server.close()
 
-module.exports.canCache = (before_exit) ->  
-  {CachingViewServer} = ViewServer.create CachingViewServer:
+module.exports.canCache = ->  
+  {CachingViewServer} = TestServer.create CachingViewServer:
     port: 4008
     routes:
       '/': 'BasicView'
@@ -151,6 +148,9 @@ module.exports.canCache = (before_exit) ->
     ]
   
   #test BasicView
+  #cleanup in case of failing test from previous call
+  fs.unlinkSync public + '/index.html' if file_exists public + '/index.html'
+  fs.unlinkSync public + '/template.html' if file_exists public + '/template.html'
   assert.equal false, file_exists public + '/index.html'
   http.get {host: 'localhost', port: 4008, path: '/'}, (response) ->
     assert.equal true, file_exists public + '/index.html'
@@ -161,9 +161,8 @@ module.exports.canCache = (before_exit) ->
       http.get {host: 'localhost', port: 4008, path: '/template'}, (response) ->
         assert.equal true, file_exists public + '/template.html'
         response.on 'data', (data) ->
-          before_exit ->
-            assert.equal data.toString(), fs.readFileSync public + '/template.html'
-            #cleanup
-            fs.unlinkSync public + '/index.html'
-            fs.unlinkSync public + '/template.html'
-            CachingViewServer.server.close()
+          assert.equal data.toString(), fs.readFileSync public + '/template.html'
+          #cleanup
+          fs.unlinkSync public + '/index.html'
+          fs.unlinkSync public + '/template.html'
+          CachingViewServer.server.close()

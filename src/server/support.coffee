@@ -7,6 +7,11 @@ _ = require 'underscore'
 {jsdom} = require 'jsdom'
 {XMLHttpRequest} = require 'XMLHttpRequest'
 
+extend = (destination,source) ->
+  for key, value of source
+    destination[key] = value
+  destination
+
 is_array = (array) ->
   array and Object::toString.call(array) is '[object Array]'
 
@@ -60,3 +65,6 @@ proxy = (func,object) ->
     args.shift()
     ->
       func.apply object, args.concat array_from arguments
+
+create_empty_document = ->
+  jsdom '<html><head></head><body></body></html>'

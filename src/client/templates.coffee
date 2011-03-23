@@ -1,8 +1,8 @@
 # Templates
 ###########
-cache = {}
-View.extend extend:cache: (_cache,discard) ->
-  cache = _cache
+templates = {}
+View.extend extend:templates: (_templates,discard) ->
+  templates = _templates
   discard()
 
 View.extend
@@ -32,13 +32,13 @@ View.extend
 View.extend extend:render: (filename) ->
   if typeof filename is 'string'
     callback = (context) ->
-      @trigger 'error', 'Template ' + filename + ' not found' if not cache[filename]
+      @trigger 'error', 'Template ' + filename + ' not found' if not templates[filename]
       if context.attributes?
         context_with_attributes = extend {}, context.attributes
         context_with_attributes = extend context_with_attributes, context
-        cache[filename](context_with_attributes)
+        templates[filename](context_with_attributes)
       else
-        cache[filename](context)
+        templates[filename](context)
   else
     callback = filename
   @_render = callback
