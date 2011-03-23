@@ -31,6 +31,7 @@ files =
     './src/server/stylesheets.coffee'
     './src/server/javascripts.coffee'
     './src/server/routes.coffee'
+    './src/server/cache.coffee'
     './src/server/response.coffee'
     './src/server/proxy.coffee'
     './src/server/env.coffee'
@@ -123,5 +124,15 @@ task 'compile', 'compile library', ->
     fs.writeFile "./lib/#{name}.js", CoffeeScript.compile sources[name].join('\n')
     console.log "compiled ./lib/#{name}.js\n"
 
+task 'templates', 'compile templates accepts source directory [arg 1] and target file [arg 2]', (options) ->
+  #TODO: named options don't seem to work...
+  {ViewServer} = require './lib/view.server.js'
+  output = ViewServer.compileTemplates true, false, options.arguments[1] || (__dirname + '/templates')
+  fs.writeFileSync (options.arguments[2] || __dirname + '/public/javascripts/templates.js'), """
+    View.extend({
+      templates: #{output}
+    });
+  """
+  
 task 'test', 'run tests', ->
   run_tests()

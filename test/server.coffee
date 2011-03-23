@@ -1,10 +1,20 @@
 #test
 http = require 'http'
+fs = require 'fs'
+
+file_exists = (path) ->
+  try
+    fs.lstatSync path
+    true
+  catch e
+    false
+
+public = __dirname + '/../test/public'
 
 {ViewServer} = require './view.server.js'
 
 {TestServer} = ViewServer.create TestServer:
-  public: './test/public'
+  public: public
 
 module.exports.serverWithoutPortDoesNotListen = ->
   assert.isUndefined TestServer.server
@@ -30,11 +40,9 @@ module.exports.canServeStatic = (before_exit) ->
 
 module.exports.canServeBasicApp = (before_exit) ->
   request_count = 0
-  public = __dirname + '/../test/public'
   
   {BasicAppServer} = TestServer.create BasicAppServer:
     port: 4003
-    templates: './test/templates'
     routes:
       '/': 'BasicView'
       '/template': 'TemplateView'
@@ -43,6 +51,7 @@ module.exports.canServeBasicApp = (before_exit) ->
       "#{public}/javascripts/lib/underscore.js"
       "#{public}/javascripts/lib/backbone.js"
       "#{public}/javascripts/lib/view.js"
+      "#{public}/javascripts/templates.js"
       "#{public}/javascripts/views/basic.js"
     ]
   
@@ -87,3 +96,74 @@ module.exports.canServeProxies = (before_exit) ->
           ProxyServer.server.close()
           before_exit ->
             assert.equal data.toString(), 'b'
+
+module.exports.envsExecuteCorrectly = (before_exit) ->
+  ViewServer.env set:
+    a: -> false
+    b: true
+    c: -> true
+    
+  {ConditionalViewServer} = TestServer.create ConditionalViewServer:
+    port: 4007
+    routes:
+      '/': 'BasicView'
+    execute: [
+      "#{public}/javascripts/lib/jquery.js"
+      "#{public}/javascripts/lib/underscore.js"
+      "#{public}/javascripts/lib/backbone.js"
+      "#{public}/javascripts/lib/view.js"
+      "#{public}/javascripts/templates.js"
+      "#{public}/javascripts/views/basic.js"
+    ]
+    env:
+      a: ->
+        stylesheets: ['a']
+      b:
+        stylesheets: ['b']
+      c: ->
+        stylesheets: 'c'
+  
+  http.get {host: 'localhost', port: 4007, path: '/'}, (response) ->
+    response.on 'data', (data) ->
+      before_exit ->
+        assert.match data.toString(), /href="b"/
+        assert.match data.toString(), /href="c"/
+        assert.isNull data.toString().match /href="a"/
+        ConditionalViewServer.server.close()
+
+module.exports.canCache = (before_exit) ->  
+  {CachingViewServer} = ViewServer.create CachingViewServer:
+    port: 4008
+    routes:
+      '/': 'BasicView'
+      '/template': 'TemplateView'
+    cache: [
+      'BasicView'
+      'TemplateView'
+    ]
+    execute: [
+      "#{public}/javascripts/lib/jquery.js"
+      "#{public}/javascripts/lib/underscore.js"
+      "#{public}/javascripts/lib/backbone.js"
+      "#{public}/javascripts/lib/view.js"
+      "#{public}/javascripts/templates.js"
+      "#{public}/javascripts/views/basic.js"
+    ]
+  
+  #test BasicView
+  assert.equal false, file_exists public + '/index.html'
+  http.get {host: 'localhost', port: 4008, path: '/'}, (response) ->
+    assert.equal true, file_exists public + '/index.html'
+    response.on 'data', (data) ->
+      assert.equal data.toString(), fs.readFileSync public + '/index.html'
+      #test TemplateView
+      assert.equal false, file_exists public + '/template.html'
+      http.get {host: 'localhost', port: 4008, path: '/template'}, (response) ->
+        assert.equal true, file_exists public + '/template.html'
+        response.on 'data', (data) ->
+          before_exit ->
+            assert.equal data.toString(), fs.readFileSync public + '/template.html'
+            #cleanup
+            fs.unlinkSync public + '/index.html'
+            fs.unlinkSync public + '/template.html'
+            CachingViewServer.server.close()
