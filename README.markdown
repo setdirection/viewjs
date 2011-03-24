@@ -1,103 +1,94 @@
-Client
-======
+# ViewJS
 
-View
-----
-{View} = View view_name: ->
-{View} = @create view_name: mixins = {}
-@extend: mixins = {}
-@initialize: data = {}, ->
-views: [views...]
+# Client
 
-Aspect
-------
-@before: method_name: (original_method) ->
+## View
+### {View} = View view_name: ->
+### {View} = @create view_name: mixins = {}
+### @extend: mixins = {}
+### @initialize: data = {}, ->
+### views: [views...]
 
-*Builder*
----------
-Element = @tag tag_name, attributes = {}, elements = [], content = ''
+## Aspect
+### @before: method_name: (original_method) ->
 
-Data
-----
-model: Backbone.Model
-collection: Backbone.Collection
-value = @get key
-@set attributes = {}, options = silent: false
-- event: change: ->
-- event: change:key: (value) ->
+## *Builder*
+### Element = @tag tag_name, attributes = {}, elements = [], content = ''
 
-DOM
----
-element: ->
-elements = @$ selector
-handler = @callback method_name, args...
-delegate: event_name: selector: (event) ->
-document: Document
+## Data
+### model: Backbone.Model
+### collection: Backbone.Collection
+### value = @get key
+### @set attributes = {}, options = silent: false
 
-Env
----
-@env: env_name: ->
-- env: server
-- env: client
-- env: browser
+## DOM
+### element: ->
+### elements = @$ selector
+### handler = @callback method_name, args...
+### delegate: event_name: selector: (event) ->
+### document: Document
 
-Events
-------
-@bind/on: event_name, (args...) ->
-@unbind/removeListener event_name = false, handler = ->
-@trigger/emit event_name, args...
+## Env
+### @env: env_name: ->
+#### env: server
+#### env: client
+#### env: browser
 
-Logger
-------
-@log: method_name
+## Events
+### @bind/on: event_name, (args...) ->
+### @unbind/removeListener event_name = false, handler = ->
+### @trigger/emit event_name, args...
+#### change: ->
+#### change:key: (value) ->
+#### ready: ->
+#### error: (error) ->
+#### warning: (warning)
 
-*Router*
---------
-route: url
-routes: path: view_name
-url = @url view_name: attributes: {}
+## Logger
+### @log: method_name
 
-Render
-------
-templates: template_name: ->
-render: template || ->
+## *Router*
+### route: url
+### routes: path: view_name
+### url = @url view_name: attributes: {}
 
-Server
-======
-ViewServer server_name: ->
-{ViewServer} = ViewServer server_name: ->
-{ViewServer} = @create server_name: mixins = {}
+## Render
+# templates: template_name: ->
+# render: template || ->
 
-Assets
-------
-@javascripts: [javascripts...]
-@execute: [execute...]
-@stylesheets: [stylesheets...]
+# ViewServer
+### ViewServer server_name: ->
+### {ViewServer} = ViewServer server_name: ->
+### {ViewServer} = @create server_name: mixins = {}
 
-Cache
------
-cache: [views...]
+## Assets
+### @javascripts: [javascripts...]
+### @execute: [execute...]
+### @stylesheets: [stylesheets...]
 
-Env
----
-@env: env_name: ->
+## Cache
+### cache: [views...]
 
-Events
-------
-@bind/on: event_name, (args...) ->
-@unbind/removeListener event_name = false, handler = ->
-@trigger/emit event_name, args...
+## Env
+### @env: env_name: ->
 
-Routes
-------
-routes: path: view_name
+## Events
+### @bind/on: event_name, (args...) ->
+### @unbind/removeListener event_name = false, handler = ->
+### @trigger/emit event_name, args...
+#### window:created (window) ->
+#### window:render (window,request) ->
+#### error: (error) ->
+#### warning: (warning)
 
-Server
-------
-server: express_instance
-port: number
-templates: path
-public: path
+## Routes
+### routes: path: view_name
+
+## Server
+### server: express_instance
+### port: number
+### templates: path
+### public: path
 
 old docs
 

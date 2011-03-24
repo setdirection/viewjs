@@ -2,6 +2,7 @@
 ##########
 ViewServer.extend
   respond: (request,response) ->
+    @trigger 'request', request, response
     request._stylesheets = array_from @_stylesheets
     request._javascripts = array_from @_javascripts
     request._execute = array_from @_execute
@@ -16,12 +17,12 @@ ViewServer.extend
     @createWindow request, (window) =>
       if window.View?
         window.View.extend on:route: (view_instance) =>
-          output = @renderWindow request, window
+          output = @renderWindow window, request
           @cache request.originalUrl, output if @cache[view_instance.name]
           response.send output
         window.View.extend route: request.originalUrl
       else
-        response.send @renderWindow request, window
+        response.send @renderWindow window, request
       
   createWindow: (request,callback) ->
     document = create_empty_document()
@@ -30,6 +31,7 @@ ViewServer.extend
     window.document.implementation.addFeature 'MutationEvents', ['1.0']
     window.document.implementation.addFeature 'FetchExternalResources', ['script']
     window.document.implementation.addFeature 'ProcessExternalResources', ['script']
+    @trigger 'window:created', window
     executables = array_from request._execute
     add_script = =>
       script = executables.shift()
@@ -53,7 +55,8 @@ ViewServer.extend
     else
       callback.call @, window
   
-  renderWindow: (request,window) -> 
+  renderWindow: (window,request) -> 
+    @trigger 'window:render', window, request
     output = window.document.documentElement.innerHTML    
     #append stylesheets
     stylesheets = (request._stylesheets || []).map (href) =>
