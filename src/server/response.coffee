@@ -56,7 +56,7 @@ ViewServer.extend
   renderWindow: (request,window) -> 
     output = window.document.documentElement.innerHTML    
     #append stylesheets
-    stylesheets = (request._stylesheets || []).map (href) ->
+    stylesheets = (request._stylesheets || []).map (href) =>
       """<link rel="stylesheet" type="text/css" href="#{href.replace(@public,'/')}"/>"""
     javascripts = (request._javascripts || []).map (src) =>
       script_output = """<script type="text/javascript" src="#{src.replace(@public,'/')}"/></script>"""

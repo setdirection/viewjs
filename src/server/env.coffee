@@ -8,6 +8,9 @@ ViewServer.extend
       for env_name, callback of request.set
         environments[env_name] = callback
     else
+      if arguments.length is 1
+        envs = request
+        request = false
       response =
         stylesheets: []
         javascripts: []

@@ -9,6 +9,7 @@ ViewServer.extend
       @_callbacks ||= {}
       @_callbacks[event_name] ||= []
       @_callbacks[event_name].push callback if not (callback in @_callbacks[event_name])
+      console.log 'call to bind' if event_name is 'ready' and @_ready
       callback.call @ if event_name is 'ready' and @_ready
     @
 

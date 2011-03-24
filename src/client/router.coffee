@@ -9,7 +9,7 @@ splat_param = /\*([\w\d]+)/g
 initial_route = '/'
 
 Router = mixin: []
-
+dispatch_count = 0
 RouteResolver = ->
   #if just a string view name is passed
   if typeof arguments[0] is 'string' and ViewManager.views[arguments[0]]?
@@ -121,7 +121,7 @@ dispatcher = (view_instance,params,callback) ->
       sibling.style.display = 'none' for sibling in siblings()
     remove = ->
       for sibling in siblings()
-        if sibling isnt view_instance[0]
+        if sibling and sibling isnt view_instance[0] #TODO: something fishy going on, nulls are present
           view_instance[0].parentNode.removeChild sibling
     ensure_parent_node()
     View.env

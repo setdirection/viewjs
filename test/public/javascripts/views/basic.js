@@ -18,6 +18,11 @@ View.create({
     defaults: {
       key: 'value'
     }
+  },
+  TextView: {
+    render: function(){
+      return this.tag('div','test')
+    }
   }
 });
 

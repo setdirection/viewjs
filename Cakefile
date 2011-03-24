@@ -47,6 +47,20 @@ directories =
   'view.server': './src/server'
   'test': './test'
 
+copy_file = (source,target) ->
+  fs.writeFileSync target, fs.readFileSync source
+
+compile_templates = ->
+  {ViewServer} = require './lib/view.server.js'
+  filename = './test/public/javascripts/templates.js'
+  output = ViewServer.compileTemplates true, false, './test/templates'
+  fs.writeFileSync filename, """
+    View.extend({
+      templates: #{output}
+    });
+  """
+  console.log 'Compiled ' + filename
+  
 watch_directory = (_opts, callback) ->
   opts = _.extend(
     { path: '.', persistent: true, interval: 500, callOnAdd: false },
@@ -121,18 +135,16 @@ task 'compile', 'compile library', ->
   for name of files
     sources[name] = files[name].map (filename) -> fs.readFileSync filename
   for name of files
-    fs.writeFile "./lib/#{name}.js", CoffeeScript.compile sources[name].join('\n')
+    fs.writeFileSync "./lib/#{name}.js", CoffeeScript.compile sources[name].join('\n')
     console.log "compiled ./lib/#{name}.js\n"
-
-task 'templates', 'compile templates accepts source directory [arg 1] and target file [arg 2]', (options) ->
-  #TODO: named options don't seem to work...
-  {ViewServer} = require './lib/view.server.js'
-  output = ViewServer.compileTemplates true, false, options.arguments[1] || (__dirname + '/templates')
-  fs.writeFileSync (options.arguments[2] || __dirname + '/public/javascripts/templates.js'), """
-    View.extend({
-      templates: #{output}
-    });
-  """
+  copy_file __dirname + '/lib/jquery.js', __dirname + '/test/public/javascripts/lib/jquery.js'
+  copy_file __dirname + '/lib/underscore.js', __dirname + '/test/public/javascripts/lib/underscore.js'
+  copy_file __dirname + '/lib/backbone.js', __dirname + '/test/public/javascripts/lib/backbone.js'
+  copy_file __dirname + '/lib/view.client.js', __dirname + '/test/public/javascripts/lib/view.js'
+  compile_templates()
+  
+task 'templates', 'compile templates for tests', (options) ->
+  compile_templates()
   
 task 'test', 'run tests', ->
   run_tests()

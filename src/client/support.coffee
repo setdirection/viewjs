@@ -18,7 +18,7 @@ is_array = (array) ->
   Boolean(array and Object::toString.call(array) is '[object Array]')
 
 is_element = (element) ->
-  Boolean(element?.nodeType is 1 or element?.nodeType is 2)
+  Boolean(element?.nodeType is 1 or element?.nodeType is 3)
 
 is_$ = ($) -> 
   Boolean($?[0] and $?[0]?.nodeType and $.length?)

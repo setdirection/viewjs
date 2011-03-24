@@ -1,0 +1,77 @@
+{spawn} = require 'child_process'
+path = require 'path'
+{ViewServer} = require 'view'
+fs = require 'fs'
+sys = require 'sys'
+
+files_with_extension = (dir,extension) ->
+	paths = []
+	try
+	  fs.statSync dir
+	catch e
+	  return []
+	traverse = (dir,stack) ->
+		stack.push dir
+		fs.readdirSync(stack.join '/').map (file) ->
+			path = stack.concat([file]).join '/'
+			stat = fs.statSync path
+			return if file[0] is '.' or file is 'vendor'
+			paths.push path if stat.isFile() and extension.test file
+			traverse file, stack if stat.isDirectory()
+		stack.pop()
+	traverse dir || '.', []
+	paths
+
+spawn_coffee = (source,target) ->
+  coffee = spawn 'coffee', [
+    '--lint'
+    '--output'
+    target
+    '--watch'
+    source
+  ]
+  coffee.stdout.on 'data', (data) ->
+    sys.print data.toString()
+  coffee.stderr.on 'data', (data) ->
+    sys.print data.toString()
+
+spawn_stylus = (source,target) ->
+  stylus = spawn 'stylus', [
+    '--out'
+    target
+    '--watch'
+    source
+  ]
+  stylus.stdout.on 'data', (data) ->
+    sys.print 'stylus: ' + data
+  stylus.stderr.on 'data', (data) ->
+    sys.print 'stylus err: ' + data
+
+spawn_template_watcher = (source,target) ->
+  timeout = null
+  files_to_watch = files_with_extension source, /\.(jade|eco|html)$/
+  files_to_watch.map (filename) ->
+    fs.watchFile filename, {persistent: true, interval: 500}, (curr, prev) ->
+      return if curr.size is prev.size and curr.mtime.getTime() is prev.mtime.getTime()
+      clearTimeout timeout
+      timeout = setTimeout ->
+        compile_templates(source,target)
+      ,500
+
+compile_templates = (source,target) ->
+  output = ViewServer.compileTemplates true, false, source
+  fs.writeFileSync target, """
+    View.extend({
+      templates: #{output}
+    });
+  """
+  sys.print 'ViewJS: compiled ' + target + '\n'
+
+task 'watch', 'Recompile templates, views, models and templates as needed', ->
+  spawn_coffee __dirname + '/app/models', __dirname + '/public/javascripts/models'
+  spawn_coffee __dirname + '/app/collections', __dirname + '/public/javascripts/collections'
+  spawn_coffee __dirname + '/app/controllers', __dirname + '/public/javascripts/controllers'
+  spawn_coffee __dirname + '/app/views', __dirname + '/public/javascripts/views'
+  spawn_stylus __dirname + '/app/stylesheets', __dirname + '/public/stylesheets'
+  spawn_template_watcher __dirname + '/app/templates', __dirname + '/public/javascripts/templates.js'
+  compile_templates __dirname + '/app/templates', __dirname + '/public/javascripts/templates.js'

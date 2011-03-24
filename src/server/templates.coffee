@@ -7,9 +7,15 @@ eco = require 'eco'
 ViewServer.extend compileTemplates: (as_string = false,document,templates_dir = @templates) ->
   compiled = {}
   child_nodes_from_html = "(function(html){
-    var div = (typeof(document) != 'undefined' ? document : View.document).createElement('div');
-    div.innerHTML = html;
-    return div.childNodes.length === 1 ? div.childNodes[0] : div.childNodes;
+    var doc = (typeof(document) != 'undefined' ? document : View.document);
+    var div = doc.createElement('div');
+    if(!html.match(/^\\</)){
+      div.innerHTML = html;
+      return div;
+    }else{
+      div.innerHTML = html;
+      return div.childNodes.length === 1 ? div.childNodes[0] : div.childNodes;
+    }
   })"
   prefix = "(function(___obj){return #{child_nodes_from_html}(("
   suffix = ')(___obj))})'
