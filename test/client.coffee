@@ -1,5 +1,5 @@
 assert = require 'assert'
-{View,Builder,Router,RouteResolver,Logger} = require './view.client.js'
+{View,Builder,Router,RouteResolver} = require './view.client.js'
 {jsdom} = require 'jsdom'
 jQuery = require 'jquery'
 Backbone = require 'backbone'

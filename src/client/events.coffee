@@ -47,11 +47,14 @@ bind_extend_handler = (events) ->
         @bind 'change:' + _event_name, _callback
     else
       @bind event_name, callback
-      
+
+# * bind: 
+# * on: 
 View.extend extend:bind: bind_extend_handler
 View.extend extend:on: bind_extend_handler
 
-# default error handler
+# event: warning: (warning) Warning messages, deprecations, etc. 
+# event: error: (Error) Triggered when an exception is thrown.
 View.extend
   on:
     warning: (warning) ->

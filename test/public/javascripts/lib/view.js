@@ -1,5 +1,5 @@
 (function() {
-  var Builder, Logger, RouteResolver, Router, View, ViewManager, array_flatten, array_from, array_without_value, attribute_map, attribute_translations, bind_extend_handler, create_router, deffered, delegate_events, dispatch_count, dispatcher, element_cache, environments, extend, has_change_callback, ie, ie_attribute_translation_sniffing_cache, ie_attribute_translations, initial_route, is_$, is_array, is_collection, is_element, is_model, is_view, named_param, params_from_ordered_params_and_route, process_node_argument, proxy, reverse_lookup, router_initialized, routes_by_path, routes_by_view, routes_regexps_by_path, set_element, splat_param, supported_events, supported_html_tags, tag, tag_name, templates, wrap_function, _fn, _i, _len;
+  var Builder, RouteResolver, Router, View, ViewManager, array_flatten, array_from, array_without_value, attribute_map, attribute_translations, bind_extend_handler, create_router, deffered, delegate_events, dispatch_count, dispatcher, element_cache, environments, extend, has_change_callback, ie, ie_attribute_translation_sniffing_cache, ie_attribute_translations, initial_route, is_$, is_array, is_collection, is_element, is_model, is_view, named_param, params_from_ordered_params_and_route, process_node_argument, proxy, reverse_lookup, router_initialized, routes_by_path, routes_by_view, routes_regexps_by_path, set_element, splat_param, supported_events, supported_html_tags, tag, tag_name, templates, wrap_function, _fn, _i, _len;
   var __slice = Array.prototype.slice, __indexOf = Array.prototype.indexOf || function(item) {
     for (var i = 0, l = this.length; i < l; i++) {
       if (this[i] === item) return i;
@@ -1232,7 +1232,7 @@
     }
     return params;
   };
-  Logger = {
+  View.extend({
     log: function(method_name) {
       var execute, _i, _len, _method_name, _results;
       execute = function(method_name) {
@@ -1254,13 +1254,15 @@
       } else {
         return execute.call(this, method_name);
       }
-    },
+    }
+  });
+  View.extend({
     extend: {
       log: function(method_name) {
         return this.log(method_name);
       }
     }
-  };
+  });
   deffered = {};
   ViewManager = function() {
     var callback, class_name, response, _callback, _i, _len, _ref, _ref2;
@@ -1312,13 +1314,11 @@
     window.Builder = Builder;
     window.Router = Router;
     window.RouteResolver = RouteResolver;
-    window.Logger = Logger;
   }
   if ((typeof module != "undefined" && module !== null ? module.exports : void 0) != null) {
     module.exports.View = ViewManager;
     module.exports.Builder = Builder;
     module.exports.Router = Router;
     module.exports.RouteResolver = RouteResolver;
-    module.exports.Logger = Logger;
   }
 }).call(this);

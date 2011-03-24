@@ -1,3 +1,106 @@
+Client
+======
+
+View
+----
+{View} = View view_name: ->
+{View} = @create view_name: mixins = {}
+@extend: mixins = {}
+@initialize: data = {}, ->
+views: [views...]
+
+Aspect
+------
+@before: method_name: (original_method) ->
+
+*Builder*
+---------
+Element = @tag tag_name, attributes = {}, elements = [], content = ''
+
+Data
+----
+model: Backbone.Model
+collection: Backbone.Collection
+value = @get key
+@set attributes = {}, options = silent: false
+- event: change: ->
+- event: change:key: (value) ->
+
+DOM
+---
+element: ->
+elements = @$ selector
+handler = @callback method_name, args...
+delegate: event_name: selector: (event) ->
+document: Document
+
+Env
+---
+@env: env_name: ->
+- env: server
+- env: client
+- env: browser
+
+Events
+------
+@bind/on: event_name, (args...) ->
+@unbind/removeListener event_name = false, handler = ->
+@trigger/emit event_name, args...
+
+Logger
+------
+@log: method_name
+
+*Router*
+--------
+route: url
+routes: path: view_name
+url = @url view_name: attributes: {}
+
+Render
+------
+templates: template_name: ->
+render: template || ->
+
+Server
+======
+ViewServer server_name: ->
+{ViewServer} = ViewServer server_name: ->
+{ViewServer} = @create server_name: mixins = {}
+
+Assets
+------
+@javascripts: [javascripts...]
+@execute: [execute...]
+@stylesheets: [stylesheets...]
+
+Cache
+-----
+cache: [views...]
+
+Env
+---
+@env: env_name: ->
+
+Events
+------
+@bind/on: event_name, (args...) ->
+@unbind/removeListener event_name = false, handler = ->
+@trigger/emit event_name, args...
+
+Routes
+------
+routes: path: view_name
+
+Server
+------
+server: express_instance
+port: number
+templates: path
+public: path
+
+old docs
+
 Create named views:
 
     {ApplicationView} = View.create ApplicationView:
