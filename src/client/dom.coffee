@@ -10,16 +10,6 @@ View.extend
   $: (selector) ->
     @trigger 'error', "No DOM library is available in #{name}" if not @_$?
     @_$ selector, @[0]
-    
-  callback: (method) ->
-    args = array_from(arguments)[1..]
-    context = @
-    ->
-      if typeof method is 'string'
-        context[method].apply context, args
-      else
-        method.apply context, args
-      false
   
   delegate: (events) ->
     @_delegatedEvents = events

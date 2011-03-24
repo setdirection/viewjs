@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>ViewJS: Markup as JavaScript</title> 
+    <link type="text/css" rel="stylesheet" href="stylesheets/syntax.css"/> 
+    <link type="text/css" rel="stylesheet" href="stylesheets/screen.css"/> 
+  </head> 
+  <body> 
+    <div id="content"> 
+      <div id="main">
+        <h1>ViewJS</h1><p class="intro">Markup as JavaScript <strong><a href="https://github.com/syntacticx/viewjs/">Source Code</a></strong></p>
+<ul id="nav">
+  <li><a href="#intro">Intro</a></li>
+  <li><a href="#view">Client</a></li>
+  <li><a href="#viewserver">Server</a></li>
+</ul>
+<br class="clear">
+
+<h2>Installation</h2>
+
+<pre><code>npm install view
+viewjs project_name
+node project_name/app.js</code></pre>
+
+<h2>Development</h2>
+
+<pre><code>cake watch</code></pre>
+
+<p>This will compile the following stylus and coffeescript files:</p>
+
+<ul><li>stylesheets -&gt; public/stylesheets</li><li>models -&gt; public/javascripts/models</li><li>collections -&gt; public/javascripts/collections</li><li>controllers -&gt; public/javascripts/controllers</li><li>views -&gt; public/javascripts/views</li><li>templates -&gt; public/javascripts/templates.js</li></ul>
+
+<h1>Client</h1>
+
+<h2>View</h2>
+
+<h3>{View} = View view_name: -&gt;</h3>
+
+<h3>{View} = @create view_name: mixins = {}</h3>
+
+<h3>@extend: mixins = {}</h3>
+
+<h3>@initialize: data = {}, -&gt;</h3>
+
+<h3>views: [views...]</h3>
+
+<h2>Data</h2>
+
+<h3>model: Backbone.Model</h3>
+
+<h3>collection: Backbone.Collection</h3>
+
+<h3>value = @get key</h3>
+
+<h3>@set attributes = {}, options = silent: false</h3>
+
+<h2>DOM</h2>
+
+<h3>elements = @$ selector</h3>
+
+<h3>Element = @tag tag_name, attributes = {}, elements = [], content = ''</h3>
+
+<h3>render: template || -&gt;</h3>
+
+<h3>element: -&gt;</h3>
+
+<h3>delegate: event_name: selector: (event) -&gt;</h3>
+
+<h3>document: Document</h3>
+
+<h3>templates: template_name: -&gt;</h3>
+
+<h2>Events</h2>
+
+<h3>@bind/on: event_name, (args...) -&gt;</h3>
+
+<h3>@unbind/removeListener event_name = false, handler = -&gt;</h3>
+
+<h3>@trigger/emit event_name, args...</h3>
+
+<h3>@before: method_name: (original_method) -&gt;</h3>
+
+<h4>change: -&gt;</h4>
+
+<h4>change:key: (value) -&gt;</h4>
+
+<h4>ready: -&gt;</h4>
+
+<h4>error: (error) -&gt;</h4>
+
+<h4>warning: (warning)</h4>
+
+<h2>Env</h2>
+
+<h3>@env: env_name: -&gt;</h3>
+
+<h4>server</h4>
+
+<h4>client</h4>
+
+<h4>browser</h4>
+
+<h2>Routes</h2>
+
+<h3>route: url</h3>
+
+<h3>routes: path: view_name</h3>
+
+<h3>url = @url view_name: attributes: {}</h3>
+
+<h2>Mixins</h2>
+
+<h3>Builder</h3>
+
+<h3>Router</h3>
+
+<h1>ViewServer</h1>
+
+<h2>ViewServer</h2>
+
+<h3>{ViewServer} = ViewServer server_name: -&gt;</h3>
+
+<h3>{ViewServer} = @create server_name: mixins = {}</h3>
+
+<h2>Server</h2>
+
+<h3>server: express_instance</h3>
+
+<h3>port: number</h3>
+
+<h3>templates: path</h3>
+
+<h3>public: path</h3>
+
+<h2>Assets</h2>
+
+<h3>@javascripts: [javascripts...]</h3>
+
+<h3>@execute: [execute...]</h3>
+
+<h3>@stylesheets: [stylesheets...]</h3>
+
+<h2>Events</h2>
+
+<h3>@bind/on: event_name, (args...) -&gt;</h3>
+
+<h3>@unbind/removeListener event_name = false, handler = -&gt;</h3>
+
+<h3>@trigger/emit event_name, args...</h3>
+
+<h4>window:created (window) -&gt;</h4>
+
+<h4>window:render (window,request) -&gt;</h4>
+
+<h4>error: (error) -&gt;</h4>
+
+<h4>warning: (warning)</h4>
+
+<h2>Env</h2>
+
+<h3>@env: env_name: -&gt;</h3>
+
+<h2>Routes</h2>
+
+<h3>routes: path: view_name</h3>
+
+<h2>Cache</h2>
+
+<h3>cache: [views...]</h3>
+      </div>
+      <div id="api_toc"><table><tbody><tr><td><h2>View</h2><h3>View</h3><h3>@create</h3><h3>@extend:</h3><h3>@initialize:</h3><h3>views:</h3></td><td><h2>Data</h2><h3>model:</h3><h3>collection:</h3><h3>@get</h3><h3>@set</h3></td><td><h2>DOM</h2><h3>@$</h3><h3>@tag</h3><h3>render:</h3><h3>element:</h3><h3>delegate:</h3><h3>document:</h3><h3>templates:</h3></td><td><h2>Events</h2><h3>@bind/on:</h3><h3>@unbind</h3><h3>@trigger</h3><h3>@before:</h3><h4>change:</h4><h4>change:key:</h4><h4>ready:</h4><h4>error:</h4><h4>warning:</h4></td><td><h2>Env</h2><h3>@env:</h3><h4>server</h4><h4>client</h4><h4>browser</h4></td><td><h2>Routes</h2><h3>route:</h3><h3>routes:</h3><h3>@url</h3></td><td><h2>Mixins</h2><h3>Builder</h3><h3>Router</h3></td></tr><tr><td><h2>ViewServer</h2><h3>ViewServer</h3><h3>@create</h3></td><td><h2>Server</h2><h3>server:</h3><h3>port:</h3><h3>templates:</h3><h3>public:</h3></td><td><h2>Assets</h2><h3>@javascripts:</h3><h3>@execute:</h3><h3>@stylesheets:</h3></td><td><h2>Events</h2><h3>@bind/on:</h3><h3>@unbind</h3><h3>@trigger</h3><h4>window:created</h4><h4>window:render</h4><h4>error:</h4><h4>warning:</h4></td><td><h2>Env</h2><h3>@env:</h3></td><td><h2>Routes</h2><h3>routes:</h3></td><td><h2>Cache</h2><h3>cache:</h3></td></tr></tbody></table></div>
+    </div>
+    <script type="text/javascript">
+      var _gaq = _gaq || [];
+      _gaq.push(['_setAccount', 'UA-20694546-1']);
+      _gaq.push(['_trackPageview']);
+
+      (function() {
+        var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+        ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+        var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+      })();
+    </script>
+  </body>
+</html>

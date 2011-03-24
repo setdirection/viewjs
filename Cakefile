@@ -148,3 +148,6 @@ task 'templates', 'compile templates for tests', (options) ->
   
 task 'test', 'run tests', ->
   run_tests()
+  
+task 'docs', 'build documentation', ->
+  require('./lib/docs.coffee').build_docs __dirname + '/README.md', __dirname + '/docs/index.html'
