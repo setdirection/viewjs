@@ -1,5 +1,25 @@
 # ViewJS
 
+## Installation
+  
+    npm install view
+    viewjs project_name
+    cd project_name
+    node app.js
+    
+## Development
+
+    cake watch
+
+This will compile the following stylus and coffeescript files:
+
+- stylesheets -> public/stylesheets
+- models -> public/javascripts/models
+- collections -> public/javascripts/collections
+- controllers -> public/javascripts/controllers
+- views -> public/javascripts/views
+- templates -> public/javascripts/templates.js
+
 # Client
 
 ## View
@@ -53,8 +73,8 @@
 ### url = @url view_name: attributes: {}
 
 ## Render
-# templates: template_name: ->
-# render: template || ->
+### templates: template_name: ->
+### render: template || ->
 
 # ViewServer
 ### ViewServer server_name: ->
