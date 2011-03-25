@@ -1,10 +1,11 @@
 # ViewJS
 
 ## Installation
-  
+    
     mkdir project_name
     cd project_name
-    npm install viewjs
+    npm install view
+    node_modules/view/bin/bootstrap
     node app.js
     
 ## Development

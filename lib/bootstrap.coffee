@@ -25,7 +25,7 @@ create_package_json = (target) ->
     }
   }"""
 
-exec `npm install express`
+exec 'npm install express'
 
 #setup directory structure
 create_directory 'app'
@@ -34,6 +34,7 @@ create_directory 'app/views'
 create_directory 'app/models'
 create_directory 'app/stylesheets'
 create_directory 'app/controllers'
+create_directory 'app/collections'
 create_directory 'public'
 create_directory 'public/images'
 create_directory 'public/javascripts'

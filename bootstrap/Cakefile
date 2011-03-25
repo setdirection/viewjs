@@ -1,6 +1,6 @@
+{ViewServer} = require './node_modules/view'
 {spawn} = require 'child_process'
 path = require 'path'
-{ViewServer} = require 'view'
 fs = require 'fs'
 sys = require 'sys'
 
