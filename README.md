@@ -2,7 +2,7 @@
 
 ## Installation
   
-    npm install view
+    sudo npm install -g view
     viewjs project_name
     node project_name/app.js
     
