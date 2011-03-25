@@ -2,9 +2,10 @@
 
 ## Installation
   
-    sudo npm install -g view
-    viewjs project_name
-    node project_name/app.js
+    mkdir project_name
+    cd project_name
+    npm install viewjs
+    node app.js
     
 ## Development
 

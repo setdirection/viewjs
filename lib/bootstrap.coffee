@@ -1,9 +1,9 @@
-exec = child_process.exec
+exec = require('child_process').exec
 fs = require 'fs'
 folder_mode = 0755
 bootstrap_dir = __dirname + '/../bootstrap/'
 lib_dir = __dirname + '/../lib/'
-target_dir = './'
+target_dir = '.'
 
 copy_file = (source,target) ->
   fs.writeFileSync target, fs.readFileSync source
@@ -25,8 +25,9 @@ create_package_json = (target) ->
     }
   }"""
 
+exec `npm install express`
+
 #setup directory structure
-create_directory ''
 create_directory 'app'
 create_directory 'app/templates'
 create_directory 'app/views'
@@ -59,4 +60,4 @@ copy_file lib_dir + 'backbone.js', target_dir + 'public/javascripts/lib/backbone
 copy_file lib_dir + 'view.client.js', target_dir + 'public/javascripts/lib/view.js'
 create_package_json target_dir + 'package.json'
 
-console.log "Created ViewJS"
+console.log "ViewJS project initialized"
