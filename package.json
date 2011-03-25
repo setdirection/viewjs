@@ -12,7 +12,6 @@
     "jade": ">= 0.6.3",
     "jquery": ">= 1.5.1",
     "underscore": ">= 1.1.4",
-    "expresso": ">= 0.7.3",
     "backbone": ">= 0.3.3"
   },
   "licenses": [{

@@ -1,2 +1,2 @@
-require("coffee-script");
+require("view");
 require('./config.coffee');
