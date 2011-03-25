@@ -2,7 +2,7 @@
   "name": "view",
   "description": "Markup as JavaScript",
   "version": "2.0.0",
-  "author": "Syntacticx",
+  "author": "Ryan Eastridge <ryan@syntacticx.com>, twitter: @syntacticx",
   "dependencies": {
     "coffee-script": ">= 1.0.0",
     "express": ">= 1.0.0",
@@ -24,8 +24,16 @@
     "url": "git://github.com/syntacticx/viewjs.git"
   },
   "bin": {
-    "viewjs": "./bin/viewjs",
+    "viewjs": "./bin/viewjs"
   },
-  "engine": ["node >=0.4.0"],
+  "bugs": {
+    "url": "http://github.com/syntacticx/viewjs/issues"
+  },
+  "directories": {
+    "lib": "./lib"
+  },
+  "engines": {
+    "node": ">=0.4.2"
+  },
   "main": "./lib/view.server.js"
 }
