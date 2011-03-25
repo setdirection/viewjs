@@ -3,7 +3,7 @@ fs = require 'fs'
 folder_mode = 0755
 bootstrap_dir = __dirname + '/../bootstrap/'
 lib_dir = __dirname + '/../lib/'
-target_dir = '.'
+target_dir = './'
 
 copy_file = (source,target) ->
   fs.writeFileSync target, fs.readFileSync source
