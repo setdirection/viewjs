@@ -1,3 +1,4 @@
+require.paths.unshift __dirname + '/node_modules'
 child_process = require('child_process')
 exec = child_process.exec
 spawn = child_process.spawn

@@ -57,11 +57,15 @@ module.exports.canServeBasicApp = ->
       "#{public}/javascripts/templates.js"
       "#{public}/javascripts/views/basic.js"
     ]
+    javascripts: [
+      "http://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"
+    ]
   
   http.get {host: 'localhost', port: 4003, path: '/'}, (response) ->
     ++request_count
     response.on 'data', (data) ->
       assert.match data.toString(), /<div>test<\/div>/
+      assert.match data.toString(), /src="http:\/\/ajax.googleapis.com\/ajax\/libs\/jquery\/1.5.1\/jquery.min.js"/
       
       http.get {host: 'localhost', port: 4003, path: '/template'}, (response) ->
         ++request_count

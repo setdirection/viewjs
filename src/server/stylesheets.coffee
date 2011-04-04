@@ -6,7 +6,9 @@ ViewServer.extend stylesheets: (stylesheets) ->
     @_stylesheets.push style if not (style in @stylesheets)
   styles = array_flatten array_from arguments
   for style in styles
-    if is_directory style
+    if style.match /^https?\:/
+      add_style style
+    else if is_directory style
       files_with_extension(style, /\.css$/).map add_style
     else
       add_style style
