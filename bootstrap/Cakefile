@@ -1,3 +1,4 @@
+require.paths.unshift __dirname + '/node_modules'
 {ViewServer} = require './node_modules/view'
 {spawn} = require 'child_process'
 path = require 'path'
@@ -23,7 +24,7 @@ files_with_extension = (dir,extension) ->
 	paths
 
 spawn_coffee = (source,target) ->
-  coffee = spawn 'coffee', [
+  coffee = spawn __dirname + '/node_modules/view/node_modules/coffee-script/bin/coffee', [
     '--lint'
     '--output'
     target
@@ -36,7 +37,7 @@ spawn_coffee = (source,target) ->
     sys.print data.toString()
 
 spawn_stylus = (source,target) ->
-  stylus = spawn 'stylus', [
+  stylus = spawn __dirname + '/node_modules/view/node_modules/stylus/bin/stylus', [
     '--out'
     target
     '--watch'
