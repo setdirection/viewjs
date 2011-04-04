@@ -4,6 +4,7 @@ express = require 'express'
 http = require 'http'
 fs = require 'fs'
 _ = require 'underscore'
+url = require 'url'
 {jsdom} = require 'jsdom'
 {XMLHttpRequest} = require 'XMLHttpRequest'
 

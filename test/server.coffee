@@ -91,7 +91,7 @@ module.exports.canServeBasicApp = ->
             routes:
               '/a/': 4004
               '/b': 4005
-          
+            
           http.get {host: 'localhost', port: 4006, path: '/a/1'}, (response) ->
             response.on 'data', (data) ->
               assert.equal data.toString(), 'a'

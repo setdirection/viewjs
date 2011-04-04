@@ -27,6 +27,7 @@ ViewServer.extend
   createWindow: (request,callback) ->
     document = create_empty_document()
     window = document.createWindow()
+    window.domain = @domain
     window.XMLHttpRequest = XMLHttpRequest
     window.document.implementation.addFeature 'MutationEvents', ['1.0']
     window.document.implementation.addFeature 'FetchExternalResources', ['script']
@@ -68,6 +69,7 @@ ViewServer.extend
           View.extend({
             routes: #{@JSONFromRoutes()}
           });
+          window.domain = "#{@domain}";
         </script>
         """
       script_output
