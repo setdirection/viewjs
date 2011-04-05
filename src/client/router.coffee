@@ -80,8 +80,16 @@ View.extend extend:routes: (routes,discard) ->
   discard()
   
 View.extend url: (params) ->
-  router_params = {}
-  router_params[@name] = params || {}
+  params_contain_view_name = (params) ->
+    key_count = 0
+    for param_name of params
+      ++key_count
+    key_count is 1 and ViewManager.views[param_name]?
+  if params_contain_view_name params
+    router_params = params
+  else
+    router_params = {}
+    router_params[@name] = params || {}
   url = RouteResolver router_params
   View.env browser: ->
     url = '#' + url

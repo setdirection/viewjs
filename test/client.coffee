@@ -342,6 +342,7 @@ module.exports.router = (before_exit) ->
   #view can generate a url for itself
   assert.equal '/post/5', PostView.url id: 5
   assert.equal '/', IndexView.url()
+  assert.equal '/post/5', IndexView.url PostView: id: 5
   assert.equal '/', RouteResolver 'IndexView'
   
   #should have route auto set
