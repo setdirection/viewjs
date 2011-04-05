@@ -286,7 +286,7 @@ module.exports.router = (before_exit) ->
   #initial call sets
   View.extend routes: {
     '/': 'IndexView'
-    '/post/:id': 'PostView'
+    '/post/:id?': 'PostView'
     '/:a/:b/:c': 'AlphabetView'
   }
   

@@ -24,7 +24,7 @@ RouteResolver = ->
       params = params_from_ordered_params_and_route params, routes_by_view[view] if is_array params
       url = String(routes_by_view[view])
       url = url.replace(/\*/,params.path.replace(/^\//,'')) if params.path
-      param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?(/|$)','g')
+      param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?\\??(/|$)','g')
       for param_name of params
         url = url.replace param_matcher, ->
           if arguments[2] is param_name
