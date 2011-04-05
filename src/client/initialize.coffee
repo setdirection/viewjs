@@ -25,6 +25,7 @@ View.extend extend:initialize: (callback) ->
 # Dependents
 ############
 View.extend extend:views: (dependents) ->
+  @views = dependents
   caller = @
   for dependent in dependents
     do (dependent) ->

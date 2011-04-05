@@ -40,7 +40,7 @@ View.extend
           @_changed = true
           #TODO: note incompatibility with backbone.js, it passes "@" as the first argument
           @trigger 'change:' + attribute, value, options
-    @trigger 'change', @, options if not options.silent and @_changed
+    @trigger 'change', @, options if (not options.silent and @_changed)
     @_changed = false
     attributes
 
