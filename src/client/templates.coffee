@@ -30,15 +30,32 @@ View.extend
     @trigger 'render', element
 
 View.extend extend:render: (filename) ->
+  add_helpers_to_context = (context) =>
+    for helper_name, helper of template_helpers
+      context[helper_name] = proxy template_helpers[helper_name], @
   if typeof filename is 'string'
     callback = (context) ->
       @trigger 'error', 'Template ' + filename + ' not found' if not templates[filename]
       if context.attributes?
-        context_with_attributes = extend {}, context.attributes
-        context_with_attributes = extend context_with_attributes, context
-        templates[filename](context_with_attributes)
+        final_context = extend {}, context.attributes
+        final_context = extend final_context, context
+        add_helpers_to_context final_context
+        templates[filename](final_context)
       else
-        templates[filename](context)
+        final_context = extend {}, context
+        add_helpers_to_context final_context
+        templates[filename](final_context)
   else
     callback = filename
   @_render = callback
+
+template_helpers = {}
+View.extend extend:helpers: (helpers) ->
+  extend template_helpers, helpers
+  
+View.extend helpers:
+  url: (params) ->
+    url = RouteResolver params
+    View.env browser: ->
+      url = '#' + url
+    url
