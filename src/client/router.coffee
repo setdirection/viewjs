@@ -24,13 +24,16 @@ RouteResolver = ->
       params = params_from_ordered_params_and_route params, routes_by_view[view] if is_array params
       url = String(routes_by_view[view])
       url = url.replace(/\*/,params.path.replace(/^\//,'')) if params.path
-      param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?\\??(/|$)','g')
+      param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?(\\?)?(/|$)','g')
       for param_name of params
         url = url.replace param_matcher, ->
           if arguments[2] is param_name
-            params[param_name] + arguments[4]
+            params[param_name] + arguments[5]
           else
-            (arguments[1] || '') + ':' + arguments[2] + (arguments[3] || '') + arguments[4]
+            (arguments[1] || '') + ':' + arguments[2] + (arguments[3] || '') + (arguments[4] || '') + arguments[5]
+      #remove :key?
+      optional_param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?\\?(/|$)','g')
+      url = url.replace optional_param_matcher, ''
       if typeof arguments[1] is 'function'
         dispatcher ViewManager(view), params, arguments[1]
       return url.replace(/\([^\)]+\)/g,'')
@@ -89,7 +92,9 @@ View.extend url: (params) ->
     router_params = params
   else
     router_params = {}
-    router_params[@name] = params || {}
+    router_params[@name] = {}
+    extend router_params[@name], @attributes
+    extend router_params[@name], params || {}
   url = RouteResolver router_params
   View.env browser: ->
     url = '#' + url
@@ -125,6 +130,9 @@ dispatcher = (view_instance,params,callback) ->
       view_instance.trigger 'error', 'This view is part of a Router, and must be attched to a parent node.'
   next = ->
     view_instance.unbind 'render', next
+    for _view in (view_instance.views || [])
+      _view_instance = ViewManager _view
+      _view_instance.unbind 'render', next
     hide = ->
       sibling.style.display = 'none' for sibling in siblings()
     remove = ->
@@ -141,6 +149,9 @@ dispatcher = (view_instance,params,callback) ->
     View.trigger 'route', view_instance
     View.trigger 'route:' + view_instance.name, view_instance
   view_instance.bind 'render', next
+  for _view in (view_instance.views || [])
+    _view_instance = ViewManager _view
+    _view_instance.bind 'render', next
   view_instance.bind 'change', did_change_observer
   view_instance.set params
   view_instance.unbind 'change', did_change_observer

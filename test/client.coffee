@@ -287,7 +287,7 @@ module.exports.router = (before_exit) ->
   View.extend routes: {
     '/': 'IndexView'
     '/post/:id?': 'PostView'
-    '/:a/:b/:c': 'AlphabetView'
+    '/:a/:b/:c?': 'AlphabetView'
   }
   
   View.extend
@@ -335,6 +335,7 @@ module.exports.router = (before_exit) ->
   assert.deepEqual {IndexView: {}}, RouteResolver '/'
   assert.deepEqual {AlphabetView: {a:'a',b:'b',c:'c'}}, RouteResolver '/a/b/c'
   assert.deepEqual {AlphabetView: {a:'a',b:'b',c:'c'}}, RouteResolver '/a/b/c' 
+  assert.deepEqual '/a/b/', RouteResolver {AlphabetView: {a:'a',b:'b'}}
   
   #router can resolve ordered params
   assert.equal '/a/b/c', RouteResolver(AlphabetView: ['a','b','c'])

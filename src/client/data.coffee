@@ -33,13 +33,16 @@ View.extend
     return @ if not attributes
     attributes = attributes.attributes if attributes.attributes?
     now = @attributes
+    key_change_events = []
     for attribute, value of attributes
       if now[attribute] != value
         now[attribute] = value
         if not options.silent
           @_changed = true
           #TODO: note incompatibility with backbone.js, it passes "@" as the first argument
-          @trigger 'change:' + attribute, value, options
+          key_change_events.push ['change:' + attribute, value, options]
+    for trigger_arguments in key_change_events
+      @trigger.apply @, trigger_arguments
     @trigger 'change', @, options if (not options.silent and @_changed)
     @_changed = false
     attributes
