@@ -26,6 +26,17 @@ View.create({
   }
 });
 
+View.extend({
+  helpers: {
+    test: function(params){
+      return '<p>' + params.key + '</p>';
+    },
+    test2: function(params){
+      return Builder.p(params.key);
+    }
+  }
+});
+
 $(function(){
   View({
     RouterView: function(){

@@ -40,11 +40,12 @@ View.extend extend:render: (filename) ->
         final_context = extend {}, context.attributes
         final_context = extend final_context, context
         add_helpers_to_context final_context
-        templates[filename](final_context)
+        output = templates[filename](final_context)
       else
         final_context = extend {}, context
         add_helpers_to_context final_context
-        templates[filename](final_context)
+        output = templates[filename](final_context)
+      output
   else
     callback = filename
   @_render = callback

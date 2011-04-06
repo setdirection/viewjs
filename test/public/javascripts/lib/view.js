@@ -304,6 +304,7 @@
     extend: {
       views: function(dependents) {
         var caller, dependent, _i, _len, _results;
+        this.views = dependents;
         caller = this;
         _results = [];
         for (_i = 0, _len = dependents.length; _i < _len; _i++) {
@@ -690,7 +691,7 @@
       return this.attributes[key];
     },
     set: function(attributes, options) {
-      var attribute, now, value;
+      var attribute, key_change_events, now, trigger_arguments, value, _i, _len;
       options || (options = {});
       if (!attributes) {
         return this;
@@ -699,15 +700,20 @@
         attributes = attributes.attributes;
       }
       now = this.attributes;
+      key_change_events = [];
       for (attribute in attributes) {
         value = attributes[attribute];
         if (now[attribute] !== value) {
           now[attribute] = value;
           if (!options.silent) {
             this._changed = true;
-            this.trigger('change:' + attribute, value, options);
+            key_change_events.push(['change:' + attribute, value, options]);
           }
         }
+      }
+      for (_i = 0, _len = key_change_events.length; _i < _len; _i++) {
+        trigger_arguments = key_change_events[_i];
+        this.trigger.apply(this, trigger_arguments);
       }
       if (!options.silent && this._changed) {
         this.trigger('change', this, options);
@@ -817,7 +823,7 @@
         }, this);
         if (typeof filename === 'string') {
           callback = function(context) {
-            var final_context;
+            var final_context, output;
             if (!templates[filename]) {
               this.trigger('error', 'Template ' + filename + ' not found');
             }
@@ -825,12 +831,13 @@
               final_context = extend({}, context.attributes);
               final_context = extend(final_context, context);
               add_helpers_to_context(final_context);
-              return templates[filename](final_context);
+              output = templates[filename](final_context);
             } else {
               final_context = extend({}, context);
               add_helpers_to_context(final_context);
-              return templates[filename](final_context);
+              output = templates[filename](final_context);
             }
+            return output;
           };
         } else {
           callback = filename;
@@ -1031,7 +1038,7 @@
   };
   dispatch_count = 0;
   RouteResolver = function() {
-    var fragment, ordered_params, param_matcher, param_name, params, path, response, router_params, url, view, _ref;
+    var fragment, optional_param_matcher, ordered_params, param_matcher, param_name, params, path, response, router_params, url, view, _ref;
     if (typeof arguments[0] === 'string' && (ViewManager.views[arguments[0]] != null)) {
       router_params = {};
       router_params[arguments[0]] = {};
@@ -1049,16 +1056,18 @@
         if (params.path) {
           url = url.replace(/\*/, params.path.replace(/^\//, ''));
         }
-        param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?(/|$)', 'g');
+        param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?(\\?)?(/|$)', 'g');
         for (param_name in params) {
           url = url.replace(param_matcher, function() {
             if (arguments[2] === param_name) {
-              return params[param_name] + arguments[4];
+              return params[param_name] + arguments[5];
             } else {
-              return (arguments[1] || '') + ':' + arguments[2] + (arguments[3] || '') + arguments[4];
+              return (arguments[1] || '') + ':' + arguments[2] + (arguments[3] || '') + (arguments[4] || '') + arguments[5];
             }
           });
         }
+        optional_param_matcher = new RegExp('(\\()?\\:([\\w]+)(\\))?\\?(/|$)', 'g');
+        url = url.replace(optional_param_matcher, '');
         if (typeof arguments[1] === 'function') {
           dispatcher(ViewManager(view), params, arguments[1]);
         }
@@ -1138,9 +1147,23 @@
   });
   View.extend({
     url: function(params) {
-      var router_params, url;
-      router_params = {};
-      router_params[this.name] = params || {};
+      var params_contain_view_name, router_params, url;
+      params_contain_view_name = function(params) {
+        var key_count, param_name;
+        key_count = 0;
+        for (param_name in params) {
+          ++key_count;
+        }
+        return key_count === 1 && (ViewManager.views[param_name] != null);
+      };
+      if (params_contain_view_name(params)) {
+        router_params = params;
+      } else {
+        router_params = {};
+        router_params[this.name] = {};
+        extend(router_params[this.name], this.attributes);
+        extend(router_params[this.name], params || {});
+      }
       url = RouteResolver(router_params);
       View.env({
         browser: function() {
@@ -1183,7 +1206,7 @@
     return false;
   };
   dispatcher = function(view_instance, params, callback) {
-    var did_change, did_change_observer, ensure_parent_node, next, siblings;
+    var did_change, did_change_observer, ensure_parent_node, next, siblings, _i, _len, _ref, _view, _view_instance;
     siblings = function() {
       return view_instance[0].parentNode.childNodes;
     };
@@ -1197,8 +1220,14 @@
       }
     };
     next = function() {
-      var hide, remove;
+      var hide, remove, _i, _len, _ref, _view, _view_instance;
       view_instance.unbind('render', next);
+      _ref = view_instance.views || [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        _view = _ref[_i];
+        _view_instance = ViewManager(_view);
+        _view_instance.unbind('render', next);
+      }
       hide = function() {
         var sibling, _i, _len, _ref, _results;
         _ref = siblings();
@@ -1231,6 +1260,12 @@
       return View.trigger('route:' + view_instance.name, view_instance);
     };
     view_instance.bind('render', next);
+    _ref = view_instance.views || [];
+    for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+      _view = _ref[_i];
+      _view_instance = ViewManager(_view);
+      _view_instance.bind('render', next);
+    }
     view_instance.bind('change', did_change_observer);
     view_instance.set(params);
     view_instance.unbind('change', did_change_observer);
