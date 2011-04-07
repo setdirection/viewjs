@@ -6,10 +6,11 @@ routes_by_view = {}
 routes_regexps_by_path = {}
 named_param = /:([\w\d]+)/g
 splat_param = /\*([\w\d]+)/g
-initial_route = '/'
 
-Router = mixin: []
-dispatch_count = 0
+Router =
+  _initializedViews: {}
+  mixin: []
+  
 RouteResolver = ->
   #if just a string view name is passed
   if typeof arguments[0] is 'string' and ViewManager.views[arguments[0]]?
@@ -54,7 +55,8 @@ RouteResolver = ->
     View.trigger 'error', 'Could not resolve the url: ' + arguments[0]
 
 View.extend extend:route: (route,discard) ->
-  initial_route = route
+  #called from ViewServer
+  RouteResolver route, ->
   discard()
 
 View.extend extend:routes: (routes,discard) ->
@@ -65,17 +67,14 @@ View.extend extend:routes: (routes,discard) ->
     regexp = '^' + path.replace(named_param, "([^\/]*)").replace(splat_param, "(.*?)") + '$'
     routes_regexps_by_path[path] = new RegExp regexp
     routes_by_view[view] = path
-  
   View.env browser: ->
     create_router()
-  Router.mixin.push ['views',dependent_views]
   Router.mixin.push ['initialize', (next) ->
     Router.view = @
     @router = []
     for view in dependent_views
       @router.push ViewManager view
     @on ready: ->
-      RouteResolver initial_route, ->
       View.env browser: ->
         Backbone.history.start()
     next()
@@ -148,17 +147,24 @@ dispatcher = (view_instance,params,callback) ->
     callback.call view_instance, view_instance, params
     View.trigger 'route', view_instance
     View.trigger 'route:' + view_instance.name, view_instance
-  view_instance.bind 'render', next
-  for _view in (view_instance.views || [])
-    _view_instance = ViewManager _view
-    _view_instance.bind 'render', next
-  view_instance.bind 'change', did_change_observer
-  view_instance.set params
-  view_instance.unbind 'change', did_change_observer
-  if not did_change
-    next()
-  else if not has_change_callback view_instance
-    view_instance.trigger 'error', 'View with route must respond to a change, or change:key event with a render() call.'
+  dispatch = ->
+    view_instance.bind 'render', next
+    for _view in (view_instance.views || [])
+      _view_instance = ViewManager _view
+      _view_instance.bind 'render', next
+    view_instance.bind 'change', did_change_observer
+    view_instance.set params
+    view_instance.unbind 'change', did_change_observer
+    if not did_change
+      next()
+    else if not has_change_callback view_instance
+      view_instance.trigger 'error', 'View with route must respond to a change, or change:key event with a render() call.'
+  if !Router._initializedViews[view_instance.name]
+    Router._initializedViews[view_instance.name] = true
+    view_instance.bind ready: dispatch
+    view_instance.initialize()
+  else
+    dispatch()
 
 params_from_ordered_params_and_route = (ordered_params,route) ->
   params = {}
