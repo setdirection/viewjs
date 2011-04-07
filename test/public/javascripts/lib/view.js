@@ -1039,7 +1039,7 @@
     mixin: []
   };
   RouteResolver = function() {
-    var fragment, optional_param_matcher, ordered_params, param_matcher, param_name, params, path, response, router_params, url, view, _ref;
+    var callback, fragment, optional_param_matcher, ordered_params, param_matcher, param_name, params, path, response, router_params, url, view, view_manager_params, _ref;
     if (typeof arguments[0] === 'string' && (ViewManager.views[arguments[0]] != null)) {
       router_params = {};
       router_params[arguments[0]] = {};
@@ -1078,14 +1078,22 @@
       fragment = arguments[0];
       for (path in routes_by_path) {
         view = routes_by_path[path];
-        ViewManager(view);
         if (routes_regexps_by_path[path].test(fragment)) {
           ordered_params = routes_regexps_by_path[path].exec(fragment).slice(1);
           params = params_from_ordered_params_and_route(ordered_params, path);
           response = {};
           response[view] = params;
           if (typeof arguments[1] === 'function') {
-            dispatcher(ViewManager(view), params, arguments[1]);
+            callback = arguments[1];
+            if (!(ViewManager.views[view] != null)) {
+              view_manager_params = {};
+              view_manager_params[view] = function() {
+                return dispatcher(ViewManager(view), params, callback);
+              };
+              ViewManager(view_manager_params);
+            } else {
+              dispatcher(ViewManager(view), params, callback);
+            }
           }
           return response;
         }
