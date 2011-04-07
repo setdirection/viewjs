@@ -58,4 +58,8 @@ ViewServer.extend
       console.log.apply console, ["#{@name} warning: "].concat array_from arguments if console?.log?
     error: (error) ->
       console.log.apply console, ["#{@name || 'ViewServer'} error: "].concat array_from arguments if console?.log?
-      throw error
+      #in Node, writing the error will not be written to the console before the error is thrown
+      #which stops the process
+      setTimeout ->
+        throw error
+      , 100
