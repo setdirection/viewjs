@@ -76,6 +76,8 @@ View.extend extend:routes: (routes,discard) ->
       @router.push ViewManager view
     @on ready: ->
       View.env browser: ->
+        if not window.location.hash or window.location.hash is ''
+          window.location.hash = '/'
         Backbone.history.start()
     next()
   ]

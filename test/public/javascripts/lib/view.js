@@ -1132,6 +1132,9 @@
               ready: function() {
                 return View.env({
                   browser: function() {
+                    if (!window.location.hash || window.location.hash === '') {
+                      window.location.hash = '/';
+                    }
                     return Backbone.history.start();
                   }
                 });
