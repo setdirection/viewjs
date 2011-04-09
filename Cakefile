@@ -23,6 +23,9 @@ files =
     './src/client/manager.coffee'
     './src/client/export.coffee'
   ]
+  'view.serializer': [
+    './src/serializer/serializer.coffee'
+  ]
   'view.server': [
     './src/server/support.coffee'
     './src/server/mixin.coffee'
@@ -46,6 +49,7 @@ files =
 directories = 
   'view.client': './src/client'
   'view.server': './src/server'
+  'view.serializer': './src/serializer'
   'test': './test'
 
 copy_file = (source,target) ->

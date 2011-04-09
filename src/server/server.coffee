@@ -19,7 +19,7 @@ create_server = ->
   server.use express.methodOverride()
   server.use express.bodyParser()
   server.use express.cookieParser()
-  server.use express.logger()
+  #server.use express.logger()
   server
   
 setup_static_provider_and_routes = (server,public) ->

@@ -208,6 +208,34 @@ module.exports.canDepend = ->
       assert.equal sequence[0], 'a'
       assert.equal sequence[1], 'b'
       assert.equal sequence[2], 'c'
+
+module.exports.canDependAsync = (before_exit) ->
+  View.create
+    AsyncParentView: [Builder,
+      views: ['AsyncChildView1','AsyncChildView2']
+      initialize: (next) ->
+        setTimeout next, 50
+      render: ->
+        @ul @AsyncChildView1, @AsyncChildView2
+    ]
+    AsyncChildView1: [Builder,
+      initialize: (next) ->
+        setTimeout next, 1
+      render: ->
+        @li 'A'
+    ]
+    AsyncChildView2: [Builder,
+      initialize: (next) ->
+        setTimeout next, 100
+      render: ->
+        @li 'B'
+    ]
+
+  View AsyncParentView: ->
+    @initialize()
+    @on ready: ->
+      before_exit =>
+        assert.equal jQuery('li:first',@[0]).html(), 'A'
       
 module.exports.canPassViewsToBuilder = ->
   {OuterView} = View.create OuterView: [Builder, 
@@ -282,7 +310,7 @@ module.exports.canUseArrayInBuilder = (before_exit) ->
       assert.ok @[0].firstChild.firstChild?
       assert.equal @[0].firstChild.firstChild.firstChild.innerHTML, 'b'
       
-module.exports.router = (before_exit) ->
+_router = (before_exit) ->
   #initial call sets
   View.extend routes: {
     '/': 'IndexView'

@@ -1039,7 +1039,7 @@
     mixin: []
   };
   RouteResolver = function() {
-    var callback, fragment, optional_param_matcher, ordered_params, param_matcher, param_name, params, path, response, router_params, url, view, view_manager_params, _ref;
+    var fragment, optional_param_matcher, ordered_params, param_matcher, param_name, params, path, response, router_params, url, view, _ref;
     if (typeof arguments[0] === 'string' && (ViewManager.views[arguments[0]] != null)) {
       router_params = {};
       router_params[arguments[0]] = {};
@@ -1078,22 +1078,14 @@
       fragment = arguments[0];
       for (path in routes_by_path) {
         view = routes_by_path[path];
+        ViewManager(view);
         if (routes_regexps_by_path[path].test(fragment)) {
           ordered_params = routes_regexps_by_path[path].exec(fragment).slice(1);
           params = params_from_ordered_params_and_route(ordered_params, path);
           response = {};
           response[view] = params;
           if (typeof arguments[1] === 'function') {
-            callback = arguments[1];
-            if (!(ViewManager.views[view] != null)) {
-              view_manager_params = {};
-              view_manager_params[view] = function() {
-                return dispatcher(ViewManager(view), params, callback);
-              };
-              ViewManager(view_manager_params);
-            } else {
-              dispatcher(ViewManager(view), params, callback);
-            }
+            dispatcher(ViewManager(view), params, arguments[1]);
           }
           return response;
         }
@@ -1230,44 +1222,51 @@
       }
     };
     next = function() {
-      var hide, remove, _i, _len, _ref, _view, _view_instance;
-      view_instance.unbind('render', next);
-      _ref = view_instance.views || [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        _view = _ref[_i];
-        _view_instance = ViewManager(_view);
-        _view_instance.unbind('render', next);
-      }
-      hide = function() {
-        var sibling, _i, _len, _ref, _results;
-        _ref = siblings();
-        _results = [];
+      var router_view_ready, was_called;
+      was_called = false;
+      router_view_ready = function() {
+        var hide, remove, _i, _len, _ref, _view, _view_instance;
+        was_called = true;
+        Router.view.unbind('ready', router_view_ready);
+        view_instance.unbind('render', next);
+        _ref = view_instance.views || [];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          sibling = _ref[_i];
-          _results.push(sibling.style.display = 'none');
+          _view = _ref[_i];
+          _view_instance = ViewManager(_view);
+          _view_instance.unbind('render', next);
         }
-        return _results;
+        hide = function() {
+          var sibling, _i, _len, _ref, _results;
+          _ref = siblings();
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            sibling = _ref[_i];
+            _results.push(sibling.style.display = 'none');
+          }
+          return _results;
+        };
+        remove = function() {
+          var sibling, _i, _len, _ref, _results;
+          _ref = siblings();
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            sibling = _ref[_i];
+            _results.push(sibling && sibling !== view_instance[0] ? view_instance[0].parentNode.removeChild(sibling) : void 0);
+          }
+          return _results;
+        };
+        ensure_parent_node();
+        View.env({
+          test: hide,
+          browser: hide,
+          server: remove
+        });
+        view_instance[0].style.display = null;
+        callback.call(view_instance, view_instance, params);
+        View.trigger('route', view_instance, Math.random());
+        return View.trigger('route:' + view_instance.name, view_instance);
       };
-      remove = function() {
-        var sibling, _i, _len, _ref, _results;
-        _ref = siblings();
-        _results = [];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          sibling = _ref[_i];
-          _results.push(sibling && sibling !== view_instance[0] ? view_instance[0].parentNode.removeChild(sibling) : void 0);
-        }
-        return _results;
-      };
-      ensure_parent_node();
-      View.env({
-        test: hide,
-        browser: hide,
-        server: remove
-      });
-      view_instance[0].style.display = null;
-      callback.call(view_instance, view_instance, params);
-      View.trigger('route', view_instance);
-      return View.trigger('route:' + view_instance.name, view_instance);
+      return Router.view.bind('ready', router_view_ready);
     };
     dispatch = function() {
       var _i, _len, _ref, _view, _view_instance;

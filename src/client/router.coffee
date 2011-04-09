@@ -130,25 +130,30 @@ dispatcher = (view_instance,params,callback) ->
     if not view_instance[0].parentNode
       view_instance.trigger 'error', 'This view is part of a Router, and must be attched to a parent node.'
   next = ->
-    view_instance.unbind 'render', next
-    for _view in (view_instance.views || [])
-      _view_instance = ViewManager _view
-      _view_instance.unbind 'render', next
-    hide = ->
-      sibling.style.display = 'none' for sibling in siblings()
-    remove = ->
-      for sibling in siblings()
-        if sibling and sibling isnt view_instance[0] #TODO: something fishy going on, nulls are present
-          view_instance[0].parentNode.removeChild sibling
-    ensure_parent_node()
-    View.env
-      test: hide
-      browser: hide
-      server: remove
-    view_instance[0].style.display = null
-    callback.call view_instance, view_instance, params
-    View.trigger 'route', view_instance
-    View.trigger 'route:' + view_instance.name, view_instance
+    was_called = false
+    router_view_ready = ->
+      was_called = true
+      Router.view.unbind 'ready', router_view_ready
+      view_instance.unbind 'render', next
+      for _view in (view_instance.views || [])
+        _view_instance = ViewManager _view
+        _view_instance.unbind 'render', next
+      hide = ->
+        sibling.style.display = 'none' for sibling in siblings()
+      remove = ->
+        for sibling in siblings()
+          if sibling and sibling isnt view_instance[0] #TODO: something fishy going on, nulls are present
+            view_instance[0].parentNode.removeChild sibling
+      ensure_parent_node()
+      View.env
+        test: hide
+        browser: hide
+        server: remove
+      view_instance[0].style.display = null
+      callback.call view_instance, view_instance, params
+      View.trigger 'route', view_instance, Math.random()
+      View.trigger 'route:' + view_instance.name, view_instance
+    Router.view.bind 'ready', router_view_ready
   dispatch = ->
     view_instance.bind 'render', next
     for _view in (view_instance.views || [])

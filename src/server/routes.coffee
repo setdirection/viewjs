@@ -13,9 +13,3 @@ ViewServer.extend extend:routes: (routes) ->
       @routes[path] = view
       @server.get path, (request,response) =>
         @respond request, response
-        
-ViewServer.extend JSONFromRoutes: ->
-  fragments = []
-  for path,view of @routes || {}
-    fragments.push '"' + path + '":"' + view + '"'
-  "{#{fragments.join(',')}}"

@@ -1,12 +1,11 @@
 # Support
 #########
+{spawn} = require 'child_process'
 express = require 'express'
 http = require 'http'
 fs = require 'fs'
 _ = require 'underscore'
 url = require 'url'
-{jsdom} = require 'jsdom'
-{XMLHttpRequest} = require 'XMLHttpRequest'
 
 extend = (destination,source) ->
   for key, value of source
@@ -66,6 +65,3 @@ proxy = (func,object) ->
     args.shift()
     ->
       func.apply object, args.concat array_from arguments
-
-create_empty_document = ->
-  jsdom '<html><head></head><body></body></html>'
