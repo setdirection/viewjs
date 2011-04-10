@@ -14,6 +14,9 @@ ViewServer.extend proxy: (options) ->
       port: if options.url then url_components.port else options.port || 80
       path: '/' + request.params[0]
       method: request.method
+    if process.env.HTTP_PROXY? #for VMWare Cloud
+      request_options.path = request_options.protocol.replace(':','') + '://' + request_options.host + '/' + request.params[0]
+      [request_options.host,request_options.port] = /[http[s]?:\/\/]?([^:]+):(\d+)\/?/.exec process.env.HTTP_PROXY
     if options.url
       request_options.search = options.search
     proxy_request = http.request request_options, (proxy_response) ->
