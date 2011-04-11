@@ -26,6 +26,7 @@ ViewSerializer =
         </script>
         """
       script_output
+    @meta.push "<title>#{window.document.title}</title>" if window.document.title?
     output = output.replace(/<head>/,"<head>" + @meta.join('') + javascripts.join('') + stylesheets.join(''))
     """
       <!DOCTYPE html>
