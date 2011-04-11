@@ -9,6 +9,7 @@ ViewServer.extend compileTemplates: (as_string = false,document,templates_dir = 
   child_nodes_from_html = "(function(html){
     var doc = (typeof(document) != 'undefined' ? document : View.document);
     var div = doc.createElement('div');
+    html = html.replace(/(^\\s+|\\s+$)/mg,'');
     if(!html.match(/^\\</)){
       div.innerHTML = html;
       return div;

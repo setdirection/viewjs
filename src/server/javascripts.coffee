@@ -8,7 +8,7 @@ ViewServer.extend extend:javascripts: (javascripts) ->
   @javascripts javascripts
 
 ViewServer.extend execute: ->
-  process_script_arguments.call @ arguments, '_execute'
+  process_script_arguments.call @, arguments, '_execute'
 
 ViewServer.extend extend:execute: (executables) ->
   @execute executables
