@@ -1,6 +1,5 @@
 # Support
 #########
-{spawn} = require 'child_process'
 express = require 'express'
 http = require 'http'
 fs = require 'fs'

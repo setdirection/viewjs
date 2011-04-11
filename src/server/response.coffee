@@ -31,7 +31,7 @@ ViewServer.extend
       meta: meta
       url: request.originalUrl
     
-    command = "node #{__dirname}/view.serializer.js '#{json_args}'"
+    command = "#{process.argv[0]} #{__dirname}/view.serializer.js '#{json_args}'"
     require('child_process').exec command, (error, stdout, stderr) ->
       if stderr? and stderr != ''
         console.log error
