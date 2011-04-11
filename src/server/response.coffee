@@ -32,7 +32,6 @@ ViewServer.extend
       url: request.originalUrl
     
     command = "node #{__dirname}/view.serializer.js '#{json_args}'"
-    console.log command
     require('child_process').exec command, (error, stdout, stderr) ->
       if stderr? and stderr != ''
         console.log error
