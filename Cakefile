@@ -34,6 +34,7 @@ files =
     './src/server/templates.coffee'
     './src/server/stylesheets.coffee'
     './src/server/javascripts.coffee'
+    './src/server/meta.coffee'
     './src/server/routes.coffee'
     './src/server/cache.coffee'
     './src/server/response.coffee'

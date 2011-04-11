@@ -8,9 +8,9 @@ create_empty_document = ->
 
 ViewSerializer =
   setup: (options) ->
-    {@stylesheets,@javascripts,@execute,@public,@domain,@routes,@url} = options
+    {@stylesheets,@javascripts,@execute,@public,@domain,@routes,@url,@meta} = options
     
-  renderWindow: (window) -> 
+  renderWindow: (window) ->
     output = window.document.documentElement.innerHTML
     #append stylesheets
     stylesheets = (@stylesheets || []).map (href) =>
@@ -26,7 +26,7 @@ ViewSerializer =
         </script>
         """
       script_output
-    output = output.replace(/<head>/,"<head>" + javascripts.join('') + stylesheets.join(''))
+    output = output.replace(/<head>/,"<head>" + @meta.join('') + javascripts.join('') + stylesheets.join(''))
     """
       <!DOCTYPE html>
       <html>

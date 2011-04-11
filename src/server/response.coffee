@@ -6,14 +6,20 @@ ViewServer.extend
     stylesheets = array_from @_stylesheets
     javascripts = array_from @_javascripts
     execute = array_from @_execute
+    meta = array_from @_meta
     for envs in @env_callbacks || []
       args = ViewServer.env request, envs
       stylesheets = stylesheets.concat args.stylesheets if args.stylesheets
       javascripts = javascripts.concat args.javascripts if args.javascripts
-      execute = request._execute.concat args.execute if args.execute
+      execute = execute.concat args.execute if args.execute
+      meta = meta.concat args.execute if args.meta
     stylesheets = _.uniq stylesheets
     javascripts = _.uniq javascripts
     execute = _.uniq execute
+    _meta = []
+    for item in meta
+      _meta.push if typeof item is 'function' then item.call @, request else item
+    meta = _.uniq _meta
     
     json_args = JSON.stringify
       stylesheets: stylesheets
@@ -22,9 +28,11 @@ ViewServer.extend
       public: @public
       domain: @domain
       routes: @routes
+      meta: meta
       url: request.originalUrl
     
     command = "node #{__dirname}/view.serializer.js '#{json_args}'"
+    console.log command
     require('child_process').exec command, (error, stdout, stderr) ->
       if stderr? and stderr != ''
         console.log error

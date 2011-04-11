@@ -1,5 +1,5 @@
 View.extend({
-  templates: {'test.eco':(function(___obj){return (function(html){    var doc = (typeof(document) != 'undefined' ? document : View.document);    var div = doc.createElement('div');    if(!html.match(/^\</)){      div.innerHTML = html;      return div;    }else{      div.innerHTML = html;      return div.childNodes.length === 1 ? div.childNodes[0] : div.childNodes;    }  })((function(__obj) {
+  templates: {'test.eco':(function(___obj){return (function(html){    var doc = (typeof(document) != 'undefined' ? document : View.document);    var div = doc.createElement('div');    html = html.replace(/(^\s+|\s+$)/mg,'');    if(!html.match(/^\</)){      div.innerHTML = html;      return div;    }else{      div.innerHTML = html;      return div.childNodes.length === 1 ? div.childNodes[0] : div.childNodes;    }  })((function(__obj) {
   var _safe = function(value) {
     if (typeof value === 'undefined' && value == null)
       value = '';
@@ -40,7 +40,7 @@ View.extend({
     for (key in __obj) obj[key] = __obj[key];
     return obj;
   })());
-})(___obj))}),'text.eco':(function(___obj){return (function(html){    var doc = (typeof(document) != 'undefined' ? document : View.document);    var div = doc.createElement('div');    if(!html.match(/^\</)){      div.innerHTML = html;      return div;    }else{      div.innerHTML = html;      return div.childNodes.length === 1 ? div.childNodes[0] : div.childNodes;    }  })((function(__obj) {
+})(___obj))}),'text.eco':(function(___obj){return (function(html){    var doc = (typeof(document) != 'undefined' ? document : View.document);    var div = doc.createElement('div');    html = html.replace(/(^\s+|\s+$)/mg,'');    if(!html.match(/^\</)){      div.innerHTML = html;      return div;    }else{      div.innerHTML = html;      return div.childNodes.length === 1 ? div.childNodes[0] : div.childNodes;    }  })((function(__obj) {
   var _safe = function(value) {
     if (typeof value === 'undefined' && value == null)
       value = '';
