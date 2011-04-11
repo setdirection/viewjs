@@ -8,7 +8,9 @@ named_param = /:([\w\d]+)/g
 splat_param = /\*([\w\d]+)/g
 
 Router =
+  _lastActiveViewName: false
   _initializedViews: {}
+  _views: [] # names
   mixin: []
   
 RouteResolver = ->
@@ -67,6 +69,7 @@ View.extend extend:routes: (routes,discard) ->
     regexp = '^' + path.replace(named_param, "([^\/]*)").replace(splat_param, "(.*?)") + '$'
     routes_regexps_by_path[path] = new RegExp regexp
     routes_by_view[view] = path
+    Router._views.push view
   View.env browser: ->
     create_router()
   Router.mixin.push ['initialize', (next) ->
@@ -75,6 +78,8 @@ View.extend extend:routes: (routes,discard) ->
     for view in dependent_views
       @router.push ViewManager view
     @on ready: ->
+      for view in dependent_views
+        add_default_activation_events ViewManager view
       View.env browser: ->
         if not window.location.hash or window.location.hash is ''
           window.location.hash = '/'
@@ -101,6 +106,26 @@ View.extend url: (params) ->
     url = '#' + url
   url
 
+add_default_activation_events = (view_instance) ->
+  hide = ->
+    @[0].style.display = 'none'
+  show = ->
+    @[0].style.display = null
+  remove = ->
+    @[0].parentNode.removeChild @[0]
+  noop = ->
+  view_instance.bind
+    activated: ->
+      @env
+        test: show
+        browser: show
+        server: noop
+    deactivated: ->
+      @env
+        test: hide
+        browser: hide
+        server: remove
+
 #TODO: remove backbone dependency
 create_router = ->
   #this is only called in the browser
@@ -121,8 +146,6 @@ has_change_callback = (view) ->
   false
 
 dispatcher = (view_instance,params,callback) ->
-  siblings = ->
-    view_instance[0].parentNode.childNodes
   did_change = false
   did_change_observer = ->
     did_change = true
@@ -138,18 +161,9 @@ dispatcher = (view_instance,params,callback) ->
       for _view in (view_instance.views || [])
         _view_instance = ViewManager _view
         _view_instance.unbind 'render', next
-      hide = ->
-        sibling.style.display = 'none' for sibling in siblings()
-      remove = ->
-        for sibling in siblings()
-          if sibling and sibling isnt view_instance[0] #TODO: something fishy going on, nulls are present
-            view_instance[0].parentNode.removeChild sibling
-      ensure_parent_node()
-      View.env
-        test: hide
-        browser: hide
-        server: remove
-      view_instance[0].style.display = null
+      ViewManager(Router._lastActivatedView).trigger 'deactivated' if Router._lastActivatedView
+      view_instance.trigger 'activated'
+      Router._lastActivatedView = view_instance.name
       callback.call view_instance, view_instance, params
       View.trigger 'route', view_instance, Math.random()
       View.trigger 'route:' + view_instance.name, view_instance

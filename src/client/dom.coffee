@@ -1,5 +1,11 @@
 # DOM
 #####
+
+generate_selector_delegate = ->
+  (selector) ->
+    @trigger 'error', "No DOM library is available in #{name}" if not @_$?
+    @_$ selector, @[0]
+
 View.extend
   element: ->
     return @[0] if @[0]
@@ -27,11 +33,6 @@ View.extend extend:
       dom_library.fn.view = reverse_lookup
     else
       @trigger 'error', 'Unsupported DOM library specified, use jQuery or Zepto', dom_library
-
-generate_selector_delegate = ->
-  (selector) ->
-    @trigger 'error', "No DOM library is available in #{name}" if not @_$?
-    @_$ selector, @[0]
 
 set_element = (element) ->
   @length = 1

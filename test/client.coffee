@@ -310,7 +310,7 @@ module.exports.canUseArrayInBuilder = (before_exit) ->
       assert.ok @[0].firstChild.firstChild?
       assert.equal @[0].firstChild.firstChild.firstChild.innerHTML, 'b'
       
-_router = (before_exit) ->
+module.exports.router = (before_exit) ->
   #initial call sets
   View.extend routes: {
     '/': 'IndexView'
@@ -380,6 +380,7 @@ _router = (before_exit) ->
   
     #use as dispatcher
     RouteResolver '/post/5', (view,params) ->
+      console.log 'A'
       #callback should only be called after 
       assert.equal view.get('id'), '5'
       assert.ok PostView.element().style.display isnt 'none'
@@ -388,12 +389,15 @@ _router = (before_exit) ->
       
     #dispatcher can take object argument
     RouteResolver {IndexView: {}}, (view,params) ->
+      console.log 'B'
       assert.ok IndexView.element().style.display isnt 'none'
       assert.ok PostView.element().style.display is 'none'
       ++callback_count
       
     #dispatcher can take ordered param argument
     RouteResolver {PostView:['4']}, (view,params) ->
+      console.log 'C'
+      console.log view.get('id')
       assert.equal view.get('id'), '4'
       assert.ok PostView.element().style.display isnt 'none'
       assert.ok IndexView.element().style.display is 'none'
@@ -401,6 +405,7 @@ _router = (before_exit) ->
       
     #IndexView should not re-render
     RouteResolver {IndexView: {}}, (view,params) ->
+      console.log 'D'
       assert.ok IndexView.element().style.display isnt 'none'
       assert.ok PostView.element().style.display is 'none'
       ++callback_count
@@ -408,11 +413,13 @@ _router = (before_exit) ->
     #default logic of hiding siblings can be disabled
     PostView.unbind 'route'
     RouteResolver {PostView: id: 4}, (view,params) ->
+      console.log 'E'
       assert.ok IndexView.element().style.display is 'none'
       assert.ok PostView.element().style.display isnt 'none'
       ++callback_count
       
   before_exit ->
+    console.log 'callback_count', callback_count
     assert.equal 5, callback_count
     assert.equal 4, post_view_render_count
     assert.equal 1, index_view_render_count

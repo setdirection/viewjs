@@ -20,7 +20,7 @@ ViewSerializer =
       if src.match(/(^|\/)view\.js$/)
         script_output += """<script type="text/javascript">
           View.extend({
-            routes: #{@routes}
+            routes: #{JSON.stringify @routes}
           });
           window.domain = "#{@domain}";
         </script>
@@ -72,7 +72,7 @@ ViewSerializer =
           callback @renderWindow window
         window.View.extend route: @url
       else
-        callback @renderWindow window, request
+        callback @renderWindow window
   
 ViewSerializer.setup JSON.parse process.argv[2]
 ViewSerializer.serialize (output) ->
