@@ -7,9 +7,7 @@ View.extend
     element.setAttribute 'class', @name if @name 
     set_element.call @, element
     
-  $: (selector) ->
-    @trigger 'error', "No DOM library is available in #{name}" if not @_$?
-    @_$ selector, @[0]
+  $: generate_selector_delegate()
   
   delegate: (events) ->
     @_delegatedEvents = events
@@ -30,10 +28,19 @@ View.extend extend:
     else
       @trigger 'error', 'Unsupported DOM library specified, use jQuery or Zepto', dom_library
 
+generate_selector_delegate = ->
+  (selector) ->
+    @trigger 'error', "No DOM library is available in #{name}" if not @_$?
+    @_$ selector, @[0]
+
 set_element = (element) ->
   @length = 1
   @[0] = element
   #create a hybrid function object to allow: both @$('li a') and @$.hide()
+  #TODO: shouldn't need to do this twice, but it's a quick fix since
+  #@$ will always refer to the same generated function unless we do this
+  #and @$ get's modified by extend
+  @$ = generate_selector_delegate()
   extend @$, @_$ @[0] if @_$
   delegate_events.call @, @_delegatedEvents, @[0] if @_delegatedEvents
 
