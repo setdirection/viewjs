@@ -1,10 +1,10 @@
-{markdown} = require 'markdown'
+markdown = require __dirname + '/markdown' #todo: move to npm
 jsdom = require 'jsdom'
 fs = require 'fs'
 
 module.exports.build_docs = (source,target) ->
   formatted = markdown.toHTML fs.readFileSync(source).toString()
-  jsdom.env formatted, ['http://code.jquery.com/jquery-1.5.min.js'], (error,window) ->
+  jsdom.env formatted, [__dirname + '/jquery.js'], (error,window) ->
     create_nav window
     fs.writeFileSync target, template
       content: window.document.body.innerHTML

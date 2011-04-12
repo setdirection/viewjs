@@ -39,8 +39,11 @@ View.extend
           stack: []
         @[method_name] = ->
           _stack = array_from @_stack[method_name].stack
-          step = ->
-            (_stack.shift() || @_stack[method_name].complete).apply @, array_from(arguments).concat [proxy(step, @)]
+          step = proxy ->
+            args = array_from(arguments).concat [step]
+            args.shift() if typeof args[0] is 'number'
+            (_stack.shift() || @_stack[method_name].complete).apply @, args
+          , @
           step.apply @, array_from arguments
       for command_name, callback of commands[method_name]
         switch command_name

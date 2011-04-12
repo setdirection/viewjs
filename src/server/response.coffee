@@ -37,4 +37,4 @@ ViewServer.extend
         console.log error
         response.send stderr + stdout
       else
-        response.send stdout      
+        response.send stdout
