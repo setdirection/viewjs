@@ -163,9 +163,14 @@
           this[method_name] = function() {
             var step, _stack;
             _stack = array_from(this._stack[method_name].stack);
-            step = function() {
-              return (_stack.shift() || this._stack[method_name].complete).apply(this, array_from(arguments).concat([proxy(step, this)]));
-            };
+            step = proxy(function() {
+              var args;
+              args = array_from(arguments).concat([step]);
+              if (typeof args[0] === 'number') {
+                args.shift();
+              }
+              return (_stack.shift() || this._stack[method_name].complete).apply(this, args);
+            }, this);
             return step.apply(this, array_from(arguments));
           };
         }
