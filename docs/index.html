@@ -2,29 +2,32 @@
 <html>
   <head>
     <title>ViewJS: Markup as JavaScript</title> 
-    <link type="text/css" rel="stylesheet" href="stylesheets/syntax.css"/> 
-    <link type="text/css" rel="stylesheet" href="stylesheets/screen.css"/> 
+    <link type="text/css" rel="stylesheet" href="stylesheets/syntax.css"/>
+    <link type="text/css" rel="stylesheet" href="stylesheets/screen.css"/>
+    <script type="text/javascript" src="javascripts/jquery.js"></script>
+    <script type="text/javascript" src="javascripts/docs.js"></script>
+    <script type="text/javascript" src="http://use.typekit.com/tqz3zpc.js"></script>
   </head> 
   <body> 
     <div id="content"> 
       <div id="main">
-        <h1>ViewJS</h1><p class="intro">Markup as JavaScript <strong><a href="https://github.com/syntacticx/viewjs/">Source Code</a></strong></p>
+        <h1>ViewJS</h1><p class="npm">npm install view</p>
 <ul id="nav">
   <li><a href="#intro">Intro</a></li>
   <li><a href="#view">Client</a></li>
   <li><a href="#viewserver">Server</a></li>
+  <li><a href="https://github.com/syntacticx/viewjs/">Source</a></li>
 </ul>
+<a href="#" id="coffeescript"><span>Toggle</span></a>
 <br class="clear">
 
 <h2>Installation</h2>
 
-<pre><code>npm install view
-viewjs project_name
-node project_name/app.js</code></pre>
+<pre class="highlighted"><div class="dp-highlighter nogutter"><ol start="true" class="coffeescript"><li class="alt"><span><span>mkdir project_name</span></span></li><li><span>cd project_name</span></li><li class="alt"><span>npm install view</span></li><li><span>node_modules/view/bin/bootstrap</span></li><li class="alt"><span>node app.js</span></li></ol></div><div class="dp-highlighter nogutter"><ol start="true" class="javascript"><li class="alt"><span><span>mkdir(project_name);</span></span></li><li><span>cd(project_name);</span></li><li class="alt"><span>npm(install(view));</span></li><li><span>node_modules / view / bin / bootstrap;</span></li><li class="alt"><span>node(app.js);</span></li></ol></div></pre>
 
 <h2>Development</h2>
 
-<pre><code>cake watch</code></pre>
+<pre class="highlighted"><div class="dp-highlighter nogutter"><ol start="true" class="coffeescript"><li class="alt"><span><span>cake watch</span></span></li></ol></div><div class="dp-highlighter nogutter"><ol start="true" class="javascript"><li class="alt"><span><span>cake(watch);</span></span></li></ol></div></pre>
 
 <p>This will compile the following stylus and coffeescript files:</p>
 
@@ -62,11 +65,23 @@ node project_name/app.js</code></pre>
 
 <h3>render: template || -&gt;</h3>
 
+<p>Render a template or provide a callback that will return an <strong>Element</strong>.</p>
+
+<pre class="highlighted"><div class="dp-highlighter nogutter"><div class="bar"></div><ol start="true" class="coffeescript"><li class="alt"><span><span>View.create PostView:</span></span></li><li><span>  model: post</span></li><li class="alt"><span>  render: <span class="string">'path/to/template.eco'</span><span></span></span></li><li><span></span></li><li class="alt"><span><span class="comment"># test</span><span></span></span></li><li><span></span></li><li class="alt"><span>View.create PostView: [Builder,</span></li><li><span>  model: post</span></li><li class="alt"><span>  render: <span class="func_dec">-&gt;</span><span></span></span></li><li><span>    <span class="_this">@div</span><span> class: </span><span class="string">'post'</span><span>,</span></span></li><li class="alt"><span>      <span class="_this">@h2</span><span> </span><span class="_this">@model</span><span>.get </span><span class="string">'title'</span><span></span></span></li><li><span>]</span></li></ol></div><div class="dp-highlighter nogutter"><div class="bar"></div><ol start="true" class="javascript"><li class="alt"><span><span>View.create({</span></span></li><li><span>  PostView: {</span></li><li class="alt"><span>    model: post,</span></li><li><span>    render: <span class="string">'path/to/template.eco'</span><span></span></span></li><li class="alt"><span>  }</span></li><li><span>});</span></li><li class="alt"><span>View.create({</span></li><li><span>  PostView: [</span></li><li class="alt"><span>    Builder, {</span></li><li><span>      model: post,</span></li><li class="alt"><span>     <span class="func_dec"> render</span><span>: </span><span class="keyword">function</span><span>() {</span></span></li><li><span>        <span class="keyword">return</span><span> </span><span class="_this">this</span><span>.div({</span></span></li><li class="alt"><span>          <span class="string">"class"</span><span>: </span><span class="string">'post'</span><span></span></span></li><li><span>        }, <span class="_this">this</span><span>.h2(</span><span class="_this">this</span><span>.model.get(</span><span class="string">'title'</span><span>)));</span></span></li><li class="alt"><span>      }</span></li><li><span>    }</span></li><li class="alt"><span>  ]</span></li><li><span>});</span></li></ol></div></pre>
+
 <h3>element: -&gt;</h3>
+
+<p>Test</p>
+
+<pre class="highlighted"><div class="dp-highlighter nogutter"><ol start="true" class="coffeescript"><li class="alt"><span><span>Blarg()</span></span></li></ol></div><div class="dp-highlighter nogutter"><ol start="true" class="javascript"><li class="alt"><span><span>Blarg();</span></span></li></ol></div></pre>
 
 <h3>delegate: event_name: selector: (event) -&gt;</h3>
 
 <h3>document: Document</h3>
+
+<p>Test</p>
+
+<pre class="highlighted"><div class="dp-highlighter nogutter"><ol start="true" class="coffeescript"><li class="alt"><span><span>Yeep()</span></span></li></ol></div><div class="dp-highlighter nogutter"><ol start="true" class="javascript"><li class="alt"><span><span>Yeep();</span></span></li></ol></div></pre>
 
 <h3>templates: template_name: -&gt;</h3>
 
@@ -101,8 +116,6 @@ node project_name/app.js</code></pre>
 <h4>browser</h4>
 
 <h2>Routes</h2>
-
-<h3>route: url</h3>
 
 <h3>routes: path: view_name</h3>
 
@@ -168,7 +181,7 @@ node project_name/app.js</code></pre>
 
 <h3>cache: [views...]</h3>
       </div>
-      <div id="api_toc"><table><tbody><tr><td><h2>View</h2><h3>View</h3><h3>@create</h3><h3>@extend:</h3><h3>@initialize:</h3><h3>views:</h3></td><td><h2>Data</h2><h3>model:</h3><h3>collection:</h3><h3>@get</h3><h3>@set</h3></td><td><h2>DOM</h2><h3>@$</h3><h3>@tag</h3><h3>render:</h3><h3>element:</h3><h3>delegate:</h3><h3>document:</h3><h3>templates:</h3></td><td><h2>Events</h2><h3>@bind/on:</h3><h3>@unbind</h3><h3>@trigger</h3><h3>@before:</h3><h4>change:</h4><h4>change:key:</h4><h4>ready:</h4><h4>error:</h4><h4>warning:</h4></td><td><h2>Env</h2><h3>@env:</h3><h4>server</h4><h4>client</h4><h4>browser</h4></td><td><h2>Routes</h2><h3>route:</h3><h3>routes:</h3><h3>@url</h3></td><td><h2>Mixins</h2><h3>Builder</h3><h3>Router</h3></td></tr><tr><td><h2>ViewServer</h2><h3>ViewServer</h3><h3>@create</h3></td><td><h2>Server</h2><h3>server:</h3><h3>port:</h3><h3>templates:</h3><h3>public:</h3></td><td><h2>Assets</h2><h3>@javascripts:</h3><h3>@execute:</h3><h3>@stylesheets:</h3></td><td><h2>Events</h2><h3>@bind/on:</h3><h3>@unbind</h3><h3>@trigger</h3><h4>window:created</h4><h4>window:render</h4><h4>error:</h4><h4>warning:</h4></td><td><h2>Env</h2><h3>@env:</h3></td><td><h2>Routes</h2><h3>routes:</h3></td><td><h2>Cache</h2><h3>cache:</h3></td></tr></tbody></table></div>
+      <div id="api_toc"><table><tbody><tr><td><h1>View</h1><div class="even"><h3>View</h3></div><div class="odd"><h3>@create</h3></div><div class="even"><h3>@extend:</h3></div><div class="odd"><h3>@initialize:</h3></div><div class="even"><h3>views:</h3></div></td><td><h2>Data</h2><div class="even"><h3>model:</h3></div><div class="odd"><h3>collection:</h3></div><div class="even"><h3>@get</h3></div><div class="odd"><h3>@set</h3></div></td><td><h2>DOM</h2><div class="even"><h3>@$</h3></div><div class="odd"><h3>@tag</h3></div><div class="even"><h3>render:</h3></div><div class="odd"><h3>element:</h3></div><div class="even"><h3>delegate:</h3></div><div class="odd"><h3>document:</h3></div><div class="even"><h3>templates:</h3></div></td><td><h2>Events</h2><div class="even"><h3>@bind/on:</h3></div><div class="odd"><h3>@unbind</h3></div><div class="even"><h3>@trigger</h3></div><div class="odd"><h3>@before:</h3></div><div class="even"><h4>change:</h4></div><div class="odd"><h4>change:key:</h4></div><div class="even"><h4>ready:</h4></div><div class="odd"><h4>error:</h4></div><div class="even"><h4>warning:</h4></div></td><td><h2>Env</h2><div class="even"><h3>@env:</h3></div><div class="odd"><h4>server</h4></div><div class="even"><h4>client</h4></div><div class="odd"><h4>browser</h4></div></td><td><h2>Routes</h2><div class="even"><h3>routes:</h3></div><div class="odd"><h3>@url</h3></div></td><td><h2>Mixins</h2><div class="even"><h3>Builder</h3></div><div class="odd"><h3>Router</h3></div></td></tr><tr><td><h1>ViewServer</h1><div class="even"><h3>ViewServer</h3></div><div class="odd"><h3>@create</h3></div></td><td><h2>Server</h2><div class="even"><h3>server:</h3></div><div class="odd"><h3>port:</h3></div><div class="even"><h3>templates:</h3></div><div class="odd"><h3>public:</h3></div></td><td><h2>Assets</h2><div class="even"><h3>@javascripts:</h3></div><div class="odd"><h3>@execute:</h3></div><div class="even"><h3>@stylesheets:</h3></div></td><td><h2>Events</h2><div class="even"><h3>@bind/on:</h3></div><div class="odd"><h3>@unbind</h3></div><div class="even"><h3>@trigger</h3></div><div class="odd"><h4>window:created</h4></div><div class="even"><h4>window:render</h4></div><div class="odd"><h4>error:</h4></div><div class="even"><h4>warning:</h4></div></td><td><h2>Env</h2><div class="even"><h3>@env:</h3></div></td><td><h2>Routes</h2><div class="even"><h3>routes:</h3></div></td><td><h2>Cache</h2><div class="even"><h3>cache:</h3></div></td></tr></tbody></table></div>
     </div>
     <script type="text/javascript">
       var _gaq = _gaq || [];

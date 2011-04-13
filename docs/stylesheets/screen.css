@@ -1,3 +1,62 @@
+html,
+body {
+  padding:0;
+  margin:0;
+  font-family: 'Helvetica Neue', 'Lucida Grande', Arial;
+}
+
+h2 {
+  font-family "museo-sans-rounded-1", "museo-sans-rounded-2", "Helvetica Neue", Helvetica, Arial, sans-serif
+}
+
+.npm {
+  background-color:#222;
+    border:1px solid #000;
+  -moz-border-radius:5px;
+  -webkit-border-radius:5px;
+  border-radius:5px;
+  color:#fff;
+  padding:7px 10px;
+  display:inline-block;
+}
+
+#api_toc {
+  
+}
+
+#api_toc table {
+  width:100%;
+  padding:0;
+  margin:0;
+  border-collapse:collapse;
+}
+
+#api_toc table td {
+  padding:0;
+  border-right:1px solid #ccc;
+  border-bottom:1px solid #ccc;
+  vertical-align:top;
+  width:14%;
+  min-width:300px;
+}
+
+#api_toc table td h1,
+#api_toc table td h2,
+#api_toc table td h3,
+#api_toc table td h4 {
+  margin:0;
+}
+
+#api_toc table td h1,
+#api_toc table td h2 {
+  line-height:36px;
+}
+
+#api_toc table .even {
+  background-color:#f3f3f3;
+}
+
+/*
 html {
   padding:0;
   margin:0;
@@ -229,3 +288,4 @@ pre {
   padding: 18px 25px 20px 25px;
   color:#fff;
 }
+*/
