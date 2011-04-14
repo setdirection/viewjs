@@ -81,7 +81,8 @@ View.extend extend:routes: (routes,discard) ->
       for view in dependent_views
         add_default_activation_events ViewManager view
       View.env browser: ->
-        History.pushState null, String(Math.random()), window.location.href
+        History.Adapter.trigger window, 'statechange'
+        #History.pushState null, String(Math.random()), window.location.href
     next()
   ]
   discard()
@@ -99,10 +100,7 @@ View.extend url: (params) ->
     router_params[@name] = {}
     extend router_params[@name], @attributes
     extend router_params[@name], params || {}
-  url = RouteResolver router_params
-  View.env browser: ->
-    url = '#' + url if not window.history?.pushState?
-  url
+  RouteResolver router_params
 
 add_default_activation_events = (view_instance) ->
   hide = ->
