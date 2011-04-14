@@ -46,6 +46,9 @@ files =
     './test/client.coffee'
     './test/server.coffee'
   ]
+post_process =
+  'view.client': (output) ->
+    output = get_history_js() + output
 directories = 
   'view.client': './src/client'
   'view.server': './src/server'
@@ -65,7 +68,16 @@ compile_templates = ->
     });
   """
   console.log 'Compiled ' + filename
-  
+
+get_history_js = ->
+  output = [
+    fs.readFileSync './lib/json2.js'
+    fs.readFileSync './lib/amplify.store.js'
+    fs.readFileSync './lib/history.js'
+    fs.readFileSync './lib/history.adapter.$.js'
+  ].join("\n")
+  "if(window.name != 'nodejs'){#{output}}"
+
 watch_directory = (_opts, callback) ->
   opts = _.extend(
     { path: '.', persistent: true, interval: 500, callOnAdd: false },
@@ -140,7 +152,9 @@ task 'compile', 'compile library', ->
   for name of files
     sources[name] = files[name].map (filename) -> fs.readFileSync filename
   for name of files
-    fs.writeFileSync "./lib/#{name}.js", CoffeeScript.compile sources[name].join('\n')
+    output = CoffeeScript.compile sources[name].join('\n')
+    output = post_process[name](output) if post_process[name]?
+    fs.writeFileSync "./lib/#{name}.js", output
     console.log "compiled ./lib/#{name}.js\n"
   copy_file __dirname + '/lib/jquery.js', __dirname + '/test/public/javascripts/lib/jquery.js'
   copy_file __dirname + '/lib/underscore.js', __dirname + '/test/public/javascripts/lib/underscore.js'
