@@ -872,7 +872,10 @@
         url = RouteResolver(params);
         View.env({
           browser: function() {
-            return url = '#' + url;
+            var _ref;
+            if (!(((_ref = window.history) != null ? _ref.pushState : void 0) != null)) {
+              return url = '#' + url;
+            }
           }
         });
         return url;
@@ -1149,7 +1152,8 @@
                 }
                 return View.env({
                   browser: function() {
-                    if (!window.location.hash || window.location.hash === '') {
+                    var _ref;
+                    if ((!window.location.hash || window.location.hash === '') && !(((_ref = window.history) != null ? _ref.pushState : void 0) != null)) {
                       window.location.hash = '/';
                     }
                     return Backbone.history.start();
@@ -1186,7 +1190,10 @@
       url = RouteResolver(router_params);
       View.env({
         browser: function() {
-          return url = '#' + url;
+          var _ref;
+          if (!(((_ref = window.history) != null ? _ref.pushState : void 0) != null)) {
+            return url = '#' + url;
+          }
         }
       });
       return url;

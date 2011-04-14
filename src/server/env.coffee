@@ -37,3 +37,45 @@ ViewServer.extend extend:env: (envs) ->
     else
       @env_callbacks ||= []
       @env_callbacks.push envs
+
+history_available = (request) ->
+  return false if not request
+  supported_agents = 
+    chrome: (ua) -> # >= 8
+      if ua.match(/Chrome/)
+        version = ua.match(/Chrome\/([\d]+)/)
+        return true if parseInt(version[1]) >= 8
+    safari: (ua) -> # >= 5
+      if ua.match(/Safari/)
+        version = ua.match(/Version\/([\d]+)/)
+        return true if parseInt(version[1]) >= 5
+    firefox: (ua) -> # >= 4
+      if ua.match(/Firefox/)
+        version = ua.match(/Firefox\/([\d]+)/)
+        return true if parseInt(version[1]) >= 4
+    ios: (ua) -> # >= 4
+      if ua.match(/(iPhone|iPad)/)
+        version = ua.match(/\sOS\s([\d]+)/)
+        return true if parseInt(version) >= 4
+    android: (ua) -> # >= 2.2
+      if ua.match(/Android/)
+        version = ua.match(/\s([\d\.]+)/)
+        bits = version.split('.')
+        return true if parseInt(bits[0]) > 2
+        return true if parseInt(bits[0]) is 2 and parseInt(bits[1]) > 2
+    opera: (ua) -> # >= 11.5
+      if ua.match(/Opera/)
+        version = ua.match(/Version\/([\d\.]+)/)
+        bits = version.split('.')
+        return true if parseInt(bits[0]) > 11
+        return true if parseInt(bits[0]) is 11 and bits[1].match(/^[5-9]/)
+  for agent, test of supported_agents
+    if test(request.headers['user-agent']) is true
+      return true 
+  false
+  
+ViewServer.extend env:set:
+  legacy: (request) ->
+    not history_available request
+  html5: (request) ->
+    history_available request

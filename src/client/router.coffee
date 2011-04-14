@@ -81,7 +81,7 @@ View.extend extend:routes: (routes,discard) ->
       for view in dependent_views
         add_default_activation_events ViewManager view
       View.env browser: ->
-        if not window.location.hash or window.location.hash is ''
+        if (not window.location.hash or window.location.hash is '') and not window.history?.pushState?
           window.location.hash = '/'
         Backbone.history.start()
     next()
@@ -103,7 +103,7 @@ View.extend url: (params) ->
     extend router_params[@name], params || {}
   url = RouteResolver router_params
   View.env browser: ->
-    url = '#' + url
+    url = '#' + url if not window.history?.pushState?
   url
 
 add_default_activation_events = (view_instance) ->

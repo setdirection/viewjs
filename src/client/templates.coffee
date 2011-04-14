@@ -58,5 +58,5 @@ View.extend helpers:
   url: (params) ->
     url = RouteResolver params
     View.env browser: ->
-      url = '#' + url
+      url = '#' + url if not window.history?.pushState?
     url

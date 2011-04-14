@@ -7,6 +7,7 @@ ViewServer.extend
     javascripts = array_from @_javascripts
     execute = array_from @_execute
     meta = array_from @_meta
+    # allow env callbacks to specify what gets served per request
     for envs in @env_callbacks || []
       args = ViewServer.env request, envs
       stylesheets = stylesheets.concat args.stylesheets if args.stylesheets
@@ -21,16 +22,17 @@ ViewServer.extend
       _meta.push if typeof item is 'function' then item.call @, request else item
     meta = _.uniq _meta
     
+    #initialize json args
     json_args = JSON.stringify
-      stylesheets: stylesheets
-      javascripts: javascripts
-      execute: execute
+      stylesheets: process_asset_arguments(stylesheets, /\.css$/)
+      javascripts: process_asset_arguments(javascripts, /\.js$/)
+      execute: process_asset_arguments(execute, /\.js$/)
       public: @public
       domain: @domain
       routes: @routes
       meta: meta
       url: request.originalUrl
-    
+
     command = "#{process.argv[0]} #{__dirname}/view.serializer.js '#{json_args}'"
     require('child_process').exec command, (error, stdout, stderr) ->
       if stderr? and stderr != ''
@@ -38,3 +40,17 @@ ViewServer.extend
         response.send stderr + stdout
       else
         response.send stdout
+
+#build up asset arguments, which will recursively walk directories for local paths
+process_asset_arguments = (args,pattern) ->
+  target = []
+  add_item = (item) =>
+    target.push item if not (item in target)
+  for item in array_flatten array_from args
+    if item.match /^https?\:/
+      add_item item
+    else if is_directory item
+      files_with_extension(item, pattern).map add_item
+    else
+      add_item item
+  target
