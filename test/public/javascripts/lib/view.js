@@ -3496,17 +3496,7 @@ createSimpleStorage( "memory", {} );
   View.extend({
     helpers: {
       url: function(params) {
-        var url;
-        url = RouteResolver(params);
-        View.env({
-          browser: function() {
-            var _ref;
-            if (!(((_ref = window.history) != null ? _ref.pushState : void 0) != null)) {
-              return url = '#' + url;
-            }
-          }
-        });
-        return url;
+        return RouteResolver(params);
       }
     }
   });
@@ -3780,7 +3770,7 @@ createSimpleStorage( "memory", {} );
                 }
                 return View.env({
                   browser: function() {
-                    return History.pushState(null, String(Math.random()), window.location.href);
+                    return History.Adapter.trigger(window, 'statechange');
                   }
                 });
               }
@@ -3794,7 +3784,7 @@ createSimpleStorage( "memory", {} );
   });
   View.extend({
     url: function(params) {
-      var params_contain_view_name, router_params, url;
+      var params_contain_view_name, router_params;
       params_contain_view_name = function(params) {
         var key_count, param_name;
         key_count = 0;
@@ -3811,16 +3801,7 @@ createSimpleStorage( "memory", {} );
         extend(router_params[this.name], this.attributes);
         extend(router_params[this.name], params || {});
       }
-      url = RouteResolver(router_params);
-      View.env({
-        browser: function() {
-          var _ref;
-          if (!(((_ref = window.history) != null ? _ref.pushState : void 0) != null)) {
-            return url = '#' + url;
-          }
-        }
-      });
-      return url;
+      return RouteResolver(router_params);
     }
   });
   add_default_activation_events = function(view_instance) {

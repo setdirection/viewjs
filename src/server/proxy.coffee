@@ -16,17 +16,21 @@ ViewServer.extend proxy: (options) ->
       method: request.method
     if process.env.HTTP_PROXY? #for VMWare Cloud
       request_options.path = request_options.protocol.replace(':','') + '://' + request_options.host + '/' + request.params[0]
-      [request_options.host,request_options.port] = /[http[s]?:\/\/]?([^:]+):(\d+)\/?/.exec process.env.HTTP_PROXY
+      {host,port} = url.parse(process.env.HTTP_PROXY)
+      request_options.host = host.replace(/\:.+$/,'')
+      request_options.port = port
     if options.url
       request_options.search = options.search
+    request_options.protocol = request_options.protocol.replace /\:$/, ''
     proxy_request = http.request request_options, (proxy_response) ->
       response.statusCode = proxy_response.statusCode
       response.setHeader key, value for key, value of proxy_response.headers
+      proxy_response.setEncoding 'utf8'
       proxy_response.on 'data', (chunk) ->
         response.write chunk
       proxy_response.on 'end', ->
         response.end()
-    proxy_request.setHeader key, value for key,value of request.headers
+    response.setHeader key, value for key,value of request.headers
     proxy_request.end()
 
 ViewServer.extend extend:proxy: (options) ->
