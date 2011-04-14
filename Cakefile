@@ -76,7 +76,7 @@ get_history_js = ->
     fs.readFileSync './lib/history.js'
     fs.readFileSync './lib/history.adapter.$.js'
   ].join("\n")
-  "if(window.name != 'nodejs'){#{output}}"
+  "if(typeof window != \"undefined\" && window !== null && window.name != 'nodejs'){#{output}}"
 
 watch_directory = (_opts, callback) ->
   opts = _.extend(

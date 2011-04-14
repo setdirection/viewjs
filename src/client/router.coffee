@@ -121,7 +121,10 @@ add_default_activation_events = (view_instance) ->
         test: hide
         browser: hide
         server: remove
-
+  view_instance.env
+    test: hide
+    browser: hide
+  
 #TODO: remove jQuery dependency
 create_router = ->
   root_url = History.getRootUrl()
