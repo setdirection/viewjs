@@ -5,6 +5,7 @@ http = require 'http'
 fs = require 'fs'
 _ = require 'underscore'
 url = require 'url'
+{RouteResolver,View} = require __dirname + '/view.client.js'
 
 extend = (destination,source) ->
   for key, value of source
@@ -31,28 +32,38 @@ array_from = (object) ->
     results[length] = object[length]
   results
   
+file_exists = (path) ->
+  try
+    fs.lstatSync path
+    true
+  catch e
+    false
+
 is_directory = (dir) ->
-  require('fs').statSync(dir).isDirectory()
+  try
+    stat = fs.statSync(dir)
+  catch e
+    return false
+  stat.isDirectory()
 
 files_with_extension = (dir,extension) ->
-	fs = require 'fs'
-	paths = []
-	try
-	  fs.statSync dir
-	catch e
-	  return []
-	traverse = (dir,stack) ->
-		stack.push dir
-		fs.readdirSync(stack.join '/').map (file) ->
-			path = stack.concat([file]).join '/'
-			stat = fs.statSync path
-			return if file[0] is '.' or file is 'vendor'
-			paths.push path if stat.isFile() and extension.test file
-			traverse file, stack if stat.isDirectory()
-		stack.pop()
-	traverse dir || '.', []
-	paths
-	
+  paths = []
+  try
+    fs.statSync dir
+  catch e
+    return []
+  traverse = (dir,stack) ->
+    stack.push dir
+    fs.readdirSync(stack.join '/').map (file) ->
+      path = stack.concat([file]).join '/'
+      stat = fs.statSync path
+      return if file[0] is '.' or file is 'vendor'
+      paths.push path if stat.isFile() and extension.test file
+      traverse file, stack if stat.isDirectory()
+    stack.pop()
+  traverse dir || '.', []
+  paths
+  
 proxy = (func,object) ->
   return func if object is undefined
   if arguments.length < 3

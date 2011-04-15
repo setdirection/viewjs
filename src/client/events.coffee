@@ -6,6 +6,7 @@ View.extend
       for _event_name, _callback of event_name
         @bind _event_name, _callback
     else
+      @trigger 'error', 'No callback specified for ' + event_name if not callback?
       @_callbacks ||= {}
       @_callbacks[event_name] ||= []
       @_callbacks[event_name].push callback if not (callback in @_callbacks[event_name])
@@ -14,7 +15,6 @@ View.extend
 
   unbind: (event_name,callback) ->
     @_callbacks = {} if not event_name
-    calls = @_callbacks
     if not callback
       @_callbacks[event_name] = []
     else
@@ -26,10 +26,10 @@ View.extend
     @
 
   trigger: (event_name) ->
-    calls = @_callbacks
     return @ if not @_callbacks
     if @_callbacks[event_name]
-      item.apply @, Array::slice.call arguments, 1 for item in @_callbacks[event_name]
+      for item in @_callbacks[event_name]
+        item.apply @, Array::slice.call arguments, 1 if item? #if item? should not be necessary but is
     if @_callbacks.all
       item.apply @, arguments for item in @_callbacks.all
     @
@@ -63,6 +63,7 @@ View.extend
       console.log.apply console, ["#{@name || 'View'} error: "].concat array_from arguments if console?.log?
       #in Node, writing the error will not be written to the console before the error is thrown
       #which stops the process
+      throw error
       setTimeout ->
         throw error
       , 100

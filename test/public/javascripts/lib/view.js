@@ -1,4 +1,4 @@
-if(window.name != 'nodejs'){/*
+if(typeof window != "undefined" && window !== null && window.name != 'nodejs'){/*
     http://www.JSON.org/json2.js
     2011-01-18
 
@@ -2904,7 +2904,7 @@ createSimpleStorage( "memory", {} );
               this._initialize_callback = args[args.length - 1];
             }
           }
-          return setTimeout(next, 0);
+          return next();
         }
       }
     }
@@ -2976,6 +2976,9 @@ createSimpleStorage( "memory", {} );
           this.bind(_event_name, _callback);
         }
       } else {
+        if (!(callback != null)) {
+          this.trigger('error', 'No callback specified for ' + event_name);
+        }
         this._callbacks || (this._callbacks = {});
         (_base = this._callbacks)[event_name] || (_base[event_name] = []);
         if (!(__indexOf.call(this._callbacks[event_name], callback) >= 0)) {
@@ -2988,11 +2991,10 @@ createSimpleStorage( "memory", {} );
       return this;
     },
     unbind: function(event_name, callback) {
-      var calls, i, item, _len, _ref;
+      var i, item, _len, _ref;
       if (!event_name) {
         this._callbacks = {};
       }
-      calls = this._callbacks;
       if (!callback) {
         this._callbacks[event_name] = [];
       } else {
@@ -3011,8 +3013,7 @@ createSimpleStorage( "memory", {} );
       return this;
     },
     trigger: function(event_name) {
-      var calls, item, _i, _j, _len, _len2, _ref, _ref2;
-      calls = this._callbacks;
+      var item, _i, _j, _len, _len2, _ref, _ref2;
       if (!this._callbacks) {
         return this;
       }
@@ -3020,7 +3021,9 @@ createSimpleStorage( "memory", {} );
         _ref = this._callbacks[event_name];
         for (_i = 0, _len = _ref.length; _i < _len; _i++) {
           item = _ref[_i];
-          item.apply(this, Array.prototype.slice.call(arguments, 1));
+          if (item != null) {
+            item.apply(this, Array.prototype.slice.call(arguments, 1));
+          }
         }
       }
       if (this._callbacks.all) {
@@ -3081,6 +3084,7 @@ createSimpleStorage( "memory", {} );
         if ((typeof console != "undefined" && console !== null ? console.log : void 0) != null) {
           console.log.apply(console, ["" + (this.name || 'View') + " error: "].concat(array_from(arguments)));
         }
+        throw error;
         return setTimeout(function() {
           throw error;
         }, 100);
@@ -3681,7 +3685,6 @@ createSimpleStorage( "memory", {} );
       _ref = arguments[0];
       for (view in _ref) {
         params = _ref[view];
-        ViewManager(view);
         if (is_array(params)) {
           params = params_from_ordered_params_and_route(params, routes_by_view[view]);
         }
@@ -3710,7 +3713,6 @@ createSimpleStorage( "memory", {} );
       fragment = arguments[0];
       for (path in routes_by_path) {
         view = routes_by_path[path];
-        ViewManager(view);
         if (routes_regexps_by_path[path].test(fragment)) {
           ordered_params = routes_regexps_by_path[path].exec(fragment).slice(1);
           params = params_from_ordered_params_and_route(ordered_params, path);
@@ -3816,7 +3818,7 @@ createSimpleStorage( "memory", {} );
       return this[0].parentNode.removeChild(this[0]);
     };
     noop = function() {};
-    return view_instance.bind({
+    view_instance.bind({
       activated: function() {
         return this.env({
           test: show,
@@ -3831,6 +3833,10 @@ createSimpleStorage( "memory", {} );
           server: remove
         });
       }
+    });
+    return view_instance.env({
+      test: hide,
+      browser: hide
     });
   };
   create_router = function() {

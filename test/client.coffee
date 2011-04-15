@@ -377,52 +377,45 @@ module.exports.router = (before_exit) ->
   #should have route auto set
   callback_count = 0
   ContainerView.initialize ->
-  
     #use as dispatcher
     RouteResolver '/post/5', (view,params) ->
-      console.log 'A'
+      
       #callback should only be called after 
       assert.equal view.get('id'), '5'
       assert.ok PostView.element().style.display isnt 'none'
       assert.ok IndexView.element().style.display is 'none'
       ++callback_count
       
-    #dispatcher can take object argument
-    RouteResolver {IndexView: {}}, (view,params) ->
-      console.log 'B'
-      assert.ok IndexView.element().style.display isnt 'none'
-      assert.ok PostView.element().style.display is 'none'
-      ++callback_count
+      #dispatcher can take object argument
+      RouteResolver {IndexView: {}}, (view,params) ->
+        assert.ok IndexView.element().style.display isnt 'none'
+        assert.ok PostView.element().style.display is 'none'
+        ++callback_count
+        
+        #dispatcher can take ordered param argument
+        RouteResolver {PostView:['4']}, (view,params) ->
+          assert.equal view.get('id'), '4'
+          assert.ok PostView.element().style.display isnt 'none'
+          assert.ok IndexView.element().style.display is 'none'
+          ++callback_count
+          
+          #IndexView should not re-render
+          RouteResolver {IndexView: {}}, (view,params) ->
+            assert.ok IndexView.element().style.display isnt 'none'
+            assert.ok PostView.element().style.display is 'none'
+            ++callback_count
+            
+            #default logic of hiding siblings can be disabled
+            PostView.unbind 'route'
+            RouteResolver {PostView: id: 4}, (view,params) ->
+              assert.ok IndexView.element().style.display is 'none'
+              assert.ok PostView.element().style.display isnt 'none'
+              ++callback_count
       
-    #dispatcher can take ordered param argument
-    RouteResolver {PostView:['4']}, (view,params) ->
-      console.log 'C'
-      console.log view.get('id')
-      assert.equal view.get('id'), '4'
-      assert.ok PostView.element().style.display isnt 'none'
-      assert.ok IndexView.element().style.display is 'none'
-      ++callback_count
-      
-    #IndexView should not re-render
-    RouteResolver {IndexView: {}}, (view,params) ->
-      console.log 'D'
-      assert.ok IndexView.element().style.display isnt 'none'
-      assert.ok PostView.element().style.display is 'none'
-      ++callback_count
-      
-    #default logic of hiding siblings can be disabled
-    PostView.unbind 'route'
-    RouteResolver {PostView: id: 4}, (view,params) ->
-      console.log 'E'
-      assert.ok IndexView.element().style.display is 'none'
-      assert.ok PostView.element().style.display isnt 'none'
-      ++callback_count
-      
-  before_exit ->
-    console.log 'callback_count', callback_count
-    assert.equal 5, callback_count
-    assert.equal 4, post_view_render_count
-    assert.equal 1, index_view_render_count
+              before_exit ->
+                assert.equal 5, callback_count
+                assert.equal 4, post_view_render_count
+                assert.equal 1, index_view_render_count
 
   View.extend
     env:
