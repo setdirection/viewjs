@@ -129,8 +129,9 @@ create_router = ->
   $('a').live 'click', (event) ->
     # Continue as normal for cmd clicks etc
     return true if event.which is 2 or event.metaKey
-    History.pushState null, '', $(@).attr('href')
-    event.preventDefault()
+    if $(@).attr('href').indexOf(root_url) is 0 and !!(window.history && history.pushState)
+      History.pushState null, '', $(@).attr('href')
+      event.preventDefault()
   History.Adapter.bind window, 'statechange', ->
     state = History.getState()
     url = state.url.replace root_url, '/'
