@@ -161,7 +161,7 @@ task 'compile', 'compile library', ->
   copy_file __dirname + '/lib/backbone.js', __dirname + '/test/public/javascripts/lib/backbone.js'
   copy_file __dirname + '/lib/view.client.js', __dirname + '/test/public/javascripts/lib/view.js'
   compile_templates()
-  
+    
 task 'templates', 'compile templates for tests', (options) ->
   compile_templates()
   
