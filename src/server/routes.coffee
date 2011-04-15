@@ -1,6 +1,7 @@
 # Routes
 ########
-ViewServer.extend extend:routes: (routes) -> 
+ViewServer.extend extend:routes: (routes) ->
+  View.extend routes: routes #for RouteResolver
   @routes ||= {}
   for path, view of routes
     if typeof view is 'function'

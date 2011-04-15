@@ -28,6 +28,7 @@ create_package_json = (target) ->
 exec 'npm install express'
 
 #setup directory structure
+create_directory 'cache'
 create_directory 'app'
 create_directory 'app/templates'
 create_directory 'app/views'

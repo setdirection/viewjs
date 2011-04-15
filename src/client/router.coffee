@@ -23,7 +23,6 @@ RouteResolver = ->
   #url string from object View: params
   if typeof arguments[0] is 'object'
     for view, params of arguments[0]
-      ViewManager(view) #check the current view, will trigger and error if it doesn't exist
       params = params_from_ordered_params_and_route params, routes_by_view[view] if is_array params
       url = String(routes_by_view[view])
       url = url.replace(/\*/,params.path.replace(/^\//,'')) if params.path
@@ -45,7 +44,6 @@ RouteResolver = ->
   else if typeof arguments[0] is 'string'
     fragment = arguments[0]
     for path, view of routes_by_path
-      ViewManager(view) #check the current view, will trigger and error if it doesn't exist
       if routes_regexps_by_path[path].test fragment
         ordered_params = routes_regexps_by_path[path].exec(fragment).slice(1)
         params = params_from_ordered_params_and_route ordered_params, path

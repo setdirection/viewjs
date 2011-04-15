@@ -383,8 +383,6 @@ module.exports.router = (before_exit) ->
       #callback should only be called after 
       assert.equal view.get('id'), '5'
       assert.ok PostView.element().style.display isnt 'none'
-      console.log IndexView.element().style.display
-      console.log IndexView.element().innerHTML
       assert.ok IndexView.element().style.display is 'none'
       ++callback_count
       
