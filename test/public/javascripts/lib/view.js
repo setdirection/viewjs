@@ -3678,7 +3678,8 @@ createSimpleStorage( "memory", {} );
     mixin: []
   };
   RouteResolver = function() {
-    var fragment, optional_param_matcher, ordered_params, param_matcher, param_name, params, path, response, router_params, url, view, _ref;
+    var fragment, optional_param_matcher, ordered_params, param_matcher, param_name, params, path, response, router_params, silent, url, view, _ref;
+    silent = (arguments[1] != null) && arguments[1].silent === true;
     if (typeof arguments[0] === 'string' && (ViewManager.views[arguments[0]] != null)) {
       router_params = {};
       router_params[arguments[0]] = {};
@@ -3727,7 +3728,11 @@ createSimpleStorage( "memory", {} );
           return response;
         }
       }
-      return View.trigger('error', 'Could not resolve the url: ' + arguments[0]);
+      if (silent) {
+        return false;
+      } else {
+        return View.trigger('error', 'Could not resolve the url: ' + arguments[0]);
+      }
     }
   };
   View.extend({
@@ -3847,17 +3852,18 @@ createSimpleStorage( "memory", {} );
     root_url = History.getRootUrl();
     $('a').live('click', function(event) {
       var href;
-      if (event.which === 2 || event.metaKey) {
-        return true;
-      }
       href = $(this).attr('href');
-      if (/:\/\//.test(href)) {
+      if (event.which === 2 || event.metaKey || /:\/\//.test(href) || !History.enabled) {
         return true;
       }
-      if (History.enabled) {
+      if (RouteResolver(href, {
+        silent: true
+      })) {
         History.pushState(null, '', href);
         event.preventDefault();
         return false;
+      } else {
+        return true;
       }
     });
     return History.Adapter.bind(window, 'statechange', function() {
