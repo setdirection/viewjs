@@ -34,12 +34,25 @@ ViewServer.extend
       url: request.originalUrl
 
     command = "#{process.argv[0]} #{__dirname}/view.serializer.js '#{json_args}'"
-    require('child_process').exec command, (error, stdout, stderr) ->
+    require('child_process').exec command, (error, stdout, stderr) =>
       if stderr? and stderr != ''
-        console.log error
-        response.send stderr + stdout
-      else
+        console.log 'ViewSerializer threw exception with arguments:'
+        console.log json_args
+        console.log 'stderr:'
+        console.log stderr
+        console.log 'stdout contained:'
+        console.log stdout
         response.send stdout
+      else
+        params = RouteResolver request.originalUrl
+        view_name = ''
+        view_name = key for key of params
+        send_response = ->
+          response.send stdout
+        if @cache[view_name]?
+          @cache request.originalUrl, stdout, send_response
+        else
+          send_response()
 
 #build up asset arguments, which will recursively walk directories for local paths
 process_asset_arguments = (args,pattern) ->
