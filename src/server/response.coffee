@@ -34,8 +34,12 @@ ViewServer.extend
       url: request.originalUrl
 
     command = "#{process.argv[0]} #{__dirname}/view.serializer.js '#{json_args}'"
+    console.log "ViewSerializer JSON arguments for response to: #{request.originalUrl}"
+    console.log '--------------'
+    console.log command
+    console.log ''
     require('child_process').exec command, (error, stdout, stderr) =>
-      if stderr? and stderr != ''
+      if error or (stderr? and stderr != '')
         console.log 'ViewSerializer threw exception with arguments:'
         console.log json_args
         console.log 'stderr:'

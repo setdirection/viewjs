@@ -1,5 +1,6 @@
 # Serializer
 ############
+timeout_length = 5000 # if the request can't complete in a reasonable amount of time dump the output
 {jsdom} = require 'jsdom'
 {XMLHttpRequest} = require 'xmlhttprequest'
 
@@ -68,13 +69,21 @@ ViewSerializer =
   
   serialize: (callback) ->
     @createWindow (window) =>
+      timeout = null
+      complete = =>
+        clearTimeout timeout
+        callback @renderWindow window
+        process.exit 0
       if window.View?
-        window.View.extend on:route: (view_instance) =>
-          callback @renderWindow window
+        window.View.extend on:route: complete
         window.View.extend route: @url
       else
-        callback @renderWindow window
-  
+        complete()
+      #force a response if on:route is never called
+      setTimeout ->
+        complete()
+        process.exit 1
+      , @maxExecutionTime || 5000
 ViewSerializer.setup JSON.parse process.argv[2]
 ViewSerializer.serialize (output) ->
   process.stdout.write output
