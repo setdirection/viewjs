@@ -55,7 +55,7 @@ Create a named view with the given mixins. You can pass a single mixin object, o
 
 You can create a 
 
-    {ChildView} = ParentView.create ChildView:
+    {ChildView} = ParentView.create ChildView: {}
       
 
 Calling create on a named view with no arguments creates an unnamed clone of the view.
@@ -79,7 +79,7 @@ Specify a model for the view. Designed with Backbone.Model in mind, but can be a
       model: post
     
     #post.eco
-    <h2><%= @title %></h2>
+    "<h2><%= @title %></h2>"
     
 ### collection: Backbone.Collection
 **render()** will be called for each model in the collection, with the model as the context to a template, or as the first argument to a callback.

@@ -10,7 +10,6 @@ module.exports.build_docs = (source,target) ->
     syntax_highlight window
     fs.writeFileSync target, template
       content: window.document.body.innerHTML
-      toc: create_toc window
 
 process_toc_signature = (signature) ->
   signature = signature.replace /^\{?[a-zA-Z0-9]+\}?\s=\s/, ''
@@ -18,26 +17,26 @@ process_toc_signature = (signature) ->
   signature = signature.replace /\/.+$/, '' if !signature.match /bind\/on/
   signature
   
-create_toc = (window) ->
-  contents = ""
-  [1,2].map (i) ->
-    contents += "<tr>"
-    client_h2 = window.$('h1:eq(' + i + ')').next('h2').nextUntil('h1').add(window.$('h1:eq(' + i + ')').next('h2')).filter('h2')
-    ii = 0
-    client_h2.toArray().map (h2) ->
-      contents += "<td>"
-      title_tag = if ii is 0 then 'h1' else 'h2'
-      contents += "<#{title_tag}>" + h2.innerHTML + "</#{title_tag}>"
-      iii = 0
-      window.$(h2).next('h3').nextUntil('h2,h1').add(window.$(h2).next('h3')).filter('h3,h4').toArray().map (h3) ->
-        contents += "<div class=\"#{if iii % 2 is 0 then 'even' else 'odd'}\"><#{h3.tagName.toLowerCase()}>" + process_toc_signature(h3.innerHTML) + "</#{h3.tagName.toLowerCase()}></div>"
-        ++iii
-      contents += "</td>"
-      ++ii
-    contents += "</tr>"
-  """
-    <div id="api_toc"><table><tbody>#{contents}</tbody></table></div>
-  """
+#create_toc = (window) ->
+#  contents = ""
+#  [1,2].map (i) ->
+#    contents += "<tr>"
+#    client_h2 = window.$('h1:eq(' + i + ')').next('h2').nextUntil('h1').add(window.$('h1:eq(' + i + ')').next('h2')).filter('h2')
+#    ii = 0
+#    client_h2.toArray().map (h2) ->
+#      contents += "<td>"
+#      title_tag = if ii is 0 then 'h1' else 'h2'
+#      contents += "<#{title_tag}>" + h2.innerHTML + "</#{title_tag}>"
+#      iii = 0
+#      window.$(h2).next('h3').nextUntil('h2,h1').add(window.$(h2).next('h3')).filter('h3,h4').toArray().map (h3) ->
+#        contents += "<div class=\"#{if iii % 2 is 0 then 'even' else 'odd'}\"><#{h3.tagName.toLowerCase()}>" + process_toc_signature(h3.innerHTML) + "</#{h3.tagName.toLowerCase()}></div>"
+#        ++iii
+#      contents += "</td>"
+#      ++ii
+#    contents += "</tr>"
+#  """
+#    <div id="api_toc"><table><tbody>#{contents}</tbody></table></div>
+#  """
 
 syntax_highlight = (window) ->
   window.$('pre').addClass('highlighted')
@@ -45,6 +44,10 @@ syntax_highlight = (window) ->
   window.$('.javascript').each (i,element) ->
     try
       source = decode_html_entities element.innerHTML
+      console.log "attemping to compile source snippet:"
+      console.log "------------------------------------"
+      console.log source
+      console.log ''
       js = CoffeeScript.compile(source,bare: true)
     catch e
       console.log "Failed to compile: \n #{js}"
@@ -204,11 +207,10 @@ template = (options) -> """
     <script type="text/javascript" src="http://use.typekit.com/tqz3zpc.js"></script>
   </head> 
   <body> 
-    <div id="content"> 
+    <div id="content">
       <div id="main">
         #{options.content}
       </div>
-      #{options.toc}
     </div>
     <script type="text/javascript">
       var _gaq = _gaq || [];
