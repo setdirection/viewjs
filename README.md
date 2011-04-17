@@ -51,7 +51,7 @@ Create a named view with the given mixins. You can pass a single mixin object, o
       render: 'parent.eco'
       on:
         render: ->
-          console.log 'ParentView on:render'
+          console.log 'render event triggered'
         
     View.create BuilderView: [Builder,
       render: ->
@@ -61,9 +61,11 @@ Create a named view with the given mixins. You can pass a single mixin object, o
 Calling create on a named view creates a child view that will process all of the mixins of the parent view (effectively cloning it) in addition to the mixins passed into create:
 
     {ChildView} = ParentView.create ChildView:
+      render: 'child.eco'
       on:
         render: ->
-          console.log 'ChildView on:render'
+          console.log 'render event triggered'
+        #render now has two event handlers
 
 Some mixin directives like **render** will overwrite an existing callback, while others like **on** will bind additional events without unregistering old events.
 
@@ -204,6 +206,10 @@ Generate a DOM Element. Accepts a variable number of hashes of attributes, eleme
       render: ->
         @tag('ul',@tag('li','Item One'))
 
+If a DOM library is present @tag and Builder methods will instead return a wrapped object containing the element (i.e. a jQuery or Zepto array). View will always look inside these objects for the actual elements so in practice you can use them as if they were the Element objects, with the added benefit of attaching event handlers inline, etc:
+
+    @ul @li @a('Link',href:'#').click ->
+
 ### @extend render: template
 Specify a template to render:
 
@@ -276,6 +282,18 @@ Override the default element which is a div with a className containing the **na
           "html output"
 
 ## Events
+The following events are triggered internally by View:
+
+- **initialize: ->** Triggered when the view is initialized.
+- **change: ->** Triggered when any attribute in the view has changed.
+- **change:key: (value) ->** Triggered when a particular key changes.
+- **ready: ->** Triggered the first time a view is rendered.
+- **render: ->** Triggered when a view is rendered.
+- **activated: ->** Triggered when a route activates the view.
+- **deactivated: ->** Triggered when a view was active, and another view is activated by a route.
+- **error: (error) ->** Triggered when an exception is thrown.
+- **warning: (warning) ->** Triggered when a warning (such as a deprecation) occurs.
+
 ### @bind event_name, callback
 ### @on event_name, callback
 Bind a callback to an event. **bind** and **on** are aliases.
@@ -292,7 +310,8 @@ An object containing event name, callback pairs can also be used:
         console.log 'Post initialized'
         
 ### @extend on: events
-  
+The same behavior can be achieved using a mixin:
+
     PostView.extend
       on:
         render: ->
@@ -312,7 +331,7 @@ Trigger a given event with an arbitrary number of arguments.
     PostView.bind 'custom', (arg1,arg2) ->
     PostView.trigger 'custom', arg1, arg2
 
-### @before: method_name: (original_method) ->
+### @before: method_name: (original_method,args...) ->
 A simple implementation of AOP. A logger could be implemented as:
 
     View.extend log: (method_name) ->
@@ -327,46 +346,102 @@ A simple implementation of AOP. A logger could be implemented as:
     instance = View.create()
     instance.set key: 'value'
       
-#### initialize: ->
-Triggered when the view is initialized.
-
-#### change: ->
-Triggered when any attribute in the view has changed.
-
-#### change:key: (value) ->
-Triggered when a particular key changes.
-
-#### ready: ->
-Triggered the first time a view is rendered.
-
-#### render: ->
-Triggered when a view is rendered.
-
-#### activated: ->
-Triggered when a route activates the view.
-
-#### deactivated: ->
-Triggered when a view was active, and another view is activated by a route.
-
-#### error: (error) ->
-Triggered when an exception is thrown.
-
-#### warning: (warning)
-Triggered when a warning (such as a deprecation) occurs.
-
 ## Env
-### @env: env_name: ->
-#### server
-#### client
-#### browser
+Allows for the conditional execution of code depending on environment. The following environments are built in:
+
+- server: -> Executed when the application is being processed by NodeJS
+- browser: -> Executed by a remote client / web browser. **Note that this will become "client" in a future release, but is not presently so due to internal usage. Usage of "browser" will continue to work but will issue a deprecation warning in the future.**
+
+### @env: name: ->
+
+    View.env
+      server: -> console.log 'only run on the server'
+      browser: -> console.log 'only run on a browser'
+
+### @env: set: name: ->
+New environment names can be set using the **set** key:
+
+    View.env set:
+      ie: -> !!window.attachEvent and not window.opera
+    
+### @extend env: name: ->
+The **env** directive can be used in a mixin.
+
+    View.extend
+      env:
+        ie: ->
+          @on render: -> console.log 'render called in IE'
+
+### @extend env: name: mixin
+The **env** directive in a mixin, can itself contain a mixin that will be passed to extend.
+
+    View.extend
+      env:
+        ie:
+          on:
+            render: -> console.log 'render called in IE'
 
 ## Routes
 ### routes: path: view_name
-### url = @url view_name: attributes: {}
+This is automatically set by the **ViewServer**, but when using View standalone you must manually set this before you can use the **Router** mixin. 
 
+    View.extend
+      routes:
+        '/about/': 'AboutPageView'
+        '/contact/': 'ContactPageView'
+        '/blog/:post_id': 'PostView'
+
+### @url view_name: attributes
+Generates a URL for a given view and attributes. The view must have a corresponding route.
+
+    '/post/5' is View.url PostView: id: 5
+    '/post/5' is PostView.url id: 5
+    '/' is View.url IndexView: {}
+    '/' is IndexView.url()
+    
 ## Mixins
-### Builder
 ### Router
+
+    View.extend
+      routes:
+        '/about/': 'AboutPageView'
+        '/contact/': 'ContactPageView'
+        '/blog/:post_id': 'PostView'
+    
+    View.create
+      ApplicationView: [Router,
+        render: ->
+          @div @Router
+      ]
+      
+      AboutPageView:
+        render: 'about.eco'
+      
+      ContactPageView:
+        render: 'contact.eco'
+      
+      PostView:
+        render: 'post.eco'
+        on:
+          change:
+            post_id: (post_id) ->
+              Post.find post_id, (post) =>
+                @model = post
+                @render()
+
+### Builder
+The builder mixin adds all valid HTML5 tag names as methods to a view. Usage of Builder is covered in the **tag** method.
+
+    {TableView} = View.create TableView: [Builder,
+      render: ->
+        @table cellpadding: 0, cellspacing: 0,
+          @tbody(
+            @tr(
+              @td 'Cell One'
+              @td 'Cell Two'
+            )
+          )
+    ]
 
 # ViewServer
 ## ViewServer
@@ -374,27 +449,124 @@ Triggered when a warning (such as a deprecation) occurs.
 ### {ViewServer} = @create server_name: mixins = {}
 
 ## Server
-### server: express_instance
-### port: number
-### templates: path
-### public: path
+### @server
+The Express instance which handles requests for the ViewServer.
+    
+    express = require 'express'
+    BlogServer.server.use express.logger()
+    BlogServer.server.get '/custom/', (request,response) ->
+
+### @extend server: express_instance
+If no **server** attribute is supplied, an Express server will automatically be created. Or you can supply a custom one:
+
+    express = require 'express'
+    server = express.createServer()
+    {BlogServer} = ViewServer.create
+      server: server
+
+### @extend port: number
+The port number to listen on. When both **port** and **public** have been defined in the server **@server.listen()** will be called.
+
+### @extend public: path
+Full path to the public directory. When both **port** and **public** have been defined in the server **@server.listen()** will be called.
+
+### @extend templates: path
+Full path to the templates directory. All eco and Jade templates in this directory will automatically be compiled to **public/javascripts/templates.js** when running the **cake watch** command.
 
 ## Assets
-### @javascripts: [javascripts...]
-### @execute: [execute...]
-### @stylesheets: [stylesheets...]
+### @extend javascripts: [javascripts...]
+JavaScript tags to send to the browser on each request. If a directory is specified it will be recursively searched for **.js** files.
 
-## Events
-### @bind/on: event_name, (args...) ->
-### @unbind/removeListener event_name = false, handler = ->
-### @trigger/emit event_name, args...
-#### window:created (window) ->
-#### window:render (window,request) ->
-#### error: (error) ->
-#### warning: (warning)
+### @extend execute: [execute...]
+JavaScript to execute server side on each request. If a directory is specified it will be recursively searched for **.js** files.
+
+### @extend stylesheets: [stylesheets...]
+Add stylesheets to. If a directory is specified it will be recursively searched for **.css** files.
+
+    public = "#{__dirname}/public/"
+    BlogServer.extend stylesheets: [
+      "#{public}/stylesheets/a.css"
+      "#{public}/stylesheets/b.css"
+      #now scan the directory for all remaining stylesheets
+      "#{public}/stylesheets/"
+    ]
+
+### @extend meta: [meta...]
+Inject arbitrary meta information into the document head.
+
+    BlogServer.extend meta: [
+      '<link rel="alternate" type="application/rss+xml" title="Feed Name" href="url" />'
+    ]
 
 ## Env
-### @env: env_name: ->
+### @env: name: ->
+
+### @extend: env: name: ->
+In the following example the Typekit JavaScript would be available in a script tag in the header for both legacy and HTML5 capable browsers, but the rest of the application would be run server side for legacy browsers, and client side for HTML5 browsers.
+
+    public = __dirname + '/public/'
+    application_payload = [
+      "#{public}javascripts/lib/jquery.js"
+      "#{public}javascripts/lib/underscore.js"
+      "#{public}javascripts/lib/backbone.js"
+      "#{public}javascripts/lib/view.js"
+      "#{public}javascripts/templates.js"
+      "#{public}javascripts/models"
+      "#{public}javascripts/views"
+    ]
+    
+    {MyServer} = ViewServer.create MyServer:
+      public: public
+      javascripts: [
+        "http://use.typekit.com/xxx.js"
+      ]
+      env:
+        legacy:
+          execute: application_payload
+        html5:
+          javascripts: application_payload
+
+### @env: set: name: (request) ->
+
+## Events
+The following events are triggered internally by ViewServer:
+
+- **error: (error) ->** Triggered when an exception is thrown.
+- **warning: (warning) ->** Triggered when a warning (such as a deprecation) occurs.
+- **request: (request,response) ->** Triggered when an incoming request will be handled by a view.
+
+### @bind event_name, callback
+### @on event_name, callback
+Bind a callback to an event. **bind** and **on** are aliases.
+    
+    BlogServer.bind 'request', (request,response) ->
+      console.log 'Incoming request'
+
+An object containing event name, callback pairs can also be used:
+
+    BlogServer.on
+      request: (request,response) ->
+        console.log 'Incoming request'
+        
+### @extend on: events
+The same behavior can be achieved using a mixin:
+
+    BlogServer.extend
+      on:
+        request: (request,response) ->
+          console.log 'Incoming request'
+
+### @unbind/removeListener event_name = false, handler = ->
+
+    BlogServer.unbind 'error', handler #unbinds a particular handler
+    BlogServer.unbind 'error' #unbinds all error handlers
+    BlogServer.unbind() #unbinds all
+
+### @trigger/emit event_name, args...
+Trigger a given event with an arbitrary number of arguments.
+
+    BlogServer.bind 'custom', (arg1,arg2) ->
+    BlogServer.trigger 'custom', arg1, arg2
 
 ## Routes
 ### routes: path: view_name
