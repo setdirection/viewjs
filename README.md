@@ -70,7 +70,7 @@ code
 ### views: [views...]
 
 ## Data
-### model: Backbone.Model
+### @extend model: Backbone.Model
 Specify a model for the view. Designed with Backbone.Model in mind, but can be any object that has an **attributes** property. The **attributes** property of the model will be passed as the context to a template if one is specified for the view. If using a callback with **render** the model will be accessed as **@model**.
     
     post = new Backbone.Model title: 'Post Title'
@@ -81,12 +81,14 @@ Specify a model for the view. Designed with Backbone.Model in mind, but can be a
     #post.eco
     "<h2><%= @title %></h2>"
     
-### collection: Backbone.Collection
-**render()** will be called for each model in the collection, with the model as the context to a template, or as the first argument to a callback.
+### @extend collection: Backbone.Collection
+**render()** will be called for each model in the collection, with the model as the context to a template, or as the first argument to a callback. Asynchronous collection logic must be put into an  **initialize** callback or a **change** or **change:key** event.
 
     {PostCollectionView} = View.create PostCollectionView:
-      collection: PostCollection
       render: 'post_preview.eco'
+      collection: PostCollection
+      initialize: (next) ->
+        @collection.fetch success: next
       
 collection is designed for use with a Backbone.Collection, but any class conforming to the following API will work:
 
