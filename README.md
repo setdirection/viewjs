@@ -114,7 +114,7 @@ Initializes a given view. Optional attributes will be passed to **set()** and an
     PostCollectionView.initialize ->
       console.log 'called when initialize is complete'
 
-### views: [views...]
+### @extend views: [views...]
 Specifies dependent views that will be loaded. Each dependent view add an **initialize** callback. The parent view will not finish initializing until the dependent views have finished initializing. Once finished the dependent view names will become available as properties of the parent view:
 
     {ApplicationView} = View.create ApplicationView: [Builder,
@@ -299,15 +299,60 @@ An object containing event name, callback pairs can also be used:
           console.log 'Post rendered'
 
 ### @unbind/removeListener event_name = false, handler = ->
+
+    PostView.unbind 'render', handler #unbinds a particular handler
+    PostView.unbind 'render' #unbinds all render handlers
+    PostView.unbind() #unbinds all
+
+**Unbinding all is not recommended** as there are many internal events.
+
 ### @trigger/emit event_name, args...
+Trigger a given event with an arbitrary number of arguments.
+
+    PostView.bind 'custom', (arg1,arg2) ->
+    PostView.trigger 'custom', arg1, arg2
+
 ### @before: method_name: (original_method) ->
+A simple implementation of AOP. A logger could be implemented as:
+
+    View.extend log: (method_name) ->
+      @before method_name, (next,args...) ->
+        response = next.apply @, args
+        console.log "#{@name}.#{method_name}", args, ' -> ', response
+        response
+    
+    View.log 'set'
+    View.log 'get'
+    
+    instance = View.create()
+    instance.set key: 'value'
+      
+#### initialize: ->
+Triggered when the view is initialized.
+
 #### change: ->
+Triggered when any attribute in the view has changed.
+
 #### change:key: (value) ->
+Triggered when a particular key changes.
+
 #### ready: ->
+Triggered the first time a view is rendered.
+
+#### render: ->
+Triggered when a view is rendered.
+
 #### activated: ->
+Triggered when a route activates the view.
+
 #### deactivated: ->
+Triggered when a view was active, and another view is activated by a route.
+
 #### error: (error) ->
+Triggered when an exception is thrown.
+
 #### warning: (warning)
+Triggered when a warning (such as a deprecation) occurs.
 
 ## Env
 ### @env: env_name: ->
