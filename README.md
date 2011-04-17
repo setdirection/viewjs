@@ -1,5 +1,7 @@
 # ViewJS
 
+TODO: create JS that will hide all descriptions for quick API overview
+
 ## Concepts
 
 - Run JavaScript client or server
@@ -47,27 +49,82 @@ Create a named view with the given mixins. You can pass a single mixin object, o
 
     View.create ParentView:
       render: 'parent.eco'
-
+      on:
+        render: ->
+          console.log 'ParentView on:render'
+        
     View.create BuilderView: [Builder,
       render: ->
-        @div ''
+        @div()
     ]
 
-You can create a 
+Calling create on a named view creates a child view that will process all of the mixins of the parent view (effectively cloning it) in addition to the mixins passed into create:
 
-    {ChildView} = ParentView.create ChildView: {}
-      
+    {ChildView} = ParentView.create ChildView:
+      on:
+        render: ->
+          console.log 'ChildView on:render'
+
+Some mixin directives like **render** will overwrite an existing callback, while others like **on** will bind additional events without unregistering old events.
 
 Calling create on a named view with no arguments creates an unnamed clone of the view.
 
     anonymous_view = ChildView.create()
 
-### @extend mixins
-### @extend extend: name
-code
+### @extend mixin
+All mixins passed to **create()** are then passed to **extend**. @extend looks for directives to process the attributes in the mixin (**render**,**initialize**,**on**, etc are all directives). If none are found the attribute becomes an attribute of the view.
 
-### @initialize: data = {}, ->
+    {PostView} = View.create PostView:
+      render: 'post.eco' #processed with render directive
+      key: 'value'
+    PostView.key is 'value'
+
+### @extend extend: name
+Extend itself can be extended to process new directives. If you view the ViewJS source code you will see this is how ViewJS itself is constructed. The "on" directive is implemented roughly like this:
+
+    View.extend extend:on: (events) ->
+      for event_name, callback of events
+        @bind event_name, callback
+  
+    #now "on" can be passed to extend
+    View.extend
+      on:
+        render: ->
+          console.log 'Called when any view renders'
+
+A **discard** callback is always passed as the second argument to a directive processor. Call this when a directive should only be processed once and not when child views are created. 
+  
+    View.extend extend:routes: (routes,discard) ->
+      #process routes once then
+      discard()
+
+### @extend initialize: (next) ->
+Add an asynchronous initialize callback to the view. **The callback must call next** or the view will never finish initializing. Note that initialize callbacks are added to a stack of existing callbacks. Child views specifying an initialize callback will not overwrite the parent's callback.
+
+    {PostCollectionView} = View.create PostCollectionView:
+      render: 'post_preview.eco'
+      collection: PostCollection
+      initialize: (next) ->
+        @collection.fetch success: next
+
+### @initialize: attributes = {}, ->
+Initializes a given view. Optional attributes will be passed to **set()** and an optional callback will be called when initialize is complete.
+
+    $('body').append PostCollectionView
+    PostCollectionView.initialize ->
+      console.log 'called when initialize is complete'
+
 ### views: [views...]
+Specifies dependent views that will be loaded. Each dependent view add an **initialize** callback. The parent view will not finish initializing until the dependent views have finished initializing. Once finished the dependent view names will become available as properties of the parent view:
+
+    {ApplicationView} = View.create ApplicationView: [Builder,
+      views: ['PostCollectionView','SideBarView']
+      render: ->
+        @div(
+          @div class: 'main', @PostCollectionView
+          @div class: 'sidebar', @SideBarView
+        )
+    ]
 
 ## Data
 ### @extend model: Backbone.Model
@@ -78,8 +135,8 @@ Specify a model for the view. Designed with Backbone.Model in mind, but can be a
       render: 'post.eco'
       model: post
     
-    #post.eco
-    "<h2><%= @title %></h2>"
+    # post.eco
+    # <h2><%= @title %></h2>
     
 ### @extend collection: Backbone.Collection
 **render()** will be called for each model in the collection, with the model as the context to a template, or as the first argument to a callback. Asynchronous collection logic must be put into an  **initialize** callback or a **change** or **change:key** event.
@@ -129,7 +186,7 @@ When using a DOM library $ is available as a hybrid object and function. The fun
       @$('li').addClass 'item'
       
 ### @tag tag_name, attributes = {}, elements = [], content = '', ->
-Generate a DOM Element. Accepts a variable number of hashes of attributes, elements, strings of content or a functions to call, or arrays (which can be nested) of any of the above, in any order. If Builder is passed as a mixin all valid tag names become available as methods.
+Generate a DOM Element. Accepts a variable number of hashes of attributes, elements, other views, strings of content or a functions to call, or arrays (which can be nested) of any of the above, in any order. If Builder is passed as a mixin all valid tag names become available as methods.
 
     {TableView} = View.create TableView: [Builder,
       render: ->
@@ -176,7 +233,14 @@ render() is automatically called when **initialize()** has completed. Subsequent
             Post.find id, (post) =>
               @model = post
               @render()
-    
+
+### @extend helpers: template_helpers
+Adds helper methods to templates:
+
+    View.extend helpers:
+      url: (params) ->
+        @url params
+
 ### @element
 The outer most DOM Element in the view which is available as soon as the view is created (before **initialize** or **render** are called). The Element is never removed even when the view is re-rendered.
 
@@ -203,7 +267,7 @@ Override the default element which is a div with a className containing the **na
       delegate:
         'click a.class': (event) ->
     
-### templates: template_name: ->
+### @extend templates: template_name: ->
 **ViewServer** will automatically compile the contents of the **templates** directory and set this property accordingly, but if using **View** standalone this property should contain filename: callback pairs. The callbacks must return HTML strings and **not** DOM Elements. The **templates** attribute must be set on the base **View** object.
 
     View.extend
@@ -212,13 +276,36 @@ Override the default element which is a div with a className containing the **na
           "html output"
 
 ## Events
-### @bind/on: event_name, (args...) ->
+### @bind event_name, callback
+### @on event_name, callback
+Bind a callback to an event. **bind** and **on** are aliases.
+    
+    PostView.bind 'render', ->
+      console.log 'Post rendered'
+
+An object containing event name, callback pairs can also be used:
+
+    PostView.on
+      render: ->
+        console.log 'Post rendered'
+      initialize: ->
+        console.log 'Post initialized'
+        
+### @extend on: events
+  
+    PostView.extend
+      on:
+        render: ->
+          console.log 'Post rendered'
+
 ### @unbind/removeListener event_name = false, handler = ->
 ### @trigger/emit event_name, args...
 ### @before: method_name: (original_method) ->
 #### change: ->
 #### change:key: (value) ->
 #### ready: ->
+#### activated: ->
+#### deactivated: ->
 #### error: (error) ->
 #### warning: (warning)
 
