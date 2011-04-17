@@ -5,7 +5,7 @@ timeout_length = 5000 # if the request can't complete in a reasonable amount of 
 {XMLHttpRequest} = require 'xmlhttprequest'
 
 create_empty_document = ->
-  jsdom '<html><head></head><body></body></html>'
+  jsdom "<html><head></head><body></body></html>"
 
 ViewSerializer =
   setup: (options) ->
@@ -15,9 +15,9 @@ ViewSerializer =
     output = window.document.documentElement.innerHTML
     #append stylesheets
     stylesheets = (@stylesheets || []).map (href) =>
-      """<link rel="stylesheet" type="text/css" href="#{href.replace(@public,'/')}"/>"""
+      """    <link rel="stylesheet" type="text/css" href="#{href.replace(@public,'/')}"/>\n"""
     javascripts = (@javascripts || []).map (src) =>
-      script_output = """<script type="text/javascript" src="#{src.replace(@public,'/')}"/></script>"""
+      script_output = """    <script type="text/javascript" src="#{src.replace(@public,'/')}"></script>\n"""
       if src.match(/(^|\/)view\.js$/)
         script_output += """<script type="text/javascript">
           View.extend({
@@ -28,7 +28,7 @@ ViewSerializer =
         """
       script_output
     @meta.push "<title>#{window.document.title}</title>" if window.document.title?
-    output = output.replace(/<head>/,"<head>" + @meta.join('') + javascripts.join('') + stylesheets.join(''))
+    output = output.replace(/<head>/,"<head>\n    " + @meta.join('\n    ') + "\n" + javascripts.join('') + stylesheets.join(''))
     """
       <!DOCTYPE html>
       <html>
