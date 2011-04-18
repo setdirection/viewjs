@@ -67,8 +67,10 @@ create_nav = (window) ->
       <li><a href="#" id="server">Server</a></li>
       <li><a href="https://github.com/syntacticx/viewjs/">Source</a></li>
     </ul>
-    <a href="#" id="coffeescript"><span>Toggle</span></a>
-    <a href="#" id="coffeescript"><span>Toggle</span></a>
+    <ul id="controls">
+      <li><a href="#" id="coffeescript">Show JavaScript</a></li>
+      <li><a href="#" id="api_quickview">Show API Only</a></li>
+    </ul>
     <br class="clear"/>
   """
 

@@ -383,7 +383,7 @@ The **env** directive in a mixin, can itself contain a mixin that will be passed
             render: -> console.log 'render called in IE'
 
 ## Routes
-### routes: path: view_name
+### @extend routes: path: view_name
 This is automatically set by the **ViewServer**, but when using View standalone you must manually set this before you can use the **Router** mixin. Attributes matched in a route will be **@set** on the view when it is **activated**.
 
     View.extend
@@ -402,7 +402,7 @@ Generates a URL for a given view and attributes. The view must have a correspond
     
 ## Mixins
 ### Router
-The Router uses the excellent [https://github.com/balupton/History.js/](History.js) to manage the history state in the browser. **The recommended behavior is to serve browsers incapable of supporting the HTML5 history API a static HTML snapshot of the view.** The **ViewServer** provides the **legacy** and **html5** directives to **@env** to easily allow this.
+The Router uses the excellent [History.js](https://github.com/balupton/History.js/) to manage the history state in the browser. **The recommended behavior is to serve browsers incapable of supporting the HTML5 history API a static HTML snapshot of the view.** The **ViewServer** provides the **legacy** and **html5** directives to **@env** to easily allow this.
 
 When a view is activated by a route the **deactivated** event is triggered on the previous activated view, and the **activated** event is triggered on the newly active view. Client side the deactivated view is hidden and the activated view is shown. Server side, all views but the activated one will be removed from the DOM before it is serialized.
 
@@ -449,7 +449,7 @@ The builder mixin adds all valid HTML5 tag names as methods to a view. Usage of 
           )
     ]
 
-# ViewServer
+# Server
 Extends an Express server to serve the assets of a View based application, or execute the View application server side, serving the resulting DOM as static HTML.
 
 ## ViewServer
@@ -500,33 +500,30 @@ Full path to the templates directory. All eco and Jade templates in this directo
 ### @extend javascripts: [javascripts...]
 JavaScript tags to send to the browser on each request. If a directory is specified it will be recursively searched for **.js** files.
 
-    public = "#{__dirname}/public/javascripts/lib/"
     BlogServer.extend javascripts: [
-      "#{public}/javascripts/lib/view.js"
-      "#{public}/javascripts/models/"
-      "#{public}/javascripts/views/"
+      "public/javascripts/lib/view.js"
+      "public/javascripts/models/"
+      "public/javascripts/views/"
     ]
     
 ### @extend execute: [execute...]
 JavaScript to execute server side on each request. If a directory is specified it will be recursively searched for **.js** files.
 
-    public = "#{__dirname}/public/javascripts/lib/"
     BlogServer.extend execute: [
-      "#{public}/javascripts/lib/view.js"
-      "#{public}/javascripts/models/"
-      "#{public}/javascripts/views/"
+      "public/javascripts/lib/view.js"
+      "public/javascripts/models/"
+      "public/javascripts/views/"
     ]
     
 
 ### @extend stylesheets: [stylesheets...]
 Add stylesheets to. If a directory is specified it will be recursively searched for **.css** files.
 
-    public = "#{__dirname}/public/"
     BlogServer.extend stylesheets: [
-      "#{public}/stylesheets/a.css"
-      "#{public}/stylesheets/b.css"
+      "public/stylesheets/a.css"
+      "public/stylesheets/b.css"
       #now scan the directory for all remaining stylesheets
-      "#{public}/stylesheets/"
+      "public/stylesheets/"
     ]
 
 ### @extend meta: [meta...]
@@ -536,7 +533,7 @@ Inject arbitrary meta information into the document head.
       '<link rel="alternate" type="application/rss+xml" title="Feed Name" href="url" />'
     ]
 
-### @ extend bundle: assets
+### @extend bundle: assets
 TODO
 
 ## Env
@@ -563,19 +560,18 @@ The following mixin directives can be used in an **env** directive:
 
 In the following example the Typekit JavaScript would be available in a script tag in the header for both legacy and HTML5 capable browsers, but the rest of the application would be run server side for legacy browsers, and client side for HTML5 browsers.
 
-    public = __dirname + '/public/'
     application_payload = [
-      "#{public}javascripts/lib/jquery.js"
-      "#{public}javascripts/lib/underscore.js"
-      "#{public}javascripts/lib/backbone.js"
-      "#{public}javascripts/lib/view.js"
-      "#{public}javascripts/templates.js"
-      "#{public}javascripts/models"
-      "#{public}javascripts/views"
+      "public/javascripts/lib/jquery.js"
+      "public/javascripts/lib/underscore.js"
+      "public/javascripts/lib/backbone.js"
+      "public/javascripts/lib/view.js"
+      "public/javascripts/templates.js"
+      "public/javascripts/models"
+      "public/javascripts/views"
     ]
     
     {MyServer} = ViewServer.create MyServer:
-      public: public
+      public: __dirname + '/public'
       javascripts: [
         "http://use.typekit.com/xxx.js"
       ]
