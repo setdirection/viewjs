@@ -1,12 +1,7 @@
 # ViewJS
 
-TODO: create JS that will hide all descriptions for quick API overview
-
-## Concepts
-
-- Run JavaScript client or server
-- Mixin system (describe extend)
-- Builder + inline jQuery
+# Introduction
+Write applications using the latest HTML5 and JavaScript technologies, serving them as static HTML to legacy browsers.
 
 ## Installation
     
@@ -16,8 +11,6 @@ TODO: create JS that will hide all descriptions for quick API overview
     node_modules/view/bin/bootstrap
     node app.js
 
-## Project Structure
-
 ## Development
 Run this command from your project:
 
@@ -25,12 +18,12 @@ Run this command from your project:
 
 This will compile the following stylus and coffeescript files:
 
-- stylesheets -> public/stylesheets
-- models -> public/javascripts/models
-- collections -> public/javascripts/collections
-- controllers -> public/javascripts/controllers
-- views -> public/javascripts/views
-- templates -> public/javascripts/templates.js
+- app/stylesheets -> public/stylesheets
+- app/models -> public/javascripts/models
+- app/collections -> public/javascripts/collections
+- app/controllers -> public/javascripts/controllers
+- app/views -> public/javascripts/views
+- app/templates -> public/javascripts/templates.js
 
 **Note that you need to restart the cake watch process when you create new files, this will be automatic in the future.**
 
@@ -457,6 +450,8 @@ The builder mixin adds all valid HTML5 tag names as methods to a view. Usage of 
     ]
 
 # ViewServer
+Extends an Express server to serve the assets of a View based application, or execute the View application server side, serving the resulting DOM as static HTML.
+
 ## ViewServer
 ### ViewServer view_name
 Find a ViewServer by name:
@@ -540,6 +535,9 @@ Inject arbitrary meta information into the document head.
     BlogServer.extend meta: [
       '<link rel="alternate" type="application/rss+xml" title="Feed Name" href="url" />'
     ]
+
+### @ extend bundle: assets
+TODO
 
 ## Env
 Execute code, or process mixin directives conditionally per request. The following environments are pre-defined:
