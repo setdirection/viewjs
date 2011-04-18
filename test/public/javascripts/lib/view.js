@@ -3766,10 +3766,10 @@ createSimpleStorage( "memory", {} );
           'initialize', function(next) {
             var view, _i, _len;
             Router.view = this;
-            this.router = [];
+            this.Router = [];
             for (_i = 0, _len = dependent_views.length; _i < _len; _i++) {
               view = dependent_views[_i];
-              this.router.push(ViewManager(view));
+              this.Router.push(ViewManager(view));
             }
             this.on({
               ready: function() {

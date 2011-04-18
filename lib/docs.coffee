@@ -61,13 +61,13 @@ syntax_highlight = (window) ->
 
 create_nav = (window) ->
   window.$('h1:first').after """
-    <p class="npm">npm install view</p>
     <ul id="nav">
-      <li><a href="#intro">Intro</a></li>
-      <li><a href="#view">Client</a></li>
-      <li><a href="#viewserver">Server</a></li>
+      <li><a href="#" id="intro">Intro</a></li>
+      <li><a href="#" id="client">Client</a></li>
+      <li><a href="#" id="server">Server</a></li>
       <li><a href="https://github.com/syntacticx/viewjs/">Source</a></li>
     </ul>
+    <a href="#" id="coffeescript"><span>Toggle</span></a>
     <a href="#" id="coffeescript"><span>Toggle</span></a>
     <br class="clear"/>
   """

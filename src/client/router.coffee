@@ -76,9 +76,9 @@ View.extend extend:routes: (routes,discard) ->
     create_router()
   Router.mixin.push ['initialize', (next) ->
     Router.view = @
-    @router = []
+    @Router = []
     for view in dependent_views
-      @router.push ViewManager view
+      @Router.push ViewManager view
     @on ready: ->
       for view in dependent_views
         add_default_activation_events ViewManager view

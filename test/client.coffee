@@ -348,7 +348,7 @@ module.exports.router = (before_exit) ->
         element = @tag('div'
           @SidebarView
           @tag('div',
-            @router
+            @Router
           )
         )
         element

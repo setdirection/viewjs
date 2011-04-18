@@ -6,6 +6,7 @@ TODO: create JS that will hide all descriptions for quick API overview
 
 - Run JavaScript client or server
 - Mixin system (describe extend)
+- Builder + inline jQuery
 
 ## Installation
     
@@ -18,6 +19,7 @@ TODO: create JS that will hide all descriptions for quick API overview
 ## Project Structure
 
 ## Development
+Run this command from your project:
 
     cake watch
 
@@ -30,15 +32,21 @@ This will compile the following stylus and coffeescript files:
 - views -> public/javascripts/views
 - templates -> public/javascripts/templates.js
 
+**Note that you need to restart the cake watch process when you create new files, this will be automatic in the future.**
+
 # Client
 
 ## View
+The View class represents a DOM Element, a set of behaviors associated with it (event handlers, custom initializers, custom methods, etc) and possibly a Model or Collection that is bound to the view. All views are mixins and can be extended and sub classed at any time.
+
 ### View view_name
 Find a view by name:
 
     ContactView = View 'ContactView'
 
-Passing in name: callback pairs will call the callback with the view as it's context when the view is created:
+### View view_name: ->
+
+Passing in name: callback pairs will call the callback with the view as it's context when the view is available:
 
     View
       ContactView: ->
@@ -81,7 +89,7 @@ All mixins passed to **create()** are then passed to **extend**. @extend looks f
       key: 'value'
     PostView.key is 'value'
 
-### @extend extend: name
+### @extend extend: directive_name: (directive_value) ->
 Extend itself can be extended to process new directives. If you view the ViewJS source code you will see this is how ViewJS itself is constructed. The "on" directive is implemented roughly like this:
 
     View.extend extend:on: (events) ->
@@ -349,8 +357,8 @@ A simple implementation of AOP. A logger could be implemented as:
 ## Env
 Allows for the conditional execution of code depending on environment. The following environments are built in:
 
-- server: -> Executed when the application is being processed by NodeJS
-- browser: -> Executed by a remote client / web browser. **Note that this will become "client" in a future release, but is not presently so due to internal usage. Usage of "browser" will continue to work but will issue a deprecation warning in the future.**
+- **server**:  Executed when the application is being processed by NodeJS
+- **browser**: Executed by a remote client / web browser. **Note that this will become "client" in a future release, but is not presently so due to internal usage. Usage of "browser" will continue to work but will issue a deprecation warning in the future.**
 
 ### @env: name: ->
 
@@ -383,7 +391,7 @@ The **env** directive in a mixin, can itself contain a mixin that will be passed
 
 ## Routes
 ### routes: path: view_name
-This is automatically set by the **ViewServer**, but when using View standalone you must manually set this before you can use the **Router** mixin. 
+This is automatically set by the **ViewServer**, but when using View standalone you must manually set this before you can use the **Router** mixin. Attributes matched in a route will be **@set** on the view when it is **activated**.
 
     View.extend
       routes:
@@ -401,6 +409,11 @@ Generates a URL for a given view and attributes. The view must have a correspond
     
 ## Mixins
 ### Router
+The Router uses the excellent [https://github.com/balupton/History.js/](History.js) to manage the history state in the browser. **The recommended behavior is to serve browsers incapable of supporting the HTML5 history API a static HTML snapshot of the view.** The **ViewServer** provides the **legacy** and **html5** directives to **@env** to easily allow this.
+
+When a view is activated by a route the **deactivated** event is triggered on the previous activated view, and the **activated** event is triggered on the newly active view. Client side the deactivated view is hidden and the activated view is shown. Server side, all views but the activated one will be removed from the DOM before it is serialized.
+
+Each application that uses Routes must mixin the Router once. The Router mixin makes available **@Router** which will contain a div, which itself contains all of the elements of the routed views.
 
     View.extend
       routes:
@@ -445,8 +458,23 @@ The builder mixin adds all valid HTML5 tag names as methods to a view. Usage of 
 
 # ViewServer
 ## ViewServer
-### {ViewServer} = ViewServer server_name: ->
-### {ViewServer} = @create server_name: mixins = {}
+### ViewServer view_name
+Find a ViewServer by name:
+
+    BlogServer = View 'BlogServer'
+
+### ViewServer server_name: ->
+Passing in name: callback pairs will call the callback with the ViewServer as it's context when the ViewServer is available:
+
+    ViewServer BlogServer: ->
+      @server.use express.logger() 
+
+### @create server_name: mixins
+The ViewServer's mixin system and create method works identically to View's.
+
+    ViewServer.create BlogServer: ->
+      port: 3001
+      public: __dirname + '/public'
 
 ## Server
 ### @server
@@ -477,8 +505,23 @@ Full path to the templates directory. All eco and Jade templates in this directo
 ### @extend javascripts: [javascripts...]
 JavaScript tags to send to the browser on each request. If a directory is specified it will be recursively searched for **.js** files.
 
+    public = "#{__dirname}/public/javascripts/lib/"
+    BlogServer.extend javascripts: [
+      "#{public}/javascripts/lib/view.js"
+      "#{public}/javascripts/models/"
+      "#{public}/javascripts/views/"
+    ]
+    
 ### @extend execute: [execute...]
 JavaScript to execute server side on each request. If a directory is specified it will be recursively searched for **.js** files.
+
+    public = "#{__dirname}/public/javascripts/lib/"
+    BlogServer.extend execute: [
+      "#{public}/javascripts/lib/view.js"
+      "#{public}/javascripts/models/"
+      "#{public}/javascripts/views/"
+    ]
+    
 
 ### @extend stylesheets: [stylesheets...]
 Add stylesheets to. If a directory is specified it will be recursively searched for **.css** files.
@@ -499,9 +542,27 @@ Inject arbitrary meta information into the document head.
     ]
 
 ## Env
-### @env: name: ->
+Execute code, or process mixin directives conditionally per request. The following environments are pre-defined:
 
-### @extend: env: name: ->
+- **html5**: If the user-agent supports the HTML5 history API.
+- **legacy**: If the user-agent does not support the HTML5 history API.
+
+### @env: request, name: ->
+
+    View.env request,
+      html5: ->
+        console.log 'only run when an HTML5 capable user agent initiated the request'
+      legacy: (request) ->
+        console.log 'only run when a non HTML5 capable user agent initiated the request'
+
+### @extend: env: name: mixin
+The following mixin directives can be used in an **env** directive:
+
+- **execute**
+- **javascripts**
+- **stylesheets**
+- **meta**
+
 In the following example the Typekit JavaScript would be available in a script tag in the header for both legacy and HTML5 capable browsers, but the rest of the application would be run server side for legacy browsers, and client side for HTML5 browsers.
 
     public = __dirname + '/public/'
@@ -527,6 +588,19 @@ In the following example the Typekit JavaScript would be available in a script t
           javascripts: application_payload
 
 ### @env: set: name: (request) ->
+Define a new environment. Request may not be present, so always check for **request?** first.
+
+    ViewServer.env set:
+      ios: (request) ->
+        request? and request.headers['user-agent'].match /(iPhone|iPad)/
+        
+Not all environments depend on the request object. The following example sets **development** and **production** environments based on wether or not the code is run in the [VMWare Cloud Foundry](http://www.cloudfoundry.com/) offering:
+
+    ViewServer.env set:
+      production: ->
+        process?.env?.VCAP_APPLICATION
+      development: ->
+        not process?.env?.VCAP_APPLICATION
 
 ## Events
 The following events are triggered internally by ViewServer:
@@ -569,7 +643,27 @@ Trigger a given event with an arbitrary number of arguments.
     BlogServer.trigger 'custom', arg1, arg2
 
 ## Routes
-### routes: path: view_name
+### @extend routes: path: view_name
+Will register **get** handlers in express that will serve or execute JavaScript depending on the contents of the **execute** and **javascripts** directives, and will pass through route definitions to **View.routes** automatically.
 
+    BlogServer.extend
+      routes:
+        '/': 'IndexView'
+        '/post/:id': 'PostView'
+        
+You can optionally pass a callback for low level control just like in Express. Specifying a port number will proxy all requests below that path to the given port number, specifying a fully qualified URL will proxy all requests below that path to the given URL.
+
+    BlogServer.extend
+      routes:
+        '/local_api/': 3002
+        '/remote_api/': "http://api.service.com/"
+        '/page/:name': (request,response) ->
+          response.send 'Page Contents'
+    
+    # reqests to:
+    # /local_api/posts/2.json would proxy the request to: localhost:3002/posts/2.json
+    # /remote_api/posts/2.json would proxy the request to: http://api.service.com/posts/2.json
+    
 ## Cache
 ### cache: [views...]
+TODO
