@@ -70,10 +70,10 @@ ViewSerializer =
   serialize: (callback) ->
     @createWindow (window) =>
       timeout = null
-      complete = =>
+      complete = (exitCode) =>
         clearTimeout timeout
-        callback @renderWindow window
-        process.exit 0
+        callback @renderWindow(window), ->
+          process.exit exitCode ? 0
       if window.View?
         window.View.extend on:route: complete
         window.View.extend route: @url
@@ -81,9 +81,12 @@ ViewSerializer =
         complete()
       #force a response if on:route is never called
       setTimeout ->
-        complete()
-        process.exit 1
+        complete 1
       , @maxExecutionTime || 5000
 ViewSerializer.setup JSON.parse process.argv[2]
-ViewSerializer.serialize (output) ->
-  process.stdout.write output
+ViewSerializer.serialize (output, complete) ->
+  stdout = process.stdout
+  stdout.on 'close', ->
+    complete()
+  stdout.end output, 'utf8'
+  stdout.destroySoon()
