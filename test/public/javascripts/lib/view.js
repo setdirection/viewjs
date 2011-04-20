@@ -3815,7 +3815,7 @@ createSimpleStorage( "memory", {} );
       return this[0].style.display = 'none';
     };
     show = function() {
-      return this[0].style.display = null;
+      return this[0].style.display = '';
     };
     remove = function() {
       return this[0].parentNode.removeChild(this[0]);
