@@ -108,7 +108,7 @@ add_default_activation_events = (view_instance) ->
   hide = ->
     @[0].style.display = 'none'
   show = ->
-    @[0].style.display = null
+    @[0].style.display = ''
   remove = ->
     @[0].parentNode.removeChild @[0]
   noop = ->
