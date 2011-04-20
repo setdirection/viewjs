@@ -14,6 +14,7 @@ Router =
   mixin: []
   
 RouteResolver = ->
+  silent = arguments[1]? and arguments[1].silent is true
   #if just a string view name is passed
   if typeof arguments[0] is 'string' and ViewManager.views[arguments[0]]?
     router_params = {}
@@ -52,7 +53,10 @@ RouteResolver = ->
         if typeof arguments[1] is 'function'
           dispatcher ViewManager(view), params, arguments[1]
         return response
-    View.trigger 'error', 'Could not resolve the url: ' + arguments[0]
+    if silent
+      return false
+    else
+      View.trigger 'error', 'Could not resolve the url: ' + arguments[0] 
 
 View.extend extend:route: (route,discard) ->
   #called from ViewServer
@@ -72,9 +76,9 @@ View.extend extend:routes: (routes,discard) ->
     create_router()
   Router.mixin.push ['initialize', (next) ->
     Router.view = @
-    @router = []
+    @Router = []
     for view in dependent_views
-      @router.push ViewManager view
+      @Router.push ViewManager view
     @on ready: ->
       for view in dependent_views
         add_default_activation_events ViewManager view
@@ -127,11 +131,15 @@ add_default_activation_events = (view_instance) ->
 create_router = ->
   root_url = History.getRootUrl()
   $('a').live 'click', (event) ->
-    # Continue as normal for cmd clicks etc
-    return true if event.which is 2 or event.metaKey
-    if $(@).attr('href').indexOf(root_url) is 0 and !!(window.history && history.pushState)
-      History.pushState null, '', $(@).attr('href')
+    href = $(@).attr('href')
+    # Continue as normal for cmd clicks etc, external links or if history has been disabled
+    return true if event.which is 2 or event.metaKey or /:\/\//.test(href) or not History.enabled
+    if RouteResolver(href, silent: true)
+      History.pushState null, '', href
       event.preventDefault()
+      false
+    else
+      true
   History.Adapter.bind window, 'statechange', ->
     state = History.getState()
     url = state.url.replace root_url, '/'

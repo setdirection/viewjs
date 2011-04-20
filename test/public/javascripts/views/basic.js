@@ -4,7 +4,7 @@ View.create({
       setTimeout(next,0);
     },
     render: function(){
-      return this.tag('div',this.router);
+      return this.tag('div',this.Router);
     }
   }],
   BasicView: {

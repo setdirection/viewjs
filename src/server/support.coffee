@@ -32,12 +32,16 @@ array_from = (object) ->
     results[length] = object[length]
   results
   
-file_exists = (path) ->
-  try
-    fs.lstatSync path
-    true
-  catch e
-    false
+file_exists = (path,callback) ->
+  if callback
+    fs.stat path, (err) ->
+      callback not err?
+  else
+    try
+      fs.lstatSync path
+      true
+    catch e
+      false
 
 is_directory = (dir) ->
   try

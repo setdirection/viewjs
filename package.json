@@ -1,7 +1,7 @@
 {
   "name": "view",
   "description": "Markup as JavaScript",
-  "version": "2.0.0",
+  "version": "2.0.2",
   "author": "Ryan Eastridge <ryan@syntacticx.com>, twitter: @syntacticx",
   "dependencies": {
     "coffee-script": "= 1.0.1",

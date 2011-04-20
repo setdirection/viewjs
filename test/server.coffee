@@ -25,15 +25,15 @@ test_stack = []
 
 test_stack.push (next) ->
   {StaticServer1} = TestServer.create StaticServer1:
-    port: 4001
+    port: 40001
   {StaticServer2} = TestServer.create StaticServer2:
-    port: 4002
+    port: 40002
   request_count = 0
-  http.get {host: 'localhost', port: 4001, path: '/test.html'}, (response) ->
+  http.get {host: 'localhost', port: 40001, path: '/test.html'}, (response) ->
     response.on 'data', (data) ->
       assert.equal 'Test',data.toString()
       StaticServer1.server.close()
-      http.get {host: 'localhost', port: 4002, path: '/test.html'}, (response) ->
+      http.get {host: 'localhost', port: 40002, path: '/test.html'}, (response) ->
         response.on 'data', (data) ->
           assert.equal 'Test',data.toString()
           StaticServer2.server.close()
@@ -41,9 +41,8 @@ test_stack.push (next) ->
 
 test_stack.push (next) ->
   request_count = 0
-  
   {BasicAppServer} = TestServer.create BasicAppServer:
-    port: 4003
+    port: 40003
     routes:
       '/': 'BasicView'
       '/template': 'TemplateView'
@@ -59,13 +58,13 @@ test_stack.push (next) ->
       "http://ajax.googleapis.com/ajax/libs/jquery/1.5.1/jquery.min.js"
     ]
   
-  http.get {host: 'localhost', port: 4003, path: '/'}, (response) ->
+  http.get {host: 'localhost', port: 40003, path: '/'}, (response) ->
     ++request_count
     response.on 'data', (data) ->
       assert.match data.toString(), /<div>test<\/div>/
       assert.match data.toString(), /src="http:\/\/ajax.googleapis.com\/ajax\/libs\/jquery\/1.5.1\/jquery.min.js"/
           
-      http.get {host: 'localhost', port: 4003, path: '/template'}, (response) ->
+      http.get {host: 'localhost', port: 40003, path: '/template'}, (response) ->
         ++request_count
         response.on 'data', (data) ->
           assert.match data.toString(), /<p>value<\/p>/
@@ -76,25 +75,25 @@ test_stack.push (next) ->
 
 test_stack.push (next) ->
   {ProxyServerSource1} = ViewServer.create ProxyServerSource1:
-    port: 4004
+    port: 40004
   ProxyServerSource1.server.get '/1', (request,response) ->
     response.send 'a'
     
   {ProxyServerSource2} = ViewServer.create ProxyServerSource2:
-    port: 4005
+    port: 40005
   ProxyServerSource2.server.get '/2', (request,response) ->
     response.send 'b'
     
   {ProxyServer} = ViewServer.create ProxyServer:
-    port: 4006
+    port: 40006
     routes:
-      '/a/': 4004
-      '/b': 4005
+      '/a/': 40004
+      '/b': 40005
     
-  http.get {host: 'localhost', port: 4006, path: '/a/1'}, (response) ->
+  http.get {host: 'localhost', port: 40006, path: '/a/1'}, (response) ->
     response.on 'data', (data) ->
       assert.equal data.toString(), 'a'
-      http.get {host: 'localhost', port: 4006, path: '/b/2'}, (response) ->
+      http.get {host: 'localhost', port: 40006, path: '/b/2'}, (response) ->
         response.on 'data', (data) ->
           ProxyServerSource1.server.close()
           ProxyServerSource2.server.close()
@@ -123,7 +122,7 @@ test_stack.push (next) ->
   assert.equal c_was_set, true
   
   {ConditionalViewServer} = TestServer.create ConditionalViewServer:
-    port: 4007
+    port: 40007
     routes:
       '/': 'BasicView'
     execute: [
@@ -142,7 +141,7 @@ test_stack.push (next) ->
       c: ->
         stylesheets: 'c'
   
-  http.get {host: 'localhost', port: 4007, path: '/'}, (response) ->
+  http.get {host: 'localhost', port: 40007, path: '/'}, (response) ->
     response.on 'data', (data) ->
       assert.match data.toString(), /href="b"/
       assert.match data.toString(), /href="c"/
@@ -152,7 +151,7 @@ test_stack.push (next) ->
       
 test_stack.push (next) ->
   {CachingViewServer} = TestServer.create CachingViewServer:
-    port: 4008
+    port: 40008
     routes:
       '/': 'BasicView'
       '/test/test2/test3/test4/test5/template': 'TemplateView'
@@ -182,19 +181,19 @@ test_stack.push (next) ->
   
   assert.equal false, file_exists cache_location + '/index.html'
   
-  http.get {host: 'localhost', port: 4008, path: '/'}, (response) ->
+  http.get {host: 'localhost', port: 40008, path: '/'}, (response) ->
     assert.equal true, file_exists cache_location + '/index.html'
     response.on 'data', (data) ->
       assert.equal data.toString(), fs.readFileSync cache_location + '/index.html'
       
-      http.get {host: 'localhost', port: 4008, path: '/text'}, (response) ->
+      http.get {host: 'localhost', port: 40008, path: '/text'}, (response) ->
         assert.equal false, file_exists cache_location + '/text.html'
         response.on 'data', (data) ->
           assert.match data.toString(), /<div>test<\/div>/
       
           #test TemplateView
           assert.equal false, file_exists cache_location + '/test/test2/test3/test4/test5/template.html'
-          http.get {host: 'localhost', port: 4008, path: '/test/test2/test3/test4/test5/template'}, (response) ->
+          http.get {host: 'localhost', port: 40008, path: '/test/test2/test3/test4/test5/template'}, (response) ->
             assert.equal true, file_exists cache_location + '/test/test2/test3/test4/test5/template.html'
             response.on 'data', (data) ->
               assert.equal data.toString(), fs.readFileSync cache_location + '/test/test2/test3/test4/test5/template.html'

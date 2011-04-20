@@ -4,7 +4,7 @@ View.extend
 View.create
   ApplicationView: [Router, Builder,
     render: ->
-      @div @router
+      @div @Router
   ]
       
 $ -> View ApplicationView: ->

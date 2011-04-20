@@ -3678,7 +3678,8 @@ createSimpleStorage( "memory", {} );
     mixin: []
   };
   RouteResolver = function() {
-    var fragment, optional_param_matcher, ordered_params, param_matcher, param_name, params, path, response, router_params, url, view, _ref;
+    var fragment, optional_param_matcher, ordered_params, param_matcher, param_name, params, path, response, router_params, silent, url, view, _ref;
+    silent = (arguments[1] != null) && arguments[1].silent === true;
     if (typeof arguments[0] === 'string' && (ViewManager.views[arguments[0]] != null)) {
       router_params = {};
       router_params[arguments[0]] = {};
@@ -3727,7 +3728,11 @@ createSimpleStorage( "memory", {} );
           return response;
         }
       }
-      return View.trigger('error', 'Could not resolve the url: ' + arguments[0]);
+      if (silent) {
+        return false;
+      } else {
+        return View.trigger('error', 'Could not resolve the url: ' + arguments[0]);
+      }
     }
   };
   View.extend({
@@ -3761,10 +3766,10 @@ createSimpleStorage( "memory", {} );
           'initialize', function(next) {
             var view, _i, _len;
             Router.view = this;
-            this.router = [];
+            this.Router = [];
             for (_i = 0, _len = dependent_views.length; _i < _len; _i++) {
               view = dependent_views[_i];
-              this.router.push(ViewManager(view));
+              this.Router.push(ViewManager(view));
             }
             this.on({
               ready: function() {
@@ -3846,12 +3851,19 @@ createSimpleStorage( "memory", {} );
     var root_url;
     root_url = History.getRootUrl();
     $('a').live('click', function(event) {
-      if (event.which === 2 || event.metaKey) {
+      var href;
+      href = $(this).attr('href');
+      if (event.which === 2 || event.metaKey || /:\/\//.test(href) || !History.enabled) {
         return true;
       }
-      if ($(this).attr('href').indexOf(root_url) === 0 && !!(window.history && history.pushState)) {
-        History.pushState(null, '', $(this).attr('href'));
-        return event.preventDefault();
+      if (RouteResolver(href, {
+        silent: true
+      })) {
+        History.pushState(null, '', href);
+        event.preventDefault();
+        return false;
+      } else {
+        return true;
       }
     });
     return History.Adapter.bind(window, 'statechange', function() {
