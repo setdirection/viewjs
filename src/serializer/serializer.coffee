@@ -9,7 +9,12 @@ create_empty_document = ->
 
 ViewSerializer =
   setup: (options) ->
-    {@stylesheets,@javascripts,@execute,@public,@domain,@routes,@url,@meta} = options
+    {@stylesheets,@javascripts,@execute,@public,@location,@domain,@routes,@url,@meta} = options
+
+    # Augment our location object with actions
+    if @location
+      @location.reload = -> # NOP
+      @location.replace = -> # NOP TODO : Consider altering this so it emits a redirect
     
   renderWindow: (window) ->
     output = window.document.documentElement.innerHTML
@@ -39,6 +44,7 @@ ViewSerializer =
   createWindow: (callback) ->
     document = create_empty_document()
     window = document.createWindow()
+    window.location = @location if @location
     window.domain = @domain
     window.XMLHttpRequest = XMLHttpRequest
     window.document.implementation.addFeature 'MutationEvents', ['1.0']
