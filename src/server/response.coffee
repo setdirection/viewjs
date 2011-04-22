@@ -33,13 +33,34 @@ ViewServer.extend
         for item in meta
           _meta.push if typeof item is 'function' then item.call @, request else item
         meta = _.uniq _meta
-        
+
+        # Create a server-side instance of the location object. Should should mirror the data that
+        # the client code will see.
+        if not @location
+          # If the basic location information is not provided do our best to guess the server params
+          protocol = @protocol ? 'http:'
+          defaultPort = @defaultPort ? if protocol == 'https:' then 443 else 80
+          hostHeader = request.header 'Host'
+
+          location =
+            protocol: protocol
+            host: hostHeader
+            hostname: hostHeader.replace /:.*/, ''
+            port: if ~hostHeader.indexOf(':') then parseInt(hostHeader.replace /.*:/, '') else defaultPort
+        else
+          location = _.clone @location
+
+        # Smash in the location data for the request URL
+        _.extend location, url.parse request.url
+        location.href = "#{location.protocol}//#{location.host}#{request.url}"
+
         #initialize json args
         json_args = JSON.stringify
           stylesheets: process_asset_arguments(stylesheets, /\.css$/)
           javascripts: process_asset_arguments(javascripts, /\.js$/)
           execute: process_asset_arguments(execute, /\.js$/)
           public: @public
+          location: location
           domain: @domain
           routes: @routes
           meta: meta
